@@ -1,0 +1,16 @@
+# Excel data files (sensitive business data — do not commit)
+*.xlsx
+*.xls
+
+# OS / editor artifacts
+.DS_Store
+Thumbs.db
+desktop.ini
+*.swp
+*~
+.vscode/
+.idea/
+
+# Local logs and temp
+*.log
+*.tmp

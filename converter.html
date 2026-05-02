@@ -1,0 +1,549 @@
+<!DOCTYPE html>
+<html lang="zh-Hant">
+<head>
+<meta charset="UTF-8">
+<title>FY26 實績檔轉換器（橫向 → 縱向）</title>
+<script src="xlsx.full.min.js"></script>
+<script>
+if(typeof XLSX === "undefined"){
+  document.write('<scr'+'ipt src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js"></scr'+'ipt>');
+}
+</script>
+<script>
+if(typeof XLSX === "undefined"){
+  document.write('<scr'+'ipt src="https://unpkg.com/xlsx@0.18.5/dist/xlsx.full.min.js"></scr'+'ipt>');
+}
+</script>
+<style>
+  :root{
+    --bg:#f5f7fa; --card:#ffffff; --ink:#1f2937; --muted:#6b7280;
+    --accent:#1d4ed8; --good:#15803d; --warn:#b45309; --bad:#b91c1c;
+    --border:#e5e7eb;
+  }
+  *{box-sizing:border-box}
+  body{margin:0;font-family:"Segoe UI","Microsoft JhengHei","PingFang TC",sans-serif;background:var(--bg);color:var(--ink);font-size:13px}
+  header{background:linear-gradient(135deg,#0f766e,#0891b2);color:#fff;padding:14px 24px;box-shadow:0 2px 8px rgba(0,0,0,.08)}
+  header h1{margin:0;font-size:18px;font-weight:600}
+  header .sub{margin-top:2px;font-size:11px;opacity:.85}
+  main{padding:18px 24px;max-width:1500px;margin:0 auto}
+  .card{background:var(--card);border:1px solid var(--border);border-radius:8px;padding:16px;margin-bottom:16px;box-shadow:0 1px 2px rgba(0,0,0,.04)}
+  .card h2{margin:0 0 12px 0;font-size:15px;font-weight:600;border-left:3px solid var(--accent);padding-left:8px}
+  .step-num{display:inline-block;background:var(--accent);color:#fff;border-radius:50%;width:22px;height:22px;line-height:22px;text-align:center;font-size:12px;font-weight:600;margin-right:6px}
+
+  .file-input{display:flex;flex-direction:column;gap:6px;max-width:520px}
+  .file-input .fname{font-size:13px;padding:14px;background:#f9fafb;border:2px dashed var(--border);border-radius:6px;cursor:pointer;text-align:center;transition:all .15s}
+  .file-input .fname:hover{background:#eff6ff;border-color:var(--accent)}
+  .file-input .fname.loaded{background:#ecfdf5;border-color:#10b981;border-style:solid;color:#065f46}
+  .file-input input[type=file]{display:none}
+
+  button.primary{background:var(--accent);color:#fff;border:none;border-radius:6px;padding:10px 20px;font-size:13px;font-weight:500;cursor:pointer;transition:background .15s}
+  button.primary:hover{background:#1e40af}
+  button.primary:disabled{background:#9ca3af;cursor:not-allowed}
+  button.success{background:var(--good);color:#fff;border:none;border-radius:6px;padding:10px 20px;font-size:13px;font-weight:500;cursor:pointer}
+  button.success:hover{background:#166534}
+
+  .status{font-size:12px;color:var(--muted);margin-top:10px;padding:8px 12px;background:#f9fafb;border-radius:5px;border-left:3px solid var(--border)}
+  .status.error{color:var(--bad);border-left-color:var(--bad);background:#fef2f2}
+  .status.success{color:var(--good);border-left-color:var(--good);background:#f0fdf4}
+
+  .stats-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(180px,1fr));gap:10px;margin-bottom:14px}
+  .stat{background:#fff;border:1px solid var(--border);border-radius:6px;padding:10px 14px}
+  .stat .lbl{font-size:11px;color:var(--muted)}
+  .stat .val{font-size:20px;font-weight:700;margin-top:2px}
+
+  table.preview{width:100%;border-collapse:collapse;font-size:12px}
+  table.preview th,table.preview td{border:1px solid var(--border);padding:5px 8px;text-align:left;white-space:nowrap}
+  table.preview th{background:#f3f4f6;font-weight:600;text-align:center;position:sticky;top:0}
+  table.preview td.num{text-align:right;font-variant-numeric:tabular-nums}
+  .scroll-box{max-height:480px;overflow:auto;border:1px solid var(--border);border-radius:5px}
+
+  details{margin-top:10px;border:1px solid var(--border);border-radius:5px;padding:8px 12px;background:#fafafa}
+  details summary{cursor:pointer;font-size:12px;font-weight:500}
+  details .stat-line{margin-top:4px;font-family:monospace;font-size:11px;color:var(--muted)}
+  .hidden{display:none}
+  .hint{font-size:11px;color:var(--muted);margin-top:4px}
+</style>
+</head>
+<body>
+<header>
+  <h1>FY26 實績檔轉換器</h1>
+  <div class="sub">將「FY26商售實績明細」橫向 4 區塊結構（WEB/KOL・EC・TM・經代銷）轉換為縱向清單格式，輸出可直接被儀表板讀取的 Excel 檔。</div>
+</header>
+<main>
+
+  <div class="card">
+    <h2><span class="step-num">1</span>上傳實績檔</h2>
+    <div class="file-input">
+      <label class="fname" id="fname" for="file">點擊選擇 FY26商售實績明細(claude).xlsx</label>
+      <input type="file" id="file" accept=".xlsx,.xls">
+      <div class="hint">檔案僅在瀏覽器內處理，不會上傳至任何伺服器。</div>
+    </div>
+    <div class="status" id="status">尚未選擇檔案。</div>
+  </div>
+
+  <div class="card hidden" id="convert-card">
+    <h2><span class="step-num">2</span>轉換為縱向格式</h2>
+    <button class="primary" id="btn-convert">開始轉換</button>
+    <span class="hint" style="margin-left:10px">處理所有月份工作表（2604、2605、… 2703）並合併輸出。</span>
+  </div>
+
+  <div class="card hidden" id="result-card">
+    <h2><span class="step-num">3</span>結果預覽 &amp; 下載</h2>
+
+    <div class="stats-grid" id="stats-grid"></div>
+
+    <div style="margin:10px 0">
+      <button class="success" id="btn-download">📥 下載轉換後 Excel</button>
+      <span class="hint" style="margin-left:10px">下載後請在儀表板（index.html）的「實績檔」欄位選擇此新檔案。</span>
+    </div>
+
+    <div class="status" style="background:#fef3c7;border-left-color:#b45309;color:#78350f;font-size:11px">
+      ⚠ 轉換規則：<br>
+      ① 原檔 TM 與 經代銷 區塊的「未稅金額」公式為 <code>=AC/0.105</code> / <code>=AO/0.105</code>（0.105 為 1.05 之筆誤，結果為真實未稅的 10 倍）。本工具改讀含稅欄位（AC / AO）並 ÷ 1.05 換算為正確未稅金額。<br>
+      ② <strong>未稅金額為 0 的列一律排除</strong>（即使數量 &gt; 0）。<br>
+      ③ <strong>事業名正規化：</strong><code>學習 → 學習商品</code>、<code>數位經典 → 數位典藏</code>（與預算檔一致）。
+    </div>
+
+    <details id="block-detail"></details>
+
+    <h2 style="margin-top:18px"><span class="step-num">4</span>多層級統計（驗證用）</h2>
+    <div id="breakdown-area"></div>
+
+    <h2 style="margin-top:18px"><span class="step-num">5</span>資料預覽（前 100 筆）</h2>
+    <div class="scroll-box">
+      <table class="preview" id="preview-table"></table>
+    </div>
+  </div>
+
+</main>
+
+<script>
+/* ============================================================
+   FY26 實績檔轉換器 — 橫向 4 區塊 → 縱向長格式
+   ============================================================ */
+
+// 出力欄位：年月 / 事業別 / 管道 / 商品コード / 商品名 / 数量 / 未稅金額
+const OUT_HEADERS = ["年月","事業別","管道","商品代號","商品名稱","數量","未稅金額"];
+
+// 事業名の正規化マップ（實績ファイルのVLOOKUPキャッシュ値 → 預算ファイルの正式名）
+//   學習      → 學習商品（實績側は中項なし、予算側は分割済）
+//   數位經典  → 數位典藏（表記揺れ・「典藏」が正）
+const BIZ_NAME_MAP = {
+  "學習":     "學習商品",
+  "數位經典": "數位典藏",
+};
+function normalizeBiz(name){
+  if(!name) return name;
+  const trimmed = String(name).trim();
+  return BIZ_NAME_MAP[trimmed] || trimmed;
+}
+
+// ブロック定義（列インデックスは 0-base）
+//
+// 重要：原ファイル TM/經代銷 ブロックの「未稅金額」列（AD/AP）の数式は
+//        =AC/0.105  または  =AO/0.105  というバグ式（0.105 は 1.05 のタイポ）。
+//        結果が真の未稅の約 10 倍になる。
+//        → 本converterでは 含稅金額 列（AC=col 28、AO=col 40）を読み、
+//          /1.05 で未稅に正しく換算する（taxed:true）。
+//
+// 經代銷ブロック：XML ヘッダー（行12）で確認した正しい列は AI–AP（1列ズレあり）：
+//   AI=事業(34), AJ=商品編號(35), AK=商品名稱(36), AL=發貨日期(37),
+//   AM=管道(38), AN=商品數量(39), AO=商品小計含稅(40), AP=未稅バグ式(41)
+const BLOCKS = [
+  { name:"WEB/KOL", cols:{ biz:1,  code:2,  prod:3,  date:4,  channel:5,  qty:6,  amt:7  }, channelMap:{ "網站":"WEB", "團購":"KOL" }, taxed:false },
+  { name:"EC",      cols:{ biz:12, code:13, prod:14, date:15, channel:18, qty:16, amt:17 }, fixed:"EC",     taxed:false },
+  // TM：AC列(含稅金額) を /1.05 換算
+  { name:"TM",      cols:{ biz:22, code:23, prod:24, date:25, channel:26, qty:27, amt:28 }, fixed:"TM",     taxed:true  },
+  // 經代銷：AO列(商品小計=含稅) を /1.05 換算
+  { name:"經代銷",  cols:{ biz:34, code:35, prod:36, date:37, channel:38, qty:39, amt:40 }, fixed:"經代銷", taxed:true  },
+];
+
+// シート名 "2604" → 年月 "2026/04"
+function sheetNameToYM(name){
+  const m = /^(\d{2})(\d{2})$/.exec(String(name).trim());
+  if(!m) return null;
+  const yy = parseInt(m[1],10);
+  const mm = parseInt(m[2],10);
+  if(mm<1 || mm>12) return null;
+  return `20${m[1]}/${String(mm).padStart(2,"0")}`;
+}
+
+const STATE = { workbook:null, output:null };
+
+/* ---------- File loading ---------- */
+const fileInput = document.getElementById("file");
+const fnameLabel = document.getElementById("fname");
+fileInput.addEventListener("change", async (e)=>{
+  const f = e.target.files[0];
+  if(!f) return;
+  try{
+    if(typeof XLSX === "undefined") throw new Error("SheetJS 未載入。");
+    fnameLabel.textContent = "讀取中… " + f.name;
+    setStatus("讀取中…");
+    const buf = await f.arrayBuffer();
+    const wb = XLSX.read(buf, {type:"array"});
+    STATE.workbook = wb;
+    fnameLabel.textContent = "✓ " + f.name + "（" + wb.SheetNames.length + " 個工作表）";
+    fnameLabel.classList.add("loaded");
+    setStatus(`已載入：${f.name}（共 ${wb.SheetNames.length} 個工作表）。請點擊下方「開始轉換」。`, "success");
+    document.getElementById("convert-card").classList.remove("hidden");
+  }catch(err){
+    console.error(err);
+    fnameLabel.textContent = "❌ 讀取失敗：" + f.name;
+    setStatus("錯誤：" + err.message, "error");
+  }
+});
+
+function setStatus(msg, cls){
+  const el = document.getElementById("status");
+  el.textContent = msg;
+  el.className = "status" + (cls?" "+cls:"");
+}
+
+/* ---------- Convert ---------- */
+document.getElementById("btn-convert").addEventListener("click", ()=>{
+  try{
+    const result = convertWorkbook(STATE.workbook);
+    STATE.output = result;
+    renderResult(result);
+    document.getElementById("result-card").classList.remove("hidden");
+    setStatus(`✓ 轉換完成：共 ${result.rows.length} 筆資料、${result.months.length} 個月份。`, "success");
+  }catch(err){
+    console.error(err);
+    setStatus("轉換錯誤：" + err.message, "error");
+  }
+});
+
+function convertWorkbook(wb){
+  const allRows = [];
+  const months = [];
+  const debug = []; // 各シート × 各ブロックの統計
+
+  for(const sheetName of wb.SheetNames){
+    const ym = sheetNameToYM(sheetName);
+    if(!ym) continue;          // 國定假日表/年度工作天/管道定義 等を除外
+    const sheet = wb.Sheets[sheetName];
+    const rows = XLSX.utils.sheet_to_json(sheet, {header:1, defval:null, raw:true});
+
+    let monthRowCount = 0;
+    const sheetDbg = { sheet:sheetName, ym, blocks:[] };
+
+    for(const block of BLOCKS){
+      const c = block.cols;
+      const blockDbg = { name:block.name, kept:0, skippedHeader:0, skippedNoChannel:0, skippedNoBiz:0, channels:{}, bizes:{} };
+
+      for(let i=0; i<rows.length; i++){
+        const r = rows[i];
+        if(!r) continue;
+
+        const rawBiz = r[c.biz];
+        // null / 空 / "事業" header / "總計" 系の小計列はスキップ
+        if(rawBiz===null || rawBiz===undefined || rawBiz==="") { continue; }
+        const rawTrim = String(rawBiz).trim();
+        if(rawTrim === "事業" || rawTrim === "事業別" || rawTrim === "總計" || rawTrim === "(空白)" || rawTrim === "(全部)") {
+          blockDbg.skippedHeader++; continue;
+        }
+        // 事業名の正規化（學習→學習商品、數位經典→數位典藏）
+        const biz = normalizeBiz(rawTrim);
+
+        const qty = num(r[c.qty]);
+        // taxed:true のブロックは含稅列を /1.05 して未稅換算
+        // （TM・經代銷の元ファイル数式 =AC/0.105 / =AO/0.105 は 1.05 のタイポで 10 倍値）
+        const rawAmt = num(r[c.amt]);
+        const amt = block.taxed ? rawAmt / 1.05 : rawAmt;
+        // 金額が 0 の行は除外（数量があっても削除する仕様）
+        if(amt === 0){
+          blockDbg.skippedZeroAmt = (blockDbg.skippedZeroAmt||0) + 1;
+          continue;
+        }
+
+        // 管道判定
+        let channel;
+        if(block.channelMap){
+          // WEB/KOL ブロックは F 列の値で判別
+          const chRaw = r[c.channel];
+          const chKey = chRaw===null||chRaw===undefined ? "" : String(chRaw).trim();
+          channel = block.channelMap[chKey];
+          if(!channel){
+            blockDbg.skippedNoChannel++;
+            blockDbg.channels[chKey || "(空)"] = (blockDbg.channels[chKey||"(空)"]||0) + 1;
+            continue;
+          }
+          blockDbg.channels[chKey] = (blockDbg.channels[chKey]||0) + 1;
+        } else {
+          channel = block.fixed;
+        }
+
+        const code = r[c.code]==null ? "" : String(r[c.code]).trim();
+        const prod = r[c.prod]==null ? "" : String(r[c.prod]).trim();
+
+        allRows.push({
+          年月: ym,
+          事業別: biz,
+          管道: channel,
+          商品代號: code,
+          商品名稱: prod,
+          數量: qty,
+          未稅金額: roundTo(amt, 2),
+        });
+        blockDbg.kept++;
+        blockDbg.bizes[biz] = (blockDbg.bizes[biz]||0) + 1;
+        monthRowCount++;
+      }
+
+      sheetDbg.blocks.push(blockDbg);
+    }
+
+    if(monthRowCount > 0) months.push(ym);
+    debug.push(sheetDbg);
+  }
+
+  return { rows:allRows, months, debug };
+}
+
+function num(v){
+  if(v===null || v===undefined || v==="") return 0;
+  const n = Number(v);
+  return isFinite(n) ? n : 0;
+}
+function roundTo(n, d){
+  const f = Math.pow(10,d);
+  return Math.round(n*f)/f;
+}
+
+/* ---------- Render result ---------- */
+function renderResult(result){
+  // 統計卡片
+  const totalRows = result.rows.length;
+  const monthSet = result.months.length;
+  let totalQty = 0, totalAmt = 0;
+  const channelCount = {};
+  const bizCount = {};
+  for(const row of result.rows){
+    totalQty += row.數量;
+    totalAmt += row.未稅金額;
+    channelCount[row.管道] = (channelCount[row.管道]||0) + 1;
+    bizCount[row.事業別] = (bizCount[row.事業別]||0) + 1;
+  }
+  const stats = [
+    { lbl:"總筆數",   val:totalRows.toLocaleString() },
+    { lbl:"涵蓋月份", val:monthSet + " 個月（" + result.months.join(", ") + "）" },
+    { lbl:"數量合計", val:Math.round(totalQty).toLocaleString() + " 套" },
+    { lbl:"未稅合計", val:formatMoney(totalAmt) },
+  ];
+  document.getElementById("stats-grid").innerHTML = stats.map(s=>`
+    <div class="stat"><div class="lbl">${s.lbl}</div><div class="val">${s.val}</div></div>
+  `).join("");
+
+  // 區塊明細
+  const detail = document.getElementById("block-detail");
+  let html = `<summary>📊 各月份 × 各區塊統計（點擊展開）</summary>`;
+  for(const sd of result.debug){
+    html += `<div style="margin-top:8px;padding:6px 10px;background:#fff;border:1px solid var(--border);border-radius:5px">`;
+    html += `<div style="font-weight:600;color:var(--accent)">${sd.sheet} (${sd.ym})</div>`;
+    for(const bk of sd.blocks){
+      html += `<div class="stat-line">— ${bk.name}: 採用 ${bk.kept} 筆`;
+      if(bk.skippedZeroAmt) html += `, <span style="color:var(--warn)">金額0排除 ${bk.skippedZeroAmt}</span>`;
+      if(bk.skippedHeader) html += `, 跳過header ${bk.skippedHeader}`;
+      if(bk.skippedNoChannel) html += `, <span style="color:var(--bad)">未識別管道 ${bk.skippedNoChannel}</span>`;
+      if(Object.keys(bk.channels).length>0){
+        const chs = Object.entries(bk.channels).map(([k,v])=>`${k}=${v}`).join(", ");
+        html += ` | 管道分布: ${chs}`;
+      }
+      if(Object.keys(bk.bizes).length>0){
+        const bzs = Object.entries(bk.bizes).map(([k,v])=>`${k}=${v}`).join(", ");
+        html += ` | 事業: ${bzs}`;
+      }
+      html += `</div>`;
+    }
+    html += `</div>`;
+  }
+  // 全体的な事業/管道分布
+  html += `<div style="margin-top:10px;padding:6px 10px;background:#eff6ff;border:1px solid #bfdbfe;border-radius:5px">`;
+  html += `<div style="font-weight:600">全月合計：</div>`;
+  html += `<div class="stat-line">事業別筆數：` + Object.entries(bizCount).map(([k,v])=>`${k}=${v}`).join(", ") + `</div>`;
+  html += `<div class="stat-line">管道別筆數：` + Object.entries(channelCount).map(([k,v])=>`${k}=${v}`).join(", ") + `</div>`;
+  html += `</div>`;
+  detail.innerHTML = html;
+
+  // 多層級統計
+  renderBreakdowns(result);
+
+  // 預覽 (前100筆)
+  const preview = result.rows.slice(0, 100);
+  let ph = "<thead><tr>" + OUT_HEADERS.map(h=>`<th>${h}</th>`).join("") + "</tr></thead>";
+  ph += "<tbody>";
+  for(const r of preview){
+    ph += "<tr>";
+    for(const h of OUT_HEADERS){
+      const v = r[h];
+      const isNum = (h==="數量" || h==="未稅金額");
+      ph += `<td class="${isNum?'num':''}">${isNum ? Number(v).toLocaleString() : (v??"")}</td>`;
+    }
+    ph += "</tr>";
+  }
+  ph += "</tbody>";
+  document.getElementById("preview-table").innerHTML = ph;
+}
+
+/* ---------- Multi-level breakdowns ---------- */
+function renderBreakdowns(result){
+  const rows = result.rows;
+  const months = result.months;
+
+  // 1. 月別合計
+  const byMonth = aggregate(rows, r => r.年月);
+  // 2. 事業別合計
+  const byBiz = aggregate(rows, r => r.事業別);
+  // 3. 管道別合計
+  const byCh  = aggregate(rows, r => r.管道);
+  // 4. 事業 × 管道
+  const byBizCh = aggregateCross(rows, "事業別", "管道");
+  // 5. 月別 × 管道
+  const byMonthCh = aggregateCross(rows, "年月", "管道");
+  // 6. 月別 × 事業
+  const byMonthBiz = aggregateCross(rows, "年月", "事業別");
+  // 7. 商品別 Top 50
+  const byProduct = aggregate(rows, r => r.商品代號 + "│" + r.商品名稱);
+
+  let html = "";
+
+  html += renderTable("📅 月別合計", byMonth, "年月", months);
+  html += renderTable("📦 事業別合計", byBiz, "事業別");
+  html += renderTable("🛒 管道別合計", byCh, "管道");
+  html += renderCross("📊 事業別 × 管道別 — 數量 / 未稅金額", byBizCh);
+  html += renderCross("📊 月別 × 管道別 — 數量 / 未稅金額", byMonthCh, months);
+  html += renderCross("📊 月別 × 事業別 — 數量 / 未稅金額", byMonthBiz, months);
+  html += renderProductTable("🏷️ 商品別 Top 50（按未稅金額）", byProduct, 50);
+
+  document.getElementById("breakdown-area").innerHTML = html;
+}
+
+function aggregate(rows, keyFn){
+  const map = {};
+  for(const r of rows){
+    const k = keyFn(r);
+    if(!map[k]) map[k] = { qty:0, amt:0, rows:0 };
+    map[k].qty += r.數量;
+    map[k].amt += r.未稅金額;
+    map[k].rows++;
+  }
+  return map;
+}
+function aggregateCross(rows, k1, k2){
+  const map = {};
+  for(const r of rows){
+    const a = r[k1], b = r[k2];
+    if(!map[a]) map[a] = {};
+    if(!map[a][b]) map[a][b] = { qty:0, amt:0 };
+    map[a][b].qty += r.數量;
+    map[a][b].amt += r.未稅金額;
+  }
+  return map;
+}
+
+function renderTable(title, dataMap, keyLabel, sortedKeys){
+  const keys = sortedKeys || Object.keys(dataMap).sort();
+  let totalQty = 0, totalAmt = 0, totalRows = 0;
+  let html = `<details open style="margin-top:10px"><summary style="cursor:pointer;font-weight:600;font-size:13px">${title}</summary>`;
+  html += `<table class="preview" style="margin-top:8px"><thead><tr>`;
+  html += `<th>${keyLabel}</th><th>筆數</th><th>數量</th><th>未稅金額</th>`;
+  html += `</tr></thead><tbody>`;
+  for(const k of keys){
+    const v = dataMap[k];
+    if(!v) continue;
+    totalQty += v.qty; totalAmt += v.amt; totalRows += v.rows;
+    html += `<tr><td>${k}</td><td class="num">${v.rows.toLocaleString()}</td><td class="num">${Math.round(v.qty).toLocaleString()}</td><td class="num">${Math.round(v.amt).toLocaleString()}</td></tr>`;
+  }
+  html += `<tr style="background:#dbeafe;font-weight:700"><td>合計</td><td class="num">${totalRows.toLocaleString()}</td><td class="num">${Math.round(totalQty).toLocaleString()}</td><td class="num">${Math.round(totalAmt).toLocaleString()}</td></tr>`;
+  html += `</tbody></table></details>`;
+  return html;
+}
+
+function renderCross(title, crossMap, sortedKeys1){
+  const k1Keys = sortedKeys1 || Object.keys(crossMap).sort();
+  // 全 k2 値を取得
+  const k2Set = new Set();
+  for(const k of k1Keys) for(const k2 of Object.keys(crossMap[k]||{})) k2Set.add(k2);
+  const k2Keys = Array.from(k2Set).sort();
+
+  let html = `<details open style="margin-top:10px"><summary style="cursor:pointer;font-weight:600;font-size:13px">${title}</summary>`;
+  html += `<table class="preview" style="margin-top:8px"><thead><tr><th rowspan="2"></th>`;
+  for(const k2 of k2Keys) html += `<th colspan="2">${k2}</th>`;
+  html += `<th colspan="2">合計</th></tr><tr>`;
+  for(let i=0;i<k2Keys.length+1;i++) html += `<th>數量</th><th>未稅</th>`;
+  html += `</tr></thead><tbody>`;
+
+  const colTotalQ = {}; const colTotalA = {};
+  let grandQ=0, grandA=0;
+  for(const k2 of k2Keys){ colTotalQ[k2]=0; colTotalA[k2]=0; }
+
+  for(const k of k1Keys){
+    let rowQ=0, rowA=0;
+    let row = `<tr><td><strong>${k}</strong></td>`;
+    for(const k2 of k2Keys){
+      const v = (crossMap[k]||{})[k2];
+      const q = v ? Math.round(v.qty) : 0;
+      const a = v ? Math.round(v.amt) : 0;
+      rowQ += q; rowA += a;
+      colTotalQ[k2] += q; colTotalA[k2] += a;
+      row += `<td class="num">${q?q.toLocaleString():"-"}</td><td class="num">${a?a.toLocaleString():"-"}</td>`;
+    }
+    grandQ += rowQ; grandA += rowA;
+    row += `<td class="num" style="background:#fef3c7"><strong>${rowQ.toLocaleString()}</strong></td><td class="num" style="background:#fef3c7"><strong>${rowA.toLocaleString()}</strong></td></tr>`;
+    html += row;
+  }
+  // 列合計行
+  html += `<tr style="background:#dbeafe;font-weight:700"><td>合計</td>`;
+  for(const k2 of k2Keys){
+    html += `<td class="num">${colTotalQ[k2].toLocaleString()}</td><td class="num">${colTotalA[k2].toLocaleString()}</td>`;
+  }
+  html += `<td class="num">${grandQ.toLocaleString()}</td><td class="num">${grandA.toLocaleString()}</td></tr>`;
+  html += `</tbody></table></details>`;
+  return html;
+}
+
+function renderProductTable(title, dataMap, topN){
+  const sorted = Object.entries(dataMap).sort((a,b)=>b[1].amt - a[1].amt).slice(0, topN);
+  let html = `<details style="margin-top:10px"><summary style="cursor:pointer;font-weight:600;font-size:13px">${title}（共 ${Object.keys(dataMap).length.toLocaleString()} 種商品，僅顯示前 ${topN}）</summary>`;
+  html += `<table class="preview" style="margin-top:8px"><thead><tr>`;
+  html += `<th>順位</th><th>商品代號</th><th>商品名稱</th><th>筆數</th><th>數量</th><th>未稅金額</th>`;
+  html += `</tr></thead><tbody>`;
+  let i = 1;
+  for(const [k,v] of sorted){
+    const [code, name] = k.split("│");
+    html += `<tr><td class="num">${i++}</td><td>${code}</td><td style="white-space:normal;max-width:400px">${name}</td><td class="num">${v.rows.toLocaleString()}</td><td class="num">${Math.round(v.qty).toLocaleString()}</td><td class="num">${Math.round(v.amt).toLocaleString()}</td></tr>`;
+  }
+  html += `</tbody></table></details>`;
+  return html;
+}
+
+/* ---------- Download ---------- */
+document.getElementById("btn-download").addEventListener("click", ()=>{
+  if(!STATE.output) return;
+  const ws = XLSX.utils.json_to_sheet(STATE.output.rows, { header: OUT_HEADERS });
+  // 列幅
+  ws["!cols"] = [
+    { wch:10 }, { wch:12 }, { wch:10 }, { wch:14 }, { wch:48 }, { wch:8 }, { wch:14 }
+  ];
+  const wb = XLSX.utils.book_new();
+  XLSX.utils.book_append_sheet(wb, ws, "實績明細");
+
+  const fname = `FY26實績(轉換後)_${formatTimestamp()}.xlsx`;
+  XLSX.writeFile(wb, fname);
+});
+
+function formatTimestamp(){
+  const d = new Date();
+  const pad = n => String(n).padStart(2,"0");
+  return d.getFullYear() + pad(d.getMonth()+1) + pad(d.getDate()) + "_" + pad(d.getHours()) + pad(d.getMinutes());
+}
+
+function formatMoney(n){
+  if(Math.abs(n) >= 1e8) return (n/1e8).toFixed(2)+" 億";
+  if(Math.abs(n) >= 1e4) return Math.round(n/1e4).toLocaleString()+" 萬";
+  return Math.round(n).toLocaleString();
+}
+</script>
+</body>
+</html>
