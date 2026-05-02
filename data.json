@@ -1,1 +1,13 @@
-{}
+{
+  "version": "1.0",
+  "generatedAt": null,
+  "budget": {
+    "amount": {},
+    "qty": {}
+  },
+  "actuals": {},
+  "actualRows": [],
+  "master": null,
+  "workingDays": null,
+  "holidays": null
+}
