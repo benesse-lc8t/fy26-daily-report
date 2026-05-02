@@ -485,52 +485,77 @@ document.addEventListener('DOMContentLoaded', function setupAuth(){
     userInfoEl.classList.add('show');
   }
 
+  console.log('[FY26 Auth] setupAuth started. window.netlifyIdentity =', typeof window.netlifyIdentity);
+
   if(!window.netlifyIdentity){
-    // Widget が読み込まれない場合は警告のみ表示してダッシュボードを通す
-    console.warn('[FY26] Netlify Identity widget not loaded — auth disabled.');
+    console.warn('[FY26 Auth] Netlify Identity widget not loaded — auth disabled.');
+    showGate();
     return;
   }
 
-  // init() を先に呼んで Widget を初期化
-  netlifyIdentity.init();
-
+  // ===== 重要：リスナーを先に登録、init() は最後 =====
+  // 'init' イベントは netlifyIdentity.init() 内で発火するため、先に on() でリスナーを掛けないと逃す
   netlifyIdentity.on('init', user => {
+    console.log('[FY26 Auth] init event:', user ? user.email : '(anonymous)');
     if(user){
       hideGate(user);
     } else {
       showGate();
-      // 未ログインなら自動でモーダルを開く（'login' タブ明示）
-      setTimeout(() => netlifyIdentity.open('login'), 500);
     }
   });
   netlifyIdentity.on('login', user => {
+    console.log('[FY26 Auth] login:', user.email);
     netlifyIdentity.close();
     hideGate(user);
   });
   netlifyIdentity.on('logout', () => {
+    console.log('[FY26 Auth] logout');
     showGate();
-    setTimeout(() => netlifyIdentity.open('login'), 200);
   });
   netlifyIdentity.on('error', err => {
-    console.error('[FY26] Identity error:', err);
+    console.error('[FY26 Auth] Identity error:', err);
   });
+  netlifyIdentity.on('open', () => console.log('[FY26 Auth] modal opened'));
+  netlifyIdentity.on('close', () => console.log('[FY26 Auth] modal closed'));
 
-  loginBtn.addEventListener('click', () => {
-    if(window.netlifyIdentity) netlifyIdentity.open('login');
+  // ボタンハンドラ（preventDefault でフォーム送信等の干渉を遮断）
+  loginBtn.addEventListener('click', e => {
+    e.preventDefault();
+    e.stopPropagation();
+    console.log('[FY26 Auth] login button clicked, calling open("login")…');
+    if(window.netlifyIdentity){
+      try{
+        netlifyIdentity.open('login');
+      } catch(err){
+        console.error('[FY26 Auth] open() failed:', err);
+      }
+    } else {
+      console.error('[FY26 Auth] netlifyIdentity is undefined at click time');
+    }
   });
-  logoutBtn.addEventListener('click', () => {
+  logoutBtn.addEventListener('click', e => {
+    e.preventDefault();
     if(window.netlifyIdentity) netlifyIdentity.logout();
   });
 
-  // Widget がイベント発火を逃した場合のフォールバック：
-  // currentUser() で現在状態を直接確認
+  // リスナー登録後に Widget を初期化
+  console.log('[FY26 Auth] calling netlifyIdentity.init()…');
+  try{
+    netlifyIdentity.init();
+  } catch(err){
+    console.error('[FY26 Auth] init() failed:', err);
+  }
+
+  // フォールバック：'init' イベントを既に逃している場合（Widget が auto-init 済み等）
+  // currentUser() で同期的に状態を取得して UI を初期化
   setTimeout(() => {
-    if(window.netlifyIdentity && !gate.classList.contains('show') && !userInfoEl.classList.contains('show')){
+    if(!gate.classList.contains('show') && !userInfoEl.classList.contains('show')){
       const u = netlifyIdentity.currentUser();
+      console.log('[FY26 Auth] fallback (1.5s) currentUser =', u ? u.email : 'null');
       if(u){ hideGate(u); }
-      else { showGate(); netlifyIdentity.open('login'); }
+      else { showGate(); }
     }
-  }, 1000);
+  }, 1500);
 });
 
 /* ============================================================
