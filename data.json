@@ -1,13 +1,1 @@
-{
-  "version": "1.0",
-  "generatedAt": null,
-  "budget": {
-    "amount": {},
-    "qty": {}
-  },
-  "actuals": {},
-  "actualRows": [],
-  "master": null,
-  "workingDays": null,
-  "holidays": null
-}
+{"generatedAt":"2026-05-02T07:16:17.833Z","version":"1.0","budget":{"amount":{},"qty":{}},"actuals":{},"actualRows":[],"master":null,"workingDays":null,"holidays":null}
