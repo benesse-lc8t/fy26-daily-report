@@ -468,7 +468,7 @@
 /* ============================================================
    Netlify Identity (login gate)
    ============================================================ */
-(function setupAuth(){
+document.addEventListener('DOMContentLoaded', function setupAuth(){
   const gate = document.getElementById('auth-gate');
   const userInfoEl = document.getElementById('user-info');
   const userEmailEl = document.getElementById('user-email');
@@ -491,13 +491,16 @@
     return;
   }
 
+  // init() を先に呼んで Widget を初期化
+  netlifyIdentity.init();
+
   netlifyIdentity.on('init', user => {
     if(user){
       hideGate(user);
     } else {
       showGate();
-      // 未ログインなら自動でモーダルを開く
-      setTimeout(() => netlifyIdentity.open(), 500);
+      // 未ログインなら自動でモーダルを開く（'login' タブ明示）
+      setTimeout(() => netlifyIdentity.open('login'), 500);
     }
   });
   netlifyIdentity.on('login', user => {
@@ -506,17 +509,29 @@
   });
   netlifyIdentity.on('logout', () => {
     showGate();
-    setTimeout(() => netlifyIdentity.open(), 200);
+    setTimeout(() => netlifyIdentity.open('login'), 200);
   });
   netlifyIdentity.on('error', err => {
     console.error('[FY26] Identity error:', err);
   });
 
-  loginBtn.addEventListener('click', () => netlifyIdentity.open());
-  logoutBtn.addEventListener('click', () => netlifyIdentity.logout());
+  loginBtn.addEventListener('click', () => {
+    if(window.netlifyIdentity) netlifyIdentity.open('login');
+  });
+  logoutBtn.addEventListener('click', () => {
+    if(window.netlifyIdentity) netlifyIdentity.logout();
+  });
 
-  netlifyIdentity.init();
-})();
+  // Widget がイベント発火を逃した場合のフォールバック：
+  // currentUser() で現在状態を直接確認
+  setTimeout(() => {
+    if(window.netlifyIdentity && !gate.classList.contains('show') && !userInfoEl.classList.contains('show')){
+      const u = netlifyIdentity.currentUser();
+      if(u){ hideGate(u); }
+      else { showGate(); netlifyIdentity.open('login'); }
+    }
+  }, 1000);
+});
 
 /* ============================================================
    FY26 商售業績日報儀表板
