@@ -12,6 +12,9 @@
 <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.7/dist/chart.umd.js"></script>
 <script>if(typeof Chart==="undefined"){document.write('<scr'+'ipt src="chart.umd.js"></scr'+'ipt>');}</script>
 
+<!-- Netlify Identity Widget -->
+<script src="https://identity.netlify.com/v1/netlify-identity-widget.js"></script>
+
 <style>
   :root{
     --bg:#F0F9FF;
@@ -263,9 +266,38 @@
   .status.success{color:var(--good);background:var(--good-bg);border-color:#86EFAC}
 
   .legend{font-size:11px;color:var(--muted);margin-top:6px}
+
+  /* ========== Netlify Identity: Auth gate ========== */
+  #auth-gate{position:fixed;top:0;left:0;width:100%;height:100%;background:linear-gradient(135deg,#F0F9FF 0%,#BAE6FD 60%,#7DD3FC 100%);display:none;align-items:center;justify-content:center;z-index:9999}
+  #auth-gate.show{display:flex}
+  #auth-gate .auth-card{background:#fff;border-radius:14px;padding:48px 56px;box-shadow:0 8px 32px rgba(12,74,110,.18);text-align:center;max-width:440px;border:0.5px solid #BAE6FD}
+  #auth-gate .auth-icon{font-size:52px;margin-bottom:16px;line-height:1}
+  #auth-gate h1{font-size:22px;font-weight:600;color:#0C4A6E;margin:0 0 8px;letter-spacing:.4px}
+  #auth-gate .sub{font-size:13px;color:#0369A1;margin-bottom:30px;line-height:1.6}
+  #auth-gate .login-btn{background:#0284C7;color:#fff;border:none;border-radius:8px;padding:12px 36px;font-size:14px;font-weight:600;cursor:pointer;font-family:inherit;transition:all .15s;letter-spacing:.5px;box-shadow:0 2px 8px rgba(2,132,199,.25)}
+  #auth-gate .login-btn:hover{background:#0369A1;box-shadow:0 4px 12px rgba(2,132,199,.35);transform:translateY(-1px)}
+  #auth-gate .auth-hint{font-size:11px;color:var(--muted);margin-top:18px}
+
+  /* Logout button in header */
+  .user-info{display:none;align-items:center;gap:8px;margin-left:14px;padding-left:14px;border-left:1px solid rgba(255,255,255,.25)}
+  .user-info.show{display:flex}
+  .user-info .user-email{font-size:11px;opacity:.9;color:#fff;font-weight:500}
+  .user-info .logout-btn{background:rgba(255,255,255,.15);color:#fff;border:1px solid rgba(255,255,255,.3);border-radius:6px;padding:5px 12px;font-size:11px;cursor:pointer;font-family:inherit;transition:all .15s}
+  .user-info .logout-btn:hover{background:rgba(255,255,255,.25);border-color:rgba(255,255,255,.5)}
 </style>
 </head>
 <body>
+
+<!-- Netlify Identity ログインゲート -->
+<div id="auth-gate">
+  <div class="auth-card">
+    <div class="auth-icon">🔐</div>
+    <h1>FY26 商售業績日報</h1>
+    <div class="sub">儀表板需要登入後才能查看。<br>請使用 Netlify Identity 帳號登入。</div>
+    <button class="login-btn" id="auth-login-btn">登入 / 註冊</button>
+    <div class="auth-hint">如未收到邀請信，請聯絡管理者</div>
+  </div>
+</div>
 
 <header>
   <div class="brand">FY26 商售業績日報</div>
@@ -278,6 +310,10 @@
   <div class="header-meta">
     <div class="data-status" id="data-status">載入中…</div>
     <div class="data-updated" id="data-updated"></div>
+  </div>
+  <div class="user-info" id="user-info">
+    <span class="user-email" id="user-email"></span>
+    <button class="logout-btn" id="logout-btn" title="登出">登出</button>
   </div>
 </header>
 
@@ -429,6 +465,59 @@
 </main>
 
 <script>
+/* ============================================================
+   Netlify Identity (login gate)
+   ============================================================ */
+(function setupAuth(){
+  const gate = document.getElementById('auth-gate');
+  const userInfoEl = document.getElementById('user-info');
+  const userEmailEl = document.getElementById('user-email');
+  const loginBtn = document.getElementById('auth-login-btn');
+  const logoutBtn = document.getElementById('logout-btn');
+
+  function showGate(){
+    gate.classList.add('show');
+    userInfoEl.classList.remove('show');
+  }
+  function hideGate(user){
+    gate.classList.remove('show');
+    userEmailEl.textContent = user.email || (user.user_metadata && user.user_metadata.full_name) || 'User';
+    userInfoEl.classList.add('show');
+  }
+
+  if(!window.netlifyIdentity){
+    // Widget が読み込まれない場合は警告のみ表示してダッシュボードを通す
+    console.warn('[FY26] Netlify Identity widget not loaded — auth disabled.');
+    return;
+  }
+
+  netlifyIdentity.on('init', user => {
+    if(user){
+      hideGate(user);
+    } else {
+      showGate();
+      // 未ログインなら自動でモーダルを開く
+      netlifyIdentity.open();
+    }
+  });
+  netlifyIdentity.on('login', user => {
+    netlifyIdentity.close();
+    hideGate(user);
+  });
+  netlifyIdentity.on('logout', () => {
+    showGate();
+    setTimeout(() => netlifyIdentity.open(), 200);
+  });
+  netlifyIdentity.on('error', err => {
+    console.error('[FY26] Identity error:', err);
+  });
+
+  loginBtn.addEventListener('click', () => netlifyIdentity.open());
+  logoutBtn.addEventListener('click', () => netlifyIdentity.logout());
+
+  netlifyIdentity.init();
+})();
+
 /* ============================================================
    FY26 商售業績日報儀表板
    ============================================================ */
