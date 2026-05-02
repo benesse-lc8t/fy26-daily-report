@@ -497,7 +497,7 @@
     } else {
       showGate();
       // 未ログインなら自動でモーダルを開く
-      netlifyIdentity.open();
+      setTimeout(() => netlifyIdentity.open(), 500);
     }
   });
   netlifyIdentity.on('login', user => {
