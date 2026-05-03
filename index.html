@@ -15,9 +15,6 @@
 <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.7/dist/chart.umd.js"></script>
 <script>if(typeof Chart==="undefined"){document.write('<scr'+'ipt src="chart.umd.js"></scr'+'ipt>');}</script>
 
-<!-- Netlify Identity Widget（同期ロード必須：setupAuth 実行時に window.netlifyIdentity が必要） -->
-<script src="https://identity.netlify.com/v1/netlify-identity-widget.js"></script>
-
 <style>
   :root{
     --bg:#F0F9FF;
@@ -270,85 +267,9 @@
 
   .legend{font-size:11px;color:var(--muted);margin-top:6px}
 
-  /* ========== Netlify Identity: Auth gate ========== */
-  #auth-gate{position:fixed;top:0;left:0;width:100%;height:100%;background:linear-gradient(135deg,#F0F9FF 0%,#BAE6FD 60%,#7DD3FC 100%);display:none;align-items:center;justify-content:center;z-index:1000;-webkit-overflow-scrolling:touch;overflow-y:auto}
-  #auth-gate.show{display:flex}
-  /* Netlify Identity Widget を最前面に固定（auth-gate の z-index 1000 より上） */
-  #netlify-identity-widget,
-  .netlify-identity-widget,
-  [class*="netlify-identity"],
-  [data-netlify-identity-menu],
-  [data-netlify-identity-button]{z-index:99999 !important}
-  /* Widget の wrapper（コンテンツがある時のみ）を viewport 全面に fixed
-     :not(:empty) で「モーダルが開いている時だけ」に絞り込み（空 div 状態では非適用） */
-  #netlify-identity-widget:not(:empty),
-  .netlify-identity-widget{
-    position:fixed !important;
-    top:0 !important; left:0 !important;
-    width:100vw !important; height:100vh !important;
-    visibility:visible !important;
-    opacity:1 !important;
-  }
-  /* 注意：iframe 自体に position:fixed を強制してはいけない。
-     iframe は modal-content（中央カード）内に配置されるため、
-     fixed にすると親から離脱して 300x150 のデフォルトサイズで画面隅に飛ぶ */
-  /* iframe にデバッグ用の赤枠（位置確認用） + 最低サイズ確保 */
-  #netlify-identity-widget iframe,
-  .netlify-identity-widget iframe,
-  [class*="netlify-identity"] iframe{
-    border:3px solid red !important;
-    z-index:999999 !important;
-    visibility:visible !important;
-    opacity:1 !important;
-    min-width:320px !important;
-    min-height:400px !important;
-  }
-  /* スマホ対応：Identity モーダル内のタップ反応最適化 */
-  .netlify-identity-modal,
-  .netlify-identity-modal *,
-  [class*="netlify-identity"] button,
-  [class*="netlify-identity"] input{-webkit-tap-highlight-color:rgba(2,132,199,.3);touch-action:manipulation}
-  #auth-gate .auth-card{background:#fff;border-radius:14px;padding:48px 56px;box-shadow:0 8px 32px rgba(12,74,110,.18);text-align:center;max-width:440px;border:0.5px solid #BAE6FD}
-  #auth-gate .auth-icon{font-size:52px;margin-bottom:16px;line-height:1}
-  #auth-gate h1{font-size:22px;font-weight:600;color:#0C4A6E;margin:0 0 8px;letter-spacing:.4px}
-  #auth-gate .sub{font-size:13px;color:#0369A1;margin-bottom:30px;line-height:1.6}
-  #auth-gate .login-btn{background:#0284C7;color:#fff;border:none;border-radius:8px;padding:14px 36px;font-size:15px;font-weight:600;cursor:pointer;font-family:inherit;transition:all .15s;letter-spacing:.5px;box-shadow:0 2px 8px rgba(2,132,199,.25);-webkit-tap-highlight-color:rgba(255,255,255,.3);touch-action:manipulation;min-height:48px;min-width:160px}
-  #auth-gate .login-btn:hover{background:#0369A1;box-shadow:0 4px 12px rgba(2,132,199,.35);transform:translateY(-1px)}
-  #auth-gate .login-btn:active{background:#075985;transform:translateY(0)}
-  #auth-gate .auth-hint{font-size:11px;color:var(--muted);margin-top:18px}
-
-  /* ========== Mobile: viewport ≤ 768px 用調整 ========== */
-  @media (max-width: 768px){
-    #auth-gate{padding:20px;align-items:flex-start;padding-top:40px}
-    #auth-gate .auth-card{padding:32px 24px;max-width:100%;width:100%}
-    #auth-gate .auth-icon{font-size:44px}
-    #auth-gate h1{font-size:19px}
-    #auth-gate .sub{font-size:13px;margin-bottom:24px}
-    #auth-gate .login-btn{width:100%;padding:16px;font-size:16px;min-height:52px}
-    /* Netlify Identity モーダルをスマホ全幅に */
-    [class*="netlify-identity"] iframe{max-width:100vw !important;width:100vw !important}
-  }
-
-  /* Logout button in header */
-  .user-info{display:none;align-items:center;gap:8px;margin-left:14px;padding-left:14px;border-left:1px solid rgba(255,255,255,.25)}
-  .user-info.show{display:flex}
-  .user-info .user-email{font-size:11px;opacity:.9;color:#fff;font-weight:500}
-  .user-info .logout-btn{background:rgba(255,255,255,.15);color:#fff;border:1px solid rgba(255,255,255,.3);border-radius:6px;padding:5px 12px;font-size:11px;cursor:pointer;font-family:inherit;transition:all .15s}
-  .user-info .logout-btn:hover{background:rgba(255,255,255,.25);border-color:rgba(255,255,255,.5)}
 </style>
 </head>
 <body>
-
-<!-- Netlify Identity ログインゲート -->
-<div id="auth-gate">
-  <div class="auth-card">
-    <div class="auth-icon">🔐</div>
-    <h1>FY26 商售業績日報</h1>
-    <div class="sub">儀表板需要登入後才能查看。<br>請使用 Netlify Identity 帳號登入。</div>
-    <button class="login-btn" id="auth-login-btn">登入 / 註冊</button>
-    <div class="auth-hint">如未收到邀請信，請聯絡管理者</div>
-  </div>
-</div>
 
 <header>
   <div class="brand">FY26 商售業績日報</div>
@@ -361,10 +282,6 @@
   <div class="header-meta">
     <div class="data-status" id="data-status">載入中…</div>
     <div class="data-updated" id="data-updated"></div>
-  </div>
-  <div class="user-info" id="user-info">
-    <span class="user-email" id="user-email"></span>
-    <button class="logout-btn" id="logout-btn" title="登出">登出</button>
   </div>
 </header>
 
@@ -516,134 +433,6 @@
 </main>
 
 <script>
-/* ============================================================
-   Netlify Identity (login gate)
-   ============================================================ */
-document.addEventListener('DOMContentLoaded', function setupAuth(){
-  const gate = document.getElementById('auth-gate');
-  const userInfoEl = document.getElementById('user-info');
-  const userEmailEl = document.getElementById('user-email');
-  const loginBtn = document.getElementById('auth-login-btn');
-  const logoutBtn = document.getElementById('logout-btn');
-
-  function showGate(){
-    gate.classList.add('show');
-    userInfoEl.classList.remove('show');
-  }
-  function hideGate(user){
-    gate.classList.remove('show');
-    userEmailEl.textContent = user.email || (user.user_metadata && user.user_metadata.full_name) || 'User';
-    userInfoEl.classList.add('show');
-  }
-
-  console.log('[FY26 Auth] setupAuth started. window.netlifyIdentity =', typeof window.netlifyIdentity);
-
-  if(!window.netlifyIdentity){
-    console.warn('[FY26 Auth] Netlify Identity widget not loaded — auth disabled.');
-    showGate();
-    return;
-  }
-
-  // ===== 重要：リスナーを先に登録、init() は最後 =====
-  // 'init' イベントは netlifyIdentity.init() 内で発火するため、先に on() でリスナーを掛けないと逃す
-  // ハッシュトークン（invite/recovery/confirmation）がある場合は user 状態に関わらずモーダルを開く
-  netlifyIdentity.on('init', user => {
-    const hash = location.hash || '';
-    const hasToken = hash.includes('recovery_token') ||
-                     hash.includes('invite_token') ||
-                     hash.includes('confirmation_token');
-    console.log('[FY26 Auth] init event:', user ? user.email : '(anonymous)', '| hasToken:', hasToken);
-
-    if(hasToken){
-      // トークン優先：ログイン済みでもパスワード設定モーダルを開く
-      showGate();
-      setTimeout(() => {
-        try{ netlifyIdentity.open(); } catch(err){ console.error('[FY26 Auth] token open failed:', err); }
-      }, 300);
-    } else if(user){
-      hideGate(user);
-    } else {
-      showGate();
-    }
-  });
-  netlifyIdentity.on('login', user => {
-    console.log('[FY26 Auth] login:', user.email);
-    netlifyIdentity.close();
-    hideGate(user);
-  });
-  netlifyIdentity.on('logout', () => {
-    console.log('[FY26 Auth] logout');
-    showGate();
-  });
-  netlifyIdentity.on('error', err => {
-    console.error('[FY26 Auth] Identity error:', err);
-  });
-  // モーダル open/close 時に auth-gate を退避してモーダルを可視化
-  netlifyIdentity.on('open', () => {
-    console.log('[FY26 Auth] modal opened — hiding auth-gate to expose modal');
-    gate.classList.remove('show');
-  });
-  netlifyIdentity.on('close', () => {
-    console.log('[FY26 Auth] modal closed');
-    // モーダルを閉じた時点でユーザーがいなければゲートを再表示
-    if(!netlifyIdentity.currentUser()){
-      gate.classList.add('show');
-    }
-  });
-
-  // ボタンハンドラ（click 統一・touchstart は使わない／二重発火防止）
-  // PC・スマホ共通でクリックイベント1つだけ。touch-action:manipulation で iOS の 300ms 遅延も無効化済み
-  function handleLoginClick(e){
-    if(e){ e.preventDefault(); e.stopPropagation(); }
-    console.log('[FY26 Auth] login button clicked, calling open("login")…');
-    if(window.netlifyIdentity){
-      try{
-        netlifyIdentity.open('login');
-      } catch(err){
-        console.error('[FY26 Auth] open() failed:', err);
-      }
-    } else {
-      console.error('[FY26 Auth] netlifyIdentity is undefined at click time');
-    }
-  }
-  loginBtn.addEventListener('click', handleLoginClick);
-
-  logoutBtn.addEventListener('click', e => {
-    e.preventDefault();
-    e.stopPropagation();
-    if(window.netlifyIdentity) netlifyIdentity.logout();
-  });
-
-  // リスナー登録後に Widget を初期化
-  console.log('[FY26 Auth] calling netlifyIdentity.init()…');
-  try{
-    netlifyIdentity.init();
-  } catch(err){
-    console.error('[FY26 Auth] init() failed:', err);
-  }
-
-  // フォールバック：'init' イベントを既に逃している場合（Widget が auto-init 済み等）
-  // ハッシュトークンも考慮して同じロジックで状態決定
-  setTimeout(() => {
-    if(!gate.classList.contains('show') && !userInfoEl.classList.contains('show')){
-      const u = netlifyIdentity.currentUser();
-      const hash = location.hash || '';
-      const hasToken = hash.includes('recovery_token') ||
-                       hash.includes('invite_token') ||
-                       hash.includes('confirmation_token');
-      console.log('[FY26 Auth] fallback (1.5s) currentUser =', u ? u.email : 'null', '| hasToken:', hasToken);
-      if(hasToken){
-        showGate();
-        try{ netlifyIdentity.open(); } catch(err){ console.error('[FY26 Auth] fallback token open failed:', err); }
-      } else if(u){
-        hideGate(u);
-      } else {
-        showGate();
-      }
-    }
-  }, 1500);
-});
-
 /* ============================================================
    FY26 商售業績日報儀表板
    ============================================================ */
