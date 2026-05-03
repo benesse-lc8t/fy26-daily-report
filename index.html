@@ -274,9 +274,20 @@
   #auth-gate{position:fixed;top:0;left:0;width:100%;height:100%;background:linear-gradient(135deg,#F0F9FF 0%,#BAE6FD 60%,#7DD3FC 100%);display:none;align-items:center;justify-content:center;z-index:1000;-webkit-overflow-scrolling:touch;overflow-y:auto}
   #auth-gate.show{display:flex}
   /* Netlify Identity Widget を最前面に固定（auth-gate の z-index 1000 より上） */
+  /* Edge / Mobile での stacking context 競合対策：複数セレクタで網羅 */
   #netlify-identity-widget,
   .netlify-identity-widget,
-  [class*="netlify-identity"]{z-index:99999 !important}
+  [class*="netlify-identity"],
+  [data-netlify-identity-menu],
+  [data-netlify-identity-button],
+  iframe[src*="identity"]{z-index:99999 !important}
+  /* iframe / wrapper を強制的に viewport 全面 fixed に */
+  [data-netlify-identity-menu],
+  .netlify-identity-widget,
+  iframe[src*="identity"]{position:fixed !important}
+  /* Edge / iOS Safari での非表示問題への保険：強制可視化 + GPU レイヤー化 */
+  .netlify-identity-widget,
+  [class*="netlify-identity"]{visibility:visible !important;opacity:1 !important;-webkit-transform:translateZ(0);transform:translateZ(0)}
   /* スマホ対応：Identity モーダル内のタップ反応最適化 */
   .netlify-identity-modal,
   .netlify-identity-modal *,
