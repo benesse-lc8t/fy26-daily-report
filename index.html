@@ -584,19 +584,19 @@ document.addEventListener('DOMContentLoaded', function setupAuth(){
     console.error('[FY26 Auth] init() failed:', err);
   }
 
-  // URL ハッシュから invite_token / recovery_token / confirmation_token を明示検出
-  // （スマホブラウザでは Widget の自動検出が効かないケースがあるため明示処理）
-  setTimeout(() => {
-    const hash = window.location.hash || '';
-    let tokenType = null;
-    if(hash.indexOf('invite_token=') !== -1) tokenType = 'signup';
-    else if(hash.indexOf('recovery_token=') !== -1) tokenType = 'recovery';
-    else if(hash.indexOf('confirmation_token=') !== -1) tokenType = 'login';
-    if(tokenType){
-      console.log('[FY26 Auth] URL token detected, opening modal:', tokenType);
-      try{ netlifyIdentity.open(tokenType); } catch(err){ console.error('[FY26 Auth] token open failed:', err); }
-    }
-  }, 600);
+  // URL ハッシュから invite_token / recovery_token / confirmation_token を検出
+  // open() を引数なしで呼ぶ → Widget が hash を自動判定してパスワード設定モーダル等を開く
+  // （引数付きで type を強制すると token 処理がバイパスされてしまうケースがある）
+  if(location.hash && (
+    location.hash.includes('invite_token') ||
+    location.hash.includes('recovery_token') ||
+    location.hash.includes('confirmation_token')
+  )){
+    console.log('[FY26 Auth] URL token detected in hash, auto-opening modal:', location.hash.substring(0, 30) + '…');
+    setTimeout(() => {
+      try{ netlifyIdentity.open(); } catch(err){ console.error('[FY26 Auth] token open failed:', err); }
+    }, 500);
+  }
 
   // フォールバック：'init' イベントを既に逃している場合（Widget が auto-init 済み等）
   // currentUser() で同期的に状態を取得して UI を初期化
