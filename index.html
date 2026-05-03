@@ -274,20 +274,35 @@
   #auth-gate{position:fixed;top:0;left:0;width:100%;height:100%;background:linear-gradient(135deg,#F0F9FF 0%,#BAE6FD 60%,#7DD3FC 100%);display:none;align-items:center;justify-content:center;z-index:1000;-webkit-overflow-scrolling:touch;overflow-y:auto}
   #auth-gate.show{display:flex}
   /* Netlify Identity Widget を最前面に固定（auth-gate の z-index 1000 より上） */
-  /* Edge / Mobile での stacking context 競合対策：複数セレクタで網羅 */
   #netlify-identity-widget,
   .netlify-identity-widget,
   [class*="netlify-identity"],
   [data-netlify-identity-menu],
-  [data-netlify-identity-button],
-  iframe[src*="identity"]{z-index:99999 !important}
-  /* iframe / wrapper を強制的に viewport 全面 fixed に */
-  [data-netlify-identity-menu],
-  .netlify-identity-widget,
-  iframe[src*="identity"]{position:fixed !important}
-  /* Edge / iOS Safari での非表示問題への保険：強制可視化 + GPU レイヤー化 */
-  .netlify-identity-widget,
-  [class*="netlify-identity"]{visibility:visible !important;opacity:1 !important;-webkit-transform:translateZ(0);transform:translateZ(0)}
+  [data-netlify-identity-button]{z-index:99999 !important}
+  /* Widget の wrapper（コンテンツがある時のみ）を viewport 全面に fixed
+     :not(:empty) で「モーダルが開いている時だけ」に絞り込み（空 div 状態では非適用） */
+  #netlify-identity-widget:not(:empty),
+  .netlify-identity-widget{
+    position:fixed !important;
+    top:0 !important; left:0 !important;
+    width:100vw !important; height:100vh !important;
+    visibility:visible !important;
+    opacity:1 !important;
+  }
+  /* 注意：iframe 自体に position:fixed を強制してはいけない。
+     iframe は modal-content（中央カード）内に配置されるため、
+     fixed にすると親から離脱して 300x150 のデフォルトサイズで画面隅に飛ぶ */
+  /* iframe にデバッグ用の赤枠（位置確認用） + 最低サイズ確保 */
+  #netlify-identity-widget iframe,
+  .netlify-identity-widget iframe,
+  [class*="netlify-identity"] iframe{
+    border:3px solid red !important;
+    z-index:999999 !important;
+    visibility:visible !important;
+    opacity:1 !important;
+    min-width:320px !important;
+    min-height:400px !important;
+  }
   /* スマホ対応：Identity モーダル内のタップ反応最適化 */
   .netlify-identity-modal,
   .netlify-identity-modal *,
