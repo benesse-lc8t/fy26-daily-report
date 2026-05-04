@@ -441,6 +441,28 @@ const BIZ_LIST = ["學習商品","學習周邊","生活周邊","Mirafeel","數�
 const CHANNEL_LIST = ["WEB","TM","KOL","EC","經代銷"];
 const MONTHS = ["4月","5月","6月","7月","8月","9月","10月","11月","12月","1月","2月","3月"];
 
+// 月別テーマカラー（ヘッダーのグラデーション）
+const MONTH_THEMES = {
+  "4月":  ["#DB2777","#F472B6"], // 桜
+  "5月":  ["#15803D","#4ADE80"], // 新緑
+  "6月":  ["#6D28D9","#A78BFA"], // 紫陽花
+  "7月":  ["#0E7490","#22D3EE"], // 海・夏空
+  "8月":  ["#C2410C","#FB923C"], // ひまわり
+  "9月":  ["#BE123C","#FB7185"], // 秋桜
+  "10月": ["#9A3412","#F97316"], // 紅葉
+  "11月": ["#78350F","#B45309"], // 晩秋
+  "12月": ["#14532D","#B91C1C"], // 冬・聖夜
+  "1月":  ["#1E3A8A","#93C5FD"], // 新年・雪
+  "2月":  ["#831843","#DB2777"], // 梅・節分
+  "3月":  ["#9D174D","#F9A8D4"]  // 春の訪れ
+};
+function applyMonthTheme(month){
+  const theme = MONTH_THEMES[month];
+  if(!theme) return;
+  const header = document.querySelector("header");
+  if(header) header.style.background = `linear-gradient(135deg, ${theme[0]}, ${theme[1]})`;
+}
+
 const CHANNEL_MAP = {
   "shopline-WEB":"WEB","shopline-生活館":"WEB",
   "蝦皮-生活館":"EC","蝦皮-學習館":"EC",
@@ -1459,8 +1481,10 @@ function initMonthSelector(){
   STATE.selectedMonth = STATE.selectedMonth || defaultMonth;
   sel.innerHTML = MONTHS.map(m=>`<option value="${m}" ${m===STATE.selectedMonth?"selected":""}>${m}</option>`).join("");
   sel.disabled = false;
+  applyMonthTheme(STATE.selectedMonth);
   sel.onchange = e=>{
     STATE.selectedMonth = e.target.value;
+    applyMonthTheme(STATE.selectedMonth);
     const t = STATE.activeTab;
     if(t === "main") renderMainTab();
     else if(t === "trend") renderTrendTab();
