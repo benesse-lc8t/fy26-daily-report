@@ -272,7 +272,7 @@
 <body>
 
 <header>
-  <div class="brand">FY26 商售業績日報</div>
+  <div class="brand">FY26商售業績日報（β版）</div>
   <div class="month-bar">
     <label>本月份</label>
     <select id="month-select" disabled>
@@ -303,7 +303,7 @@
     <button class="tab-btn" data-tab="biz-學習周邊">學習周邊</button>
     <button class="tab-btn" data-tab="biz-生活周邊">生活周邊</button>
     <button class="tab-btn" data-tab="biz-Mirafeel">Mirafeel</button>
-    <button class="tab-btn" data-tab="biz-數位典藏">數位典藏</button>
+    <button class="tab-btn" data-tab="biz-數位典藏">數位典藏（β版）</button>
     <button class="tab-btn" data-tab="ch-WEB">WEB</button>
     <button class="tab-btn" data-tab="ch-TM">TM</button>
     <button class="tab-btn" data-tab="ch-KOL">KOL</button>
@@ -2060,7 +2060,7 @@ function renderWeeklyTab(){
 
   html += '<div class="chart-box tall"><canvas id="chart-weekly"></canvas></div>';
   html += '<div class="scroll-x" style="margin-top:14px"><table class="grid" id="weekly-table"></table></div>';
-  html += '<div class="legend">※ 週的定義：星期一〜星期日。營業日數：扣除週末（六、日）和國定假日。日次平均 = 週銷售合計 ÷ 該週營業日數。表格的最近一週位於最左邊。</div>';
+  html += '<div class="legend">※ 週的定義：星期一〜星期日。營業日數：扣除週末（六、日）和國定假日。日次平均 = 週銷售合計 ÷ 該週營業日數。表格由左至右為時間順序（最舊 → 最新）。</div>';
   html += '</div>';
 
   document.getElementById("panel-weekly").innerHTML = html;
@@ -2121,32 +2121,31 @@ function renderWeeklyContent(){
     options: weeklyChartOptions(),
   });
 
-  // テーブル（直近週を一番左、列＝週、行＝指標）
-  const reversed = data.slice().reverse(); // 直近週 → 古い週
+  // テーブル（グラフと同じ方向：左＝古い → 右＝直近、列＝週、行＝指標）
   let html = '<thead><tr>';
   html += '<th class="l1" style="text-align:left">指標</th>';
-  for(const d of reversed){
+  for(const d of data){
     html += `<th class="l2">${formatWeekLabel(d.start, d.end)}</th>`;
   }
   html += '</tr></thead><tbody>';
 
   // Row 1: 週銷售合計
   html += '<tr><td class="dim">週銷售合計（萬）</td>';
-  for(const d of reversed){
+  for(const d of data){
     html += `<td>${Math.floor(d.total/10000).toLocaleString()}</td>`;
   }
   html += '</tr>';
 
   // Row 2: 營業日數
   html += '<tr><td class="dim">營業日數</td>';
-  for(const d of reversed){
+  for(const d of data){
     html += `<td>${d.days}</td>`;
   }
   html += '</tr>';
 
   // Row 3: 日次平均
   html += '<tr><td class="dim">日次平均（萬）</td>';
-  for(const d of reversed){
+  for(const d of data){
     html += `<td>${Math.floor(d.avg/10000).toLocaleString()}</td>`;
   }
   html += '</tr>';
