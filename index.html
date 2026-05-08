@@ -422,8 +422,8 @@
     <div class="card subtle">
       <h2>🔧 實績檔轉換器</h2>
       <div class="card-desc">
-        將原始「FY26商售實績明細」（橫向 4 區塊結構）轉為縱向格式。
-        自動套用：TM / 經代銷 區塊「未稅金額」÷ 1.05 修正、事業名正規化（學習→學習商品、數位經典→數位典藏）、未稅金額 0 列排除。
+        將原始「FY26商售實績明細」（每月 3 工作表 — WEB&KOL / EC / TM）轉為縱向格式。
+        自動套用：事業名正規化（學習→學習商品、數位經典→數位典藏）、小計列（事業欄為 0/總計）跳過、未稅金額 0 列排除。商品名稱由儀表板從商品主檔補完。
         亦可使用獨立工具：<a href="converter.html" target="_blank">→ 開啟 converter.html</a>
       </div>
       <div class="dropzone" id="conv-dropzone">
@@ -431,7 +431,7 @@
         <div class="dropzone-icon">🔄</div>
         <div class="dropzone-title">拖放原始實績檔（FY26商售實績明細）</div>
         <div class="dropzone-sub">或 <a>點擊選擇檔案</a></div>
-        <div class="dropzone-hint">處理 2604 / 2605 / … 等月別工作表</div>
+        <div class="dropzone-hint">處理 2604WEB&KOL / 2604 EC / 2604TM / 2605WEB&KOL / … 等月別工作表</div>
       </div>
       <div class="status" id="conv-status">尚未選擇檔案。</div>
       <div id="conv-result"></div>
@@ -870,7 +870,7 @@ async function runImport(){
             setStatus(`🔄 轉換中… ${msg}（${(pct*100).toFixed(0)}%）`, "");
           });
           if(result.rows.length === 0){
-            errors.push("實績轉換結果為 0 筆。請確認此為原始實績檔（含 2604 / 2605 等月別工作表）。");
+            errors.push("實績轉換結果為 0 筆。請確認此為原始實績檔（含 2604WEB&KOL / 2604 EC / 2604TM 等月別工作表）。");
           } else {
             applyConvertedRows(result);
             const monthCount = Object.keys(STATE.actuals).length;
@@ -932,77 +932,84 @@ function convNormalizeBiz(name){
   const t = String(name).trim();
   return CONV_BIZ_NAME_MAP[t] || t;
 }
-const CONV_BLOCKS = [
-  { name:"WEB/KOL", cols:{ biz:1,  code:2,  prod:3,  date:4,  channel:5,  qty:6,  amt:7  }, channelMap:{ "網站":"WEB", "團購":"KOL" }, taxed:false },
-  { name:"EC",      cols:{ biz:12, code:13, prod:14, date:15, channel:18, qty:16, amt:17 }, fixed:"EC",     taxed:false },
-  { name:"TM",      cols:{ biz:22, code:23, prod:24, date:25, channel:26, qty:27, amt:28 }, fixed:"TM",     taxed:true  },
-  { name:"經代銷",  cols:{ biz:34, code:35, prod:36, date:37, channel:38, qty:39, amt:40 }, fixed:"經代銷", taxed:true  },
-];
-function convSheetNameToYM(name){
-  const m = /^(\d{2})(\d{2})$/.exec(String(name).trim());
-  if(!m) return null;
-  const mm = parseInt(m[2],10);
-  if(mm<1||mm>12) return null;
-  return `20${m[1]}/${String(mm).padStart(2,"0")}`;
-}
+
+// 新形式：月毎に WEB&KOL / EC / TM の3シートに分割。シート名 "<YYMM><suffix>"。
+// 經代銷 はFY26新形式では存在せず、空のプレースホルダーシート（2606〜2703）はスキップ。
+const CONV_SHEET_RE = /^(\d{2})(\d{2})\s*(WEB&KOL|EC|TM)$/;
+const CONV_SKIP_BIZ = new Set(['', '0', '事業', '事業別', '總計', '(空白)', '(全部)']);
+const CONV_SHEET_CONFIG = {
+  // ヘッダー行は2（行0-1にピボットフィルタ情報）。データは行3以降。
+  // 列インデックスは sheet_to_json(header:1) の 0-base 配列。
+  'WEB&KOL': {
+    headerRow: 2,
+    cols: { biz:0, code:1, date:2, channel:3, qty:4, amt:5 },
+    channelMap: { '網站':'WEB', '團購':'KOL' },
+  },
+  'EC': {
+    headerRow: 2,
+    cols: { biz:0, code:1, date:2, qty:3, amt:4 },
+    fixed: 'EC',
+  },
+  'TM': {
+    // 事業 / 商品編號 / 發貨日期 / 管道 / 商品數量 / 含稅金額 / 加總-未稅價格 / 發貨日期(複製)
+    headerRow: 2,
+    cols: { biz:0, code:1, date:2, qty:4, amt:6 },
+    fixed: 'TM',
+  },
+};
 
 async function convertOriginalActuals(wb, onProgress){
   const allRows = [];
   const monthsSet = new Set();
-  // 月別シートのみ抽出
-  const monthSheets = wb.SheetNames.filter(n => convSheetNameToYM(n));
+  const monthSheets = wb.SheetNames.filter(n => CONV_SHEET_RE.test(n.trim()));
   for(let si=0; si<monthSheets.length; si++){
     const sheetName = monthSheets[si];
+    const m = CONV_SHEET_RE.exec(sheetName.trim());
+    const yy = m[1], mm = m[2], suffix = m[3];
+    const ym = `20${yy}/${mm}`;
+    const cfg = CONV_SHEET_CONFIG[suffix];
     if(onProgress){
       onProgress(`處理 ${sheetName}（${si+1}/${monthSheets.length}）`, si / monthSheets.length);
-      // UI 更新を許可
       await new Promise(r => setTimeout(r, 0));
     }
-    const ym = convSheetNameToYM(sheetName);
     const sheet = wb.Sheets[sheetName];
     const rows = XLSX.utils.sheet_to_json(sheet, {header:1, defval:null, raw:true});
-    for(const block of CONV_BLOCKS){
-      const c = block.cols;
-      for(let i=0; i<rows.length; i++){
-        const r = rows[i];
-        if(!r) continue;
-        const rawBiz = r[c.biz];
-        if(rawBiz==null || rawBiz==="") continue;
-        const rawTrim = String(rawBiz).trim();
-        if(rawTrim==="事業" || rawTrim==="事業別" || rawTrim==="總計" || rawTrim==="(空白)" || rawTrim==="(全部)") continue;
-        const biz = convNormalizeBiz(rawTrim);
+    const c = cfg.cols;
+    for(let i = cfg.headerRow + 1; i < rows.length; i++){
+      const r = rows[i];
+      if(!r) continue;
+      const rawBiz = r[c.biz];
+      const rawTrim = rawBiz==null ? '' : String(rawBiz).trim();
+      if(CONV_SKIP_BIZ.has(rawTrim)) continue;
+      const biz = convNormalizeBiz(rawTrim);
 
-        const qty = num(r[c.qty]);
-        const rawAmt = num(r[c.amt]);
-        const amt = block.taxed ? rawAmt / 1.05 : rawAmt;
-        if(amt === 0) continue;
+      const qty = num(r[c.qty]);
+      const amt = num(r[c.amt]);
+      if(amt === 0) continue;
 
-        let channel;
-        if(block.channelMap){
-          const chRaw = r[c.channel];
-          const chKey = chRaw==null ? "" : String(chRaw).trim();
-          channel = block.channelMap[chKey];
-          if(!channel) continue;
-        } else {
-          channel = block.fixed;
-        }
-
-        const code = r[c.code]==null ? "" : String(r[c.code]).trim();
-        const prod = r[c.prod]==null ? "" : String(r[c.prod]).trim();
-
-        // 日付列（訂單日期 / 發貨日期 等）→ ISO 文字列
-        const dateObj = parseExcelDate(r[c.date]);
-        const dateISO = dateToISO(dateObj);
-
-        allRows.push({
-          年月: ym, 事業別: biz, 管道: channel,
-          商品代號: code, 商品名稱: prod,
-          數量: qty,
-          未稅金額: Math.round(amt*100)/100,
-          日期: dateISO,
-        });
-        monthsSet.add(ym);
+      let channel;
+      if(cfg.channelMap){
+        const chRaw = r[c.channel];
+        const chKey = chRaw==null ? '' : String(chRaw).trim();
+        channel = cfg.channelMap[chKey];
+        if(!channel) continue;
+      } else {
+        channel = cfg.fixed;
       }
+
+      const code = r[c.code]==null ? '' : String(r[c.code]).trim();
+      // 商品名稱は新ファイルにないため空。ダッシュボードでマスター(STATE.master.products)から補完。
+      const dateObj = parseExcelDate(r[c.date]);
+      const dateISO = dateToISO(dateObj);
+
+      allRows.push({
+        年月: ym, 事業別: biz, 管道: channel,
+        商品代號: code, 商品名稱: '',
+        數量: qty,
+        未稅金額: Math.round(amt*100)/100,
+        日期: dateISO,
+      });
+      monthsSet.add(ym);
     }
   }
   if(onProgress) onProgress("轉換完成", 1.0);
@@ -1080,7 +1087,7 @@ async function processConverterFile(file){
     });
 
     if(result.rows.length === 0){
-      throw new Error("未轉換出任何資料。請確認此為原始實績檔（包含 2604 / 2605 等月別工作表）。");
+      throw new Error("未轉換出任何資料。請確認此為原始實績檔（含 2604WEB&KOL / 2604 EC / 2604TM 等月別工作表）。");
     }
 
     STATE.convResult = result;
@@ -2837,7 +2844,8 @@ function aggregateHandPuppet(codes){
       data.byChannel[r.ch].amt += r.amt;
     }
     if(!data.products[r.code]){
-      data.products[r.code] = { name: r.name || '', qty: 0, amt: 0 };
+      const fallback = STATE.master?.products?.[r.code]?.name || '';
+      data.products[r.code] = { name: r.name || fallback, qty: 0, amt: 0 };
     }
     data.products[r.code].qty += r.qty;
     data.products[r.code].amt += r.amt;
@@ -3158,7 +3166,8 @@ function aggregateSkus(biz, ch, months){
     if(!r.code) continue;             // 商品コードなしはスキップ
     let entry = map.get(r.code);
     if(!entry){
-      entry = { code:r.code, name:r.name||'', qty:0, amt:0, rows:0 };
+      const fallback = STATE.master?.products?.[r.code]?.name || '';
+      entry = { code:r.code, name:r.name||fallback, qty:0, amt:0, rows:0 };
       map.set(r.code, entry);
     }
     entry.qty += r.qty;
