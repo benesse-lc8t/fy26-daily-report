@@ -618,6 +618,16 @@ function exportDataJSON(){
     alert("尚未載入資料，請先載入預算檔。");
     return;
   }
+  // FY25 比較資料が空で出力すると、推送到 GitHub 後に前年比モードが失効する。確認を取る。
+  if(!STATE.fy25){
+    const ok = confirm(
+      "⚠ 警告：FY25 前年比較資料未載入到 STATE。\n\n" +
+      "若繼續匯出並覆蓋 data.json，將會清除既有的 fy25 鍵，導致『前年比』模式失效。\n\n" +
+      "建議先重新整理頁面（讓 data.json 中的 fy25 載入），再匯出。\n\n" +
+      "仍要繼續匯出嗎？"
+    );
+    if(!ok) return;
+  }
   const generatedAt = new Date().toISOString();
   const payload = {
     generatedAt,
