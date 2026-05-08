@@ -696,11 +696,12 @@ async function tryLoadDataJSON(){
 STATE.pendingFiles = []; // {id, file, type}
 
 function classifyFile(name){
-  // 順序重要：「轉換後」優先で判定
-  if(/轉換後/.test(name)) return 'actual';            // 縱向格式 → 直接載入
+  // 順序重要：「轉換後」「FY25」を先に判定
+  if(/轉換後/.test(name)) return 'actual';                // 縱向格式 → 直接載入
+  if(/FY25/i.test(name) && /實績明細/.test(name)) return 'fy25-reject';  // FY25 はdata.jsonに事前集計済
   if(/管道期初目標/.test(name)) return 'budget';
   if(/商品品號主檔/.test(name)) return 'master';
-  if(/實績明細/.test(name)) return 'actual-original';  // 橫向格式 → 自動轉換
+  if(/實績明細/.test(name)) return 'actual-original';     // FY26新形式 → 自動轉換
   return null;
 }
 
@@ -784,19 +785,27 @@ function renderFileList(){
     let icon = '📄';
     let typeLabel = '';
     if(pf.type === 'budget'){ icon = '📊'; typeLabel = '預算'; }
-    else if(pf.type === 'actual'){ icon = '📈'; typeLabel = '實績（縱向）'; }
-    else if(pf.type === 'actual-original'){ icon = '🔄'; typeLabel = '實績（自動轉換）'; }
+    else if(pf.type === 'actual'){ icon = '📈'; typeLabel = '實績（已轉換）'; }
+    else if(pf.type === 'actual-original'){ icon = '🔄'; typeLabel = '實績（FY26 原始檔，自動轉換）'; }
     else if(pf.type === 'master'){ icon = '📦'; typeLabel = '主檔'; }
-    const cls = isUnknown ? ' unknown' : '';
+    else if(pf.type === 'fy25-reject'){ icon = '⛔'; typeLabel = 'FY25（已預載入，無需上傳）'; }
+    const cls = isUnknown ? ' unknown' : (pf.type==='fy25-reject' ? ' unknown' : '');
+
+    let warningNote = '';
+    if(pf.type === 'fy25-reject'){
+      warningNote = ' <span style="color:#b45309;font-size:10px">⛔ FY25 比較資料已預載入 data.json，請從清單移除（✕）</span>';
+    } else if(isDup){
+      warningNote = ' <span style="color:#b45309;font-size:10px">⚠ 同類型重複（後者覆蓋前者）</span>';
+    }
 
     html += `<div class="file-row${cls}">`;
     html += `<span class="file-icon">${icon}</span>`;
-    html += `<span class="file-name">${pf.file.name}${isDup?' <span style="color:#b45309;font-size:10px">⚠ 同類型重複（後者覆蓋前者）</span>':''}</span>`;
+    html += `<span class="file-name">${pf.file.name}${warningNote}</span>`;
     html += `<select onchange="changeFileType('${pf.id}', this.value)">`;
     html += `<option value=""${pf.type===null?' selected':''}>(未指定)</option>`;
     html += `<option value="budget"${pf.type==='budget'?' selected':''}>📊 預算檔</option>`;
-    html += `<option value="actual"${pf.type==='actual'?' selected':''}>📈 實績（縱向，直接載入）</option>`;
-    html += `<option value="actual-original"${pf.type==='actual-original'?' selected':''}>🔄 實績（原始橫向，自動轉換）</option>`;
+    html += `<option value="actual-original"${pf.type==='actual-original'?' selected':''}>🔄 實績（FY26 原始檔，自動轉換）</option>`;
+    html += `<option value="actual"${pf.type==='actual'?' selected':''}>📈 實績（已轉換縱向格式，直接載入）</option>`;
     html += `<option value="master"${pf.type==='master'?' selected':''}>📦 商品主檔</option>`;
     html += `</select>`;
     html += `<span class="file-size">${(+sizeKB).toLocaleString()} KB</span>`;
