@@ -45,6 +45,10 @@
   header .month-bar{display:flex;align-items:center;gap:8px;background:rgba(255,255,255,.12);padding:5px 13px;border-radius:8px}
   header .month-bar label{font-size:12px;color:rgba(255,255,255,.85)}
   header .month-bar select{background:#fff;color:var(--accent-dark);border:none;padding:5px 10px;border-radius:6px;font-size:13px;font-weight:600;cursor:pointer;min-width:90px}
+  header .compare-toggle{display:inline-flex;background:rgba(255,255,255,.18);padding:3px;border-radius:8px;gap:0}
+  header .compare-toggle button{background:transparent;color:rgba(255,255,255,.78);border:none;padding:5px 14px;font-size:12px;font-weight:600;cursor:pointer;border-radius:6px;font-family:inherit;letter-spacing:.3px;transition:all .15s}
+  header .compare-toggle button.active{background:#fff;color:var(--accent-dark)}
+  header .compare-toggle button:not(.active):hover{color:#fff;background:rgba(255,255,255,.1)}
   header .header-meta{margin-left:auto;display:flex;flex-direction:column;align-items:flex-end;gap:2px}
   header .data-status{font-size:11px;opacity:.9}
   header .data-status.ok{color:#86EFAC}
@@ -279,6 +283,10 @@
       <option>請先載入資料</option>
     </select>
   </div>
+  <div class="compare-toggle" id="compare-toggle" role="tablist" aria-label="比較模式">
+    <button data-mode="budget" class="active" type="button">預算比</button>
+    <button data-mode="yoy" type="button">前年比</button>
+  </div>
   <div class="header-meta">
     <div class="data-status" id="data-status">載入中…</div>
     <div class="data-updated" id="data-updated"></div>
@@ -479,7 +487,22 @@ const STATE = {
   selectedMonth:null,
   charts:{},              // canvasId → Chart instance
   activeTab:"main",
+  compareMode:"budget",   // 'budget' | 'yoy'
+  fy25:null,              // {amount, qty, daily}: FY25 actuals for YoY comparison
 };
+
+// YoY 對象タブ（前年比モードで表示するもの）
+const YOY_TABS = new Set([
+  "trend","weekly","aov",
+  "biz-學習商品","biz-學習周邊","biz-生活周邊","biz-Mirafeel",
+  "ch-WEB","ch-TM","ch-KOL","ch-EC",
+]);
+
+/* ---------- Compare-mode helpers ---------- */
+function isYoY(){ return STATE.compareMode === 'yoy' && STATE.fy25; }
+function targetLabel(){ return isYoY() ? '昨年實績' : '預算'; }
+function diffLabel(){   return isYoY() ? '昨年差'   : '預算差'; }
+function rateLabel(){   return isYoY() ? '前年比'   : '達成率'; }
 
 /* ---------- Tab navigation ---------- */
 function switchTab(tabId){
@@ -506,6 +529,41 @@ function switchTab(tabId){
 document.getElementById("tabs").addEventListener("click", e=>{
   const btn = e.target.closest(".tab-btn");
   if(btn) switchTab(btn.dataset.tab);
+});
+
+/* ---------- Compare-mode toggle ---------- */
+function applyCompareMode(){
+  // ボタンの active 切替
+  document.querySelectorAll("#compare-toggle button").forEach(b=>{
+    b.classList.toggle("active", b.dataset.mode === STATE.compareMode);
+  });
+  // YoY モードでは対象外タブ（subtleでない通常タブのみ）を非表示。loader/converter は常に表示。
+  const yoy = STATE.compareMode === 'yoy';
+  document.querySelectorAll(".tab-btn").forEach(b=>{
+    if(b.classList.contains("subtle")) return;            // 匯入 / 轉換 は常時表示
+    const tabId = b.dataset.tab;
+    const show  = !yoy || YOY_TABS.has(tabId);
+    b.style.display = show ? '' : 'none';
+  });
+  // YoYモードでアクティブタブが非表示になったら trend に切替
+  if(yoy && !YOY_TABS.has(STATE.activeTab) && STATE.activeTab !== 'loader' && STATE.activeTab !== 'converter'){
+    switchTab('trend');
+  } else {
+    // 現タブを再描画してラベル更新を反映
+    if(STATE.budget) switchTab(STATE.activeTab);
+  }
+}
+document.getElementById("compare-toggle").addEventListener("click", e=>{
+  const btn = e.target.closest("button[data-mode]");
+  if(!btn) return;
+  const newMode = btn.dataset.mode;
+  if(newMode === STATE.compareMode) return;
+  if(newMode === 'yoy' && !STATE.fy25){
+    alert('FY25 前年實績資料尚未載入（data.json に fy25 鍵不存在）');
+    return;
+  }
+  STATE.compareMode = newMode;
+  applyCompareMode();
 });
 
 function destroyCharts(){
@@ -575,6 +633,7 @@ function exportDataJSON(){
     master: STATE.master || null,
     workingDays: STATE.workingDays || null,
     holidays: STATE.holidays ? Array.from(STATE.holidays) : null,
+    fy25: STATE.fy25 || null,
   };
 
   const json = JSON.stringify(payload);
@@ -603,6 +662,7 @@ function applyDataJSON(data){
   STATE.master = data.master || null;
   STATE.workingDays = data.workingDays || null;
   STATE.holidays = data.holidays ? new Set(data.holidays) : null;
+  STATE.fy25 = data.fy25 || null;
   STATE.generatedAt = data.generatedAt;
 
   updateHeaderTimestamp(STATE.generatedAt);
@@ -1375,12 +1435,13 @@ function renderPaceBanner(monthLabel, monthBudget, monthActual){
 
 /* ---------- Aggregation helpers ---------- */
 function bgt(biz, ch, month){
-  if(!STATE.budget) return 0;
+  const src = isYoY() ? STATE.fy25 : STATE.budget;
+  if(!src || !src.amount) return 0;
   const bizes = biz==='all' ? BIZ_LIST : (Array.isArray(biz)?biz:[biz]);
   const chs   = ch==='all'  ? CHANNEL_LIST : (Array.isArray(ch)?ch:[ch]);
   let s = 0;
   for(const b of bizes) for(const c of chs){
-    s += (STATE.budget.amount[b]?.[c]?.[month]) || 0;
+    s += (src.amount[b]?.[c]?.[month]) || 0;
   }
   return s;
 }
@@ -1405,14 +1466,15 @@ function monthsThru(month){
   return i<0 ? MONTHS.slice() : MONTHS.slice(0, i+1);
 }
 
-// 套数集計（予算）
+// 套数集計（予算 or YoY前年実績）
 function bgtQty(biz, ch, month){
-  if(!STATE.budget || !STATE.budget.qty) return 0;
+  const src = isYoY() ? STATE.fy25 : STATE.budget;
+  if(!src || !src.qty) return 0;
   const bizes = biz==='all' ? BIZ_LIST : (Array.isArray(biz)?biz:[biz]);
   const chs   = ch==='all'  ? CHANNEL_LIST : (Array.isArray(ch)?ch:[ch]);
   let s = 0;
   for(const b of bizes) for(const c of chs){
-    s += (STATE.budget.qty[b]?.[c]?.[month]) || 0;
+    s += (src.qty[b]?.[c]?.[month]) || 0;
   }
   return s;
 }
@@ -1537,10 +1599,10 @@ function kpiCardHTML(label, sub, budget, actual){
   const cls = rateClass(budget, actual);
   return `
     <div class="lbl">${label} <span class="small">${sub}</span></div>
-    <div class="row"><span class="k">預算</span><span class="v">${fmtAmt(budget)} <span style="font-size:11px;color:#9ca3af;font-weight:500">萬</span></span></div>
+    <div class="row"><span class="k">${targetLabel()}</span><span class="v">${fmtAmt(budget)} <span style="font-size:11px;color:#9ca3af;font-weight:500">萬</span></span></div>
     <div class="row"><span class="k">實績</span><span class="v">${fmtAmt(actual)} <span style="font-size:11px;color:#9ca3af;font-weight:500">萬</span></span></div>
     <div class="rate-row">
-      <div class="rate-lbl">達成率</div>
+      <div class="rate-lbl">${rateLabel()}</div>
       <div class="rate ${cls}">${fmtRate(budget, actual)}</div>
     </div>
   `;
@@ -1569,7 +1631,7 @@ function renderRateTable(tableId, dimLabel, dims, dimType, fixedFilter){
   html += `<th class="l1" colspan="3">當月（${m}）</th>`;
   html += `<th class="l1" colspan="3">累計（4月〜${m}）</th></tr>`;
   html += `<tr>`;
-  for(let i=0;i<3;i++) html += `<th class="l2">預算</th><th class="l2">實績</th><th class="l2">達成率</th>`;
+  for(let i=0;i<3;i++) html += `<th class="l2">${targetLabel()}</th><th class="l2">實績</th><th class="l2">${rateLabel()}</th>`;
   html += `</tr></thead><tbody>`;
 
   let yT={b:0,a:0}, mT={b:0,a:0}, cT={b:0,a:0};
@@ -1635,9 +1697,9 @@ function renderRateChart(canvasId, dims, dimType, fixedFilter){
     data: {
       labels,
       datasets: [
-        { type:'bar', label:'累計預算', data:budgetArr, backgroundColor:'#BAE6FD', borderColor:'#7DD3FC', borderWidth:1, borderRadius:3, yAxisID:'y' },
+        { type:'bar', label:`累計${targetLabel()}`, data:budgetArr, backgroundColor:'#BAE6FD', borderColor:'#7DD3FC', borderWidth:1, borderRadius:3, yAxisID:'y' },
         { type:'bar', label:'累計實績', data:actualArr, backgroundColor:'#0284C7', borderColor:'#0284C7', borderWidth:1, borderRadius:3, yAxisID:'y' },
-        { type:'line', label:'達成率(%)', data:rateArr, borderColor:'#E11D48', backgroundColor:'rgba(225,29,72,.1)', borderWidth:2, pointRadius:4, pointBackgroundColor:'#E11D48', pointBorderColor:'#fff', pointBorderWidth:2, tension:0.25, yAxisID:'y1' },
+        { type:'line', label:`${rateLabel()}(%)`, data:rateArr, borderColor:'#E11D48', backgroundColor:'rgba(225,29,72,.1)', borderWidth:2, pointRadius:4, pointBackgroundColor:'#E11D48', pointBorderColor:'#fff', pointBorderWidth:2, tension:0.25, yAxisID:'y1' },
       ],
     },
     options: commonChartOptions(),
@@ -1659,10 +1721,10 @@ const fy26ChartLabelsPlugin = {
         ctx.font = "600 11px 'Segoe UI', 'Microsoft JhengHei', sans-serif";
         ctx.textAlign = 'center';
         const lbl = ds.label || '';
-        if(lbl.includes('達成率')){
+        if(lbl.includes('達成率') || lbl.includes('前年比')){
           ctx.fillStyle = '#E11D48';
           ctx.fillText(Math.floor(v) + '%', point.x, point.y - 12);
-        } else if(lbl === '預算' || lbl === '累計預算'){
+        } else if(lbl === '預算' || lbl === '累計預算' || lbl === '昨年實績' || lbl === '累計昨年實績'){
           ctx.fillStyle = '#0369A1';
           ctx.fillText(Math.floor(v).toLocaleString(), point.x, point.y - 4);
         } else if(lbl === '實績' || lbl === '累計實績'){
@@ -1777,7 +1839,7 @@ function commonChartOptions(){
           label: function(ctx){
             const v = ctx.parsed.y;
             if(v===null) return null;
-            if(ctx.dataset.label && ctx.dataset.label.includes("達成率")) return `${ctx.dataset.label}: ${v}%`;
+            if(ctx.dataset.label && (ctx.dataset.label.includes("達成率") || ctx.dataset.label.includes("前年比"))) return `${ctx.dataset.label}: ${v}%`;
             return `${ctx.dataset.label}: ${(+v).toLocaleString()} 萬`;
           },
         },
@@ -1785,7 +1847,7 @@ function commonChartOptions(){
     },
     scales: {
       y:  { type:'linear', position:'left',  beginAtZero:true, title:{ display:true, text:'金額（萬元）', font:{size:11, weight:'600'}, color:'#0369A1' }, ticks:{ font:{size:11}, color:'#0369A1', callback: v=>(+v).toLocaleString() }, grid:{ color:'#F0F9FF' } },
-      y1: { type:'linear', position:'right', beginAtZero:true, title:{ display:true, text:'達成率（%）', font:{size:11, weight:'600'}, color:'#0369A1' }, grid:{ drawOnChartArea:false }, suggestedMax:120, ticks:{ font:{size:11}, color:'#0369A1', callback: v=>v+"%" } },
+      y1: { type:'linear', position:'right', beginAtZero:true, title:{ display:true, text:`${rateLabel()}（%）`, font:{size:11, weight:'600'}, color:'#0369A1' }, grid:{ drawOnChartArea:false }, suggestedMax:120, ticks:{ font:{size:11}, color:'#0369A1', callback: v=>v+"%" } },
       x:  { ticks:{ font:{size:11, weight:'600'}, color:'#0C4A6E' }, grid:{ display:false } },
     },
   };
@@ -1858,7 +1920,7 @@ function renderTrendSectionHTML(s){
   html += '<div class="chart-table-row">';
   html += `<div class="chart-side"><div class="chart-box tall"><canvas id="chart-trend-${s.id}"></canvas></div></div>`;
   html += '<div class="table-side"><div class="scroll-x"><table class="grid">';
-  html += '<thead><tr><th class="l1">月份</th><th class="l2">預算</th><th class="l2">實績</th><th class="l2">達成率</th></tr></thead>';
+  html += `<thead><tr><th class="l1">月份</th><th class="l2">${targetLabel()}</th><th class="l2">實績</th><th class="l2">${rateLabel()}</th></tr></thead>`;
   html += '<tbody>';
   for(const m of MONTHS){
     const has = hasActualData(m);
@@ -1930,7 +1992,7 @@ function renderDetailTab(filterType, filterValue){
   html += `<div class="card"><h2>${filterValue} — ${breakdownLabel}別內訳</h2>`;
   html += `<div class="chart-box"><canvas id="${bdChartId}"></canvas></div>`;
   html += `<div class="scroll-x" style="margin-top:12px"><table class="grid" id="${bdTableId}"></table></div>`;
-  html += `<div class="legend">※ 累計（4月〜${m}）為基準。棒：預算 vs 實績（萬元，左軸）／折線：達成率（%，右軸）。</div>`;
+  html += `<div class="legend">※ 累計（4月〜${m}）為基準。棒：${targetLabel()} vs 實績（萬元，左軸）／折線：${rateLabel()}（%，右軸）。</div>`;
   html += `</div>`;
 
   panel.innerHTML = html;
@@ -2001,6 +2063,27 @@ function aggregateByWeek(biz, ch, weeks){
       total, days,
       avg: days > 0 ? total / days : 0,
     });
+  }
+  return result;
+}
+
+// FY25 同曜日同週（FY26週を1年前にシフト）の集計
+function aggregateByWeekFY25(biz, ch, weeks){
+  if(!STATE.fy25 || !STATE.fy25.daily) return weeks.map(()=>({total:0}));
+  const result = [];
+  for(const wk of weeks){
+    const startPrev = new Date(wk.start); startPrev.setUTCFullYear(startPrev.getUTCFullYear() - 1);
+    const endPrev   = new Date(wk.end);   endPrev.setUTCFullYear(endPrev.getUTCFullYear() - 1);
+    const startStr = dateToISO(startPrev);
+    const endStr   = dateToISO(endPrev);
+    let total = 0;
+    for(const r of STATE.fy25.daily){
+      if(r.date < startStr || r.date > endStr) continue;
+      if(biz !== 'all' && r.biz !== biz) continue;
+      if(ch  !== 'all' && r.ch  !== ch)  continue;
+      total += r.amt;
+    }
+    result.push({ start: startPrev, end: endPrev, total });
   }
   return result;
 }
@@ -2100,23 +2183,35 @@ function renderWeeklyContent(){
 
   const weeks = getWeeksInRange(latestDate, 10);
   const data = aggregateByWeek(biz, ch, weeks);
+  const yoy = isYoY();
+  const dataPrev = yoy ? aggregateByWeekFY25(biz, ch, weeks) : null;
 
   // チャート（時系列順、古い→新しい：左→右）
+  const datasets = [
+    { label:'週次銷售合計', data: data.map(d => Math.floor(d.total/10000)),
+      borderColor:'#0C4A6E', backgroundColor:'rgba(12,74,110,.1)',
+      borderWidth:2, pointRadius:4, pointBackgroundColor:'#0C4A6E',
+      pointBorderColor:'#fff', pointBorderWidth:2, tension:0.25, fill:true },
+    { label:'日次平均銷售', data: data.map(d => Math.floor(d.avg/10000)),
+      borderColor:'#0284C7', backgroundColor:'rgba(2,132,199,.1)',
+      borderWidth:2, pointRadius:4, pointBackgroundColor:'#0284C7',
+      pointBorderColor:'#fff', pointBorderWidth:2, tension:0.25 },
+  ];
+  if(yoy){
+    datasets.push({
+      label:'前年同週銷售', data: dataPrev.map(d => Math.floor(d.total/10000)),
+      borderColor:'#94A3B8', backgroundColor:'rgba(148,163,184,.10)',
+      borderWidth:2, borderDash:[6,4], pointRadius:3,
+      pointBackgroundColor:'#94A3B8', pointBorderColor:'#fff', pointBorderWidth:1,
+      tension:0.25, fill:false,
+    });
+  }
   const ctx = document.getElementById("chart-weekly").getContext('2d');
   STATE.charts['chart-weekly'] = new Chart(ctx, {
     type: 'line',
     data: {
       labels: data.map(d => formatWeekLabel(d.start, d.end)),
-      datasets: [
-        { label:'週次銷售合計', data: data.map(d => Math.floor(d.total/10000)),
-          borderColor:'#0C4A6E', backgroundColor:'rgba(12,74,110,.1)',
-          borderWidth:2, pointRadius:4, pointBackgroundColor:'#0C4A6E',
-          pointBorderColor:'#fff', pointBorderWidth:2, tension:0.25, fill:true },
-        { label:'日次平均銷售', data: data.map(d => Math.floor(d.avg/10000)),
-          borderColor:'#0284C7', backgroundColor:'rgba(2,132,199,.1)',
-          borderWidth:2, pointRadius:4, pointBackgroundColor:'#0284C7',
-          pointBorderColor:'#fff', pointBorderWidth:2, tension:0.25 },
-      ],
+      datasets,
     },
     options: weeklyChartOptions(),
   });
@@ -2149,6 +2244,28 @@ function renderWeeklyContent(){
     html += `<td>${Math.floor(d.avg/10000).toLocaleString()}</td>`;
   }
   html += '</tr>';
+
+  // Row 4 (YoY): 前年同週銷售 + 前年比
+  if(yoy){
+    html += '<tr><td class="dim">前年同週銷售（萬）</td>';
+    for(const d of dataPrev){
+      html += `<td>${Math.floor(d.total/10000).toLocaleString()}</td>`;
+    }
+    html += '</tr>';
+    html += '<tr><td class="dim">前年比（%）</td>';
+    for(let i=0; i<data.length; i++){
+      const cur = data[i].total;
+      const prev = dataPrev[i].total;
+      if(prev > 0){
+        const r = cur / prev * 100;
+        const cls = r >= 100 ? 'good' : r >= 80 ? 'warn' : 'bad';
+        html += `<td class="${cls}">${r.toFixed(1)}%</td>`;
+      } else {
+        html += '<td class="na">—</td>';
+      }
+    }
+    html += '</tr>';
+  }
 
   html += '</tbody>';
   tableEl.innerHTML = html;
@@ -2463,7 +2580,7 @@ function renderAovTab(){
   html += `<h2>AOV 分析 — 學習商品 <span class="pill">本月：${m}</span></h2>`;
   html += `<div style="font-size:11px;color:var(--secondary);margin:0 0 14px 0;line-height:1.6;padding:10px 14px;background:var(--stripe);border-radius:6px;border-left:3px solid var(--accent)">
     <strong>AOV (Average Order Value)</strong> = 未稅金額 ÷ 套數，每套商品的平均單價（單位：元）。<br>
-    <strong>AOV 達成率</strong> = 實績AOV ÷ 預算AOV × 100。對象：學習商品（套數有意義的事業）。
+    <strong>AOV ${rateLabel()}</strong> = 實績AOV ÷ ${targetLabel()}AOV × 100。對象：學習商品（套數有意義的事業）。
   </div>`;
   html += '<div class="kpi-grid" style="grid-template-columns:repeat(2,1fr)">';
   html += aovKpiCard('當月', m, 'month', mBgtAov, mActAov);
@@ -2475,7 +2592,7 @@ function renderAovTab(){
   html += '<div class="card">';
   html += '<h2>AOV 月次推移 — 學習商品（全體）</h2>';
   html += '<div class="chart-box tall"><canvas id="chart-aov"></canvas></div>';
-  html += '<div class="legend">※ 預算 AOV 與 實績 AOV 之 12 個月推移。Y 軸：元（小數點切捨）。資料缺失月份的實績 AOV 線會中斷。</div>';
+  html += `<div class="legend">※ ${targetLabel()} AOV 與 實績 AOV 之 12 個月推移。Y 軸：元（小數點切捨）。資料缺失月份的實績 AOV 線會中斷。</div>`;
   html += '</div>';
 
   // Tables (全體 / WEB / TM / KOL / EC)
@@ -2514,11 +2631,11 @@ function aovKpiCard(label, sub, classKey, bgtAov, actAov){
   return `
     <div class="kpi-card ${classKey}">
       <div class="lbl">${label} <span class="small">${sub}</span></div>
-      <div class="row"><span class="k">預算 AOV</span><span class="v">${fmtYuan(bgtAov)} <span style="font-size:11px;color:#94A3B8;font-weight:500">元</span></span></div>
+      <div class="row"><span class="k">${targetLabel()} AOV</span><span class="v">${fmtYuan(bgtAov)} <span style="font-size:11px;color:#94A3B8;font-weight:500">元</span></span></div>
       <div class="row"><span class="k">實績 AOV</span><span class="v">${fmtYuan(actAov)} <span style="font-size:11px;color:#94A3B8;font-weight:500">元</span></span></div>
       <div class="row"><span class="k">差額</span><span class="v" style="color:${diffColor};font-size:15px">${diffStr}</span></div>
       <div class="rate-row">
-        <div class="rate-lbl">AOV 達成率</div>
+        <div class="rate-lbl">AOV ${rateLabel()}</div>
         <div class="rate ${cls}">${rateStr}</div>
       </div>
     </div>
@@ -2531,14 +2648,14 @@ function renderAovTableSection(biz, ch, label){
   html += '<div class="scroll-x"><table class="grid">';
   html += '<thead><tr>';
   html += '<th class="l1">月</th>';
-  html += '<th class="l2">預算套數</th>';
+  html += `<th class="l2">${targetLabel()}套數</th>`;
   html += '<th class="l2">實績套數</th>';
-  html += '<th class="l2">預算金額（元）</th>';
+  html += `<th class="l2">${targetLabel()}金額（元）</th>`;
   html += '<th class="l2">實績金額（元）</th>';
-  html += '<th class="l1">預算AOV</th>';
+  html += `<th class="l1">${targetLabel()}AOV</th>`;
   html += '<th class="l1">實績AOV</th>';
   html += '<th class="l1">AOV差額</th>';
-  html += '<th class="l1">AOV達成率</th>';
+  html += `<th class="l1">AOV${rateLabel()}</th>`;
   html += '</tr></thead><tbody>';
 
   let totBgtQ = 0, totActQ = 0, totBgtA = 0, totActA = 0;
@@ -2644,7 +2761,7 @@ function renderAovChart(biz, ch){
     data: {
       labels: MONTHS,
       datasets: [
-        { label:'預算AOV', data: budgetAov,
+        { label:`${targetLabel()}AOV`, data: budgetAov,
           borderColor:'#BAE6FD', backgroundColor:'rgba(186,230,253,.15)',
           borderWidth:2, borderDash:[6, 4],
           pointRadius:4, pointBackgroundColor:'#BAE6FD', pointBorderColor:'#fff', pointBorderWidth:2,
@@ -3080,9 +3197,9 @@ function renderTrendChart(s){
     data: {
       labels: MONTHS,
       datasets: [
-        { type:'bar',  label:'預算',     data:budgetArr, backgroundColor:'#BAE6FD', borderColor:'#7DD3FC', borderWidth:1, borderRadius:3, yAxisID:'y' },
-        { type:'bar',  label:'實績',     data:actualArr, backgroundColor:'#0284C7', borderColor:'#0284C7', borderWidth:1, borderRadius:3, yAxisID:'y' },
-        { type:'line', label:'達成率(%)', data:rateArr,
+        { type:'bar',  label:targetLabel(),     data:budgetArr, backgroundColor:'#BAE6FD', borderColor:'#7DD3FC', borderWidth:1, borderRadius:3, yAxisID:'y' },
+        { type:'bar',  label:'實績',           data:actualArr, backgroundColor:'#0284C7', borderColor:'#0284C7', borderWidth:1, borderRadius:3, yAxisID:'y' },
+        { type:'line', label:`${rateLabel()}(%)`, data:rateArr,
           borderColor:'#E11D48', backgroundColor:'rgba(225,29,72,.1)',
           borderWidth:2, pointRadius:4, pointBackgroundColor:'#E11D48', pointBorderColor:'#fff', pointBorderWidth:2,
           tension:0.25, yAxisID:'y1', spanGaps:false },
