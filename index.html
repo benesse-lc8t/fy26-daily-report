@@ -55,26 +55,39 @@
   header .data-status.err{color:#FCA5A5}
   header .data-updated{font-size:10px;opacity:.7;letter-spacing:.3px;color:rgba(255,255,255,.85)}
 
-  /* Tab nav (2 rows: blue pill / rose pill) */
-  nav.tabs{background:#fff;border-bottom:1px solid var(--border);padding:0;display:flex;flex-direction:column;box-shadow:0 1px 4px rgba(12,74,110,.06);max-width:1600px;margin:0 auto}
-  nav.tabs .tab-divider{height:0;border-top:0.5px solid #BAE6FD;margin:8px 24px;flex-shrink:0}
+  /* Header-mounted small action buttons (匯入 / 轉換) */
+  header .header-actions{display:flex;gap:6px}
+  header .header-actions .tab-btn{background:rgba(255,255,255,.18);color:#fff;border:none;border-radius:6px;padding:5px 10px;font-size:11px;font-weight:600;cursor:pointer;font-family:inherit;letter-spacing:.3px;transition:all .15s;line-height:1.2}
+  header .header-actions .tab-btn:hover{background:rgba(255,255,255,.32)}
+  header .header-actions .tab-btn.active{background:#fff;color:var(--accent-dark)}
 
-  /* Row 1: blue pill (9 cols) */
-  nav.tabs .tab-row-1{display:grid;grid-template-columns:repeat(9, 1fr);gap:6px;padding:10px 24px 0}
-  nav.tabs .tab-row-1 .tab-btn{background:#E0F2FE;color:#0369A1;border:none;border-radius:6px;padding:7px 4px;font-size:13px;font-weight:500;cursor:pointer;transition:all .15s;font-family:inherit;text-align:center;min-width:0}
-  nav.tabs .tab-row-1 .tab-btn:hover{background:#BAE6FD}
-  nav.tabs .tab-row-1 .tab-btn.active{background:#0284C7;color:#fff;font-weight:500}
-  nav.tabs .tab-row-1 .tab-btn.active:hover{background:#0284C7;color:#fff}
-  nav.tabs .tab-row-1 .tab-btn.subtle{background:#F0F9FF;color:#7DD3FC;font-size:11px}
-  nav.tabs .tab-row-1 .tab-btn.subtle:hover{background:#E0F2FE;color:#0369A1}
-  nav.tabs .tab-row-1 .tab-btn.subtle.active{background:#0284C7;color:#fff}
+  /* Body layout: left sidebar + main */
+  .layout{display:flex;align-items:flex-start;gap:0;max-width:1600px;margin:0 auto}
 
-  /* Row 2: rose pill (10 cols) */
-  nav.tabs .tab-row-2{display:grid;grid-template-columns:repeat(10, 1fr);gap:6px;padding:0 24px 10px}
-  nav.tabs .tab-row-2 .tab-btn{background:#FFF1F2;color:#BE123C;border:none;border-radius:6px;padding:6px 4px;font-size:11px;font-weight:500;cursor:pointer;transition:all .15s;font-family:inherit;text-align:center;min-width:0}
-  nav.tabs .tab-row-2 .tab-btn:hover{background:#FFE4E6}
-  nav.tabs .tab-row-2 .tab-btn.active{background:#E11D48;color:#fff;font-weight:500}
-  nav.tabs .tab-row-2 .tab-btn.active:hover{background:#E11D48;color:#fff}
+  /* Tab nav (vertical sidebar) */
+  nav.tabs{background:#fff;border-right:1px solid var(--border);border-bottom:1px solid var(--border);padding:14px 10px;display:flex;flex-direction:column;gap:6px;box-shadow:0 1px 4px rgba(12,74,110,.06);width:150px;flex-shrink:0;position:sticky;top:0;align-self:flex-start;max-height:100vh;overflow-y:auto}
+  nav.tabs .tab-divider{height:0;border-top:0.5px solid #BAE6FD;margin:6px 4px;flex-shrink:0}
+
+  /* Column 1: blue pill (main tabs, stacked vertically) */
+  nav.tabs .tab-col-1{display:flex;flex-direction:column;gap:6px}
+  nav.tabs .tab-col-1 .tab-btn{background:#E0F2FE;color:#0369A1;border:none;border-radius:6px;padding:8px 10px;font-size:13px;font-weight:500;cursor:pointer;transition:all .15s;font-family:inherit;text-align:left;width:100%}
+  nav.tabs .tab-col-1 .tab-btn:hover{background:#BAE6FD}
+  nav.tabs .tab-col-1 .tab-btn.active{background:#0284C7;color:#fff;font-weight:500}
+  nav.tabs .tab-col-1 .tab-btn.active:hover{background:#0284C7;color:#fff}
+
+  /* Column 2: rose pill (business / channel tabs, stacked vertically) */
+  nav.tabs .tab-col-2{display:flex;flex-direction:column;gap:6px}
+  nav.tabs .tab-col-2 .tab-btn{background:#FFF1F2;color:#BE123C;border:none;border-radius:6px;padding:7px 10px;font-size:12px;font-weight:500;cursor:pointer;transition:all .15s;font-family:inherit;text-align:left;width:100%}
+  nav.tabs .tab-col-2 .tab-btn:hover{background:#FFE4E6}
+  nav.tabs .tab-col-2 .tab-btn.active{background:#E11D48;color:#fff;font-weight:500}
+  nav.tabs .tab-col-2 .tab-btn.active:hover{background:#E11D48;color:#fff}
+
+  @media (max-width: 900px){
+    .layout{flex-direction:column}
+    nav.tabs{width:100%;position:static;max-height:none;border-right:none;flex-direction:row;flex-wrap:wrap}
+    nav.tabs .tab-col-1, nav.tabs .tab-col-2{flex-direction:row;flex-wrap:wrap}
+    nav.tabs .tab-divider{width:100%;margin:4px 0}
+  }
 
   /* Chart + Table side-by-side layout (70%/30%) */
   .chart-table-row{display:flex;gap:14px;align-items:stretch;margin-top:12px}
@@ -90,7 +103,7 @@
     .chart-table-row .chart-side, .chart-table-row .table-side{flex:none;width:100%}
   }
 
-  main{padding:18px 24px;max-width:1600px;margin:0 auto}
+  main{padding:18px 24px;flex:1;min-width:0}
 
   /* Tab panels */
   .tab-panel{display:none}
@@ -287,14 +300,19 @@
     <button data-mode="budget" class="active" type="button">預算比</button>
     <button data-mode="yoy" type="button">前年比</button>
   </div>
+  <div class="header-actions">
+    <button class="tab-btn subtle" data-tab="loader" type="button">📥 匯入</button>
+    <button class="tab-btn subtle" data-tab="converter" type="button">轉換</button>
+  </div>
   <div class="header-meta">
     <div class="data-status" id="data-status">載入中…</div>
     <div class="data-updated" id="data-updated"></div>
   </div>
 </header>
 
+<div class="layout">
 <nav class="tabs" id="tabs">
-  <div class="tab-row tab-row-1">
+  <div class="tab-col tab-col-1">
     <button class="tab-btn" data-tab="main">主儀表板</button>
     <button class="tab-btn" data-tab="trend">月別推移</button>
     <button class="tab-btn" data-tab="weekly">週別趨勢</button>
@@ -302,11 +320,9 @@
     <button class="tab-btn" data-tab="aov">AOV</button>
     <button class="tab-btn" data-tab="sku">TOP20</button>
     <button class="tab-btn" data-tab="handpuppet">手偶</button>
-    <button class="tab-btn subtle" data-tab="loader">匯入</button>
-    <button class="tab-btn subtle" data-tab="converter">轉換</button>
   </div>
   <div class="tab-divider"></div>
-  <div class="tab-row tab-row-2">
+  <div class="tab-col tab-col-2">
     <button class="tab-btn" data-tab="biz-學習商品">學習商品</button>
     <button class="tab-btn" data-tab="biz-學習周邊">學習周邊</button>
     <button class="tab-btn" data-tab="biz-生活周邊">生活周邊</button>
@@ -439,6 +455,7 @@
   </div>
 
 </main>
+</div>
 
 <script>
 /* ============================================================
@@ -527,6 +544,10 @@ function switchTab(tabId){
   else if(tabId === "handpuppet") renderHandPuppetTab();
 }
 document.getElementById("tabs").addEventListener("click", e=>{
+  const btn = e.target.closest(".tab-btn");
+  if(btn) switchTab(btn.dataset.tab);
+});
+document.querySelector("header .header-actions").addEventListener("click", e=>{
   const btn = e.target.closest(".tab-btn");
   if(btn) switchTab(btn.dataset.tab);
 });
