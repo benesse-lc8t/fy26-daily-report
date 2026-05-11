@@ -2,7 +2,7 @@
 <html lang="zh-Hant">
 <head>
 <meta charset="UTF-8">
-<title>FY26 實績檔轉換器（橫向 → 縱向）</title>
+<title>FY26 實績檔轉換器（新格式 v2）</title>
 <script src="xlsx.full.min.js"></script>
 <script>
 if(typeof XLSX === "undefined"){
@@ -67,7 +67,7 @@ if(typeof XLSX === "undefined"){
 <body>
 <header>
   <h1>FY26 實績檔轉換器</h1>
-  <div class="sub">將「FY26商售實績明細」橫向 4 區塊結構（WEB/KOL・EC・TM・經代銷）轉換為縱向清單格式，輸出可直接被儀表板讀取的 Excel 檔。</div>
+  <div class="sub">將「FY26商售實績明細」（每月3工作表 — WEB&KOL / EC / TM）轉換為縱向清單格式，輸出可直接被儀表板讀取的 Excel 檔。</div>
 </header>
 <main>
 
@@ -98,10 +98,13 @@ if(typeof XLSX === "undefined"){
     </div>
 
     <div class="status" style="background:#fef3c7;border-left-color:#b45309;color:#78350f;font-size:11px">
-      ⚠ 轉換規則：<br>
-      ① 原檔 TM 與 經代銷 區塊的「未稅金額」公式為 <code>=AC/0.105</code> / <code>=AO/0.105</code>（0.105 為 1.05 之筆誤，結果為真實未稅的 10 倍）。本工具改讀含稅欄位（AC / AO）並 ÷ 1.05 換算為正確未稅金額。<br>
+      ⚠ 轉換規則（FY26 新格式：每月 3 工作表 — <code>WEB&KOL</code> / <code>EC</code> / <code>TM</code>）：<br>
+      ① 直接讀取 <code>加總-未稅價格</code> 欄位（不需要再 ÷ 1.05 換算）。<br>
       ② <strong>未稅金額為 0 的列一律排除</strong>（即使數量 &gt; 0）。<br>
-      ③ <strong>事業名正規化：</strong><code>學習 → 學習商品</code>、<code>數位經典 → 數位典藏</code>（與預算檔一致）。
+      ③ <strong>事業欄為 <code>0</code> / <code>總計</code> / 空白的小計列一律跳過</strong>。<br>
+      ④ <strong>事業名正規化：</strong><code>學習 → 學習商品</code>、<code>數位經典 → 數位典藏</code>。<br>
+      ⑤ <strong>商品名稱欄位已從原檔移除</strong>（轉換後為空，由儀表板透過商品主檔補完）。<br>
+      ⑥ <strong>經代銷管道</strong>：FY26 起原檔已無對應工作表，實績將為零。
     </div>
 
     <details id="block-detail"></details>
@@ -119,15 +122,14 @@ if(typeof XLSX === "undefined"){
 
 <script>
 /* ============================================================
-   FY26 實績檔轉換器 — 橫向 4 區塊 → 縱向長格式
+   FY26 實績檔轉換器（新格式 v2）
+   元ファイル：月毎に 3 シート（<YYMM>WEB&KOL / <YYMM> EC / <YYMM>TM）
+   出力：縱向長格式（年月 / 事業別 / 管道 / 商品代號 / 商品名稱(空) / 數量 / 未稅金額）
    ============================================================ */
 
-// 出力欄位：年月 / 事業別 / 管道 / 商品コード / 商品名 / 数量 / 未稅金額
 const OUT_HEADERS = ["年月","事業別","管道","商品代號","商品名稱","數量","未稅金額"];
 
-// 事業名の正規化マップ（實績ファイルのVLOOKUPキャッシュ値 → 預算ファイルの正式名）
-//   學習      → 學習商品（實績側は中項なし、予算側は分割済）
-//   數位經典  → 數位典藏（表記揺れ・「典藏」が正）
+// 事業名の正規化（實績ファイルでは縮約名、予算ファイルでは正式名）
 const BIZ_NAME_MAP = {
   "學習":     "學習商品",
   "數位經典": "數位典藏",
@@ -138,35 +140,33 @@ function normalizeBiz(name){
   return BIZ_NAME_MAP[trimmed] || trimmed;
 }
 
-// ブロック定義（列インデックスは 0-base）
-//
-// 重要：原ファイル TM/經代銷 ブロックの「未稅金額」列（AD/AP）の数式は
-//        =AC/0.105  または  =AO/0.105  というバグ式（0.105 は 1.05 のタイポ）。
-//        結果が真の未稅の約 10 倍になる。
-//        → 本converterでは 含稅金額 列（AC=col 28、AO=col 40）を読み、
-//          /1.05 で未稅に正しく換算する（taxed:true）。
-//
-// 經代銷ブロック：XML ヘッダー（行12）で確認した正しい列は AI–AP（1列ズレあり）：
-//   AI=事業(34), AJ=商品編號(35), AK=商品名稱(36), AL=發貨日期(37),
-//   AM=管道(38), AN=商品數量(39), AO=商品小計含稅(40), AP=未稅バグ式(41)
-const BLOCKS = [
-  { name:"WEB/KOL", cols:{ biz:1,  code:2,  prod:3,  date:4,  channel:5,  qty:6,  amt:7  }, channelMap:{ "網站":"WEB", "團購":"KOL" }, taxed:false },
-  { name:"EC",      cols:{ biz:12, code:13, prod:14, date:15, channel:18, qty:16, amt:17 }, fixed:"EC",     taxed:false },
-  // TM：AC列(含稅金額) を /1.05 換算
-  { name:"TM",      cols:{ biz:22, code:23, prod:24, date:25, channel:26, qty:27, amt:28 }, fixed:"TM",     taxed:true  },
-  // 經代銷：AO列(商品小計=含稅) を /1.05 換算
-  { name:"經代銷",  cols:{ biz:34, code:35, prod:36, date:37, channel:38, qty:39, amt:40 }, fixed:"經代銷", taxed:true  },
-];
+// シート名規則：<YY><MM><suffix>。suffix = WEB&KOL | EC | TM（EC は前にスペース可）
+const SHEET_RE = /^(\d{2})(\d{2})\s*(WEB&KOL|EC|TM)$/;
 
-// シート名 "2604" → 年月 "2026/04"
-function sheetNameToYM(name){
-  const m = /^(\d{2})(\d{2})$/.exec(String(name).trim());
-  if(!m) return null;
-  const yy = parseInt(m[1],10);
-  const mm = parseInt(m[2],10);
-  if(mm<1 || mm>12) return null;
-  return `20${m[1]}/${String(mm).padStart(2,"0")}`;
-}
+// 小計行・ヘッダー行で「事業」欄に出る値（スキップ対象）
+const SKIP_BIZ = new Set(['', '0', '事業', '事業別', '總計', '(空白)', '(全部)']);
+
+// シート種別ごとの列構造（ヘッダー行は 2、データは行3以降）
+const SHEET_CONFIG = {
+  // 事業 / 商品貨號 / 訂單日期 / 銷貨管道 / 加總-數量 / 加總-未稅價格
+  'WEB&KOL': {
+    headerRow: 2,
+    cols: { biz:0, code:1, date:2, channel:3, qty:4, amt:5 },
+    channelMap: { '網站':'WEB', '團購':'KOL' },
+  },
+  // 事業 / 主商品貨號 / 訂單成立日期 / 加總-數量 / 加總-未稅價格 / [EC固定列]
+  'EC': {
+    headerRow: 2,
+    cols: { biz:0, code:1, date:2, qty:3, amt:4 },
+    fixed: 'EC',
+  },
+  // 事業 / 商品編號 / 發貨日期 / 管道 / 商品數量 / 含稅金額 / 加總-未稅價格 / 發貨日期(複製)
+  'TM': {
+    headerRow: 2,
+    cols: { biz:0, code:1, date:2, qty:4, amt:6 },
+    fixed: 'TM',
+  },
+};
 
 const STATE = { workbook:null, output:null };
 
@@ -216,88 +216,71 @@ document.getElementById("btn-convert").addEventListener("click", ()=>{
 
 function convertWorkbook(wb){
   const allRows = [];
-  const months = [];
-  const debug = []; // 各シート × 各ブロックの統計
+  const monthsSet = new Set();
+  const debug = []; // シート毎の統計
 
   for(const sheetName of wb.SheetNames){
-    const ym = sheetNameToYM(sheetName);
-    if(!ym) continue;          // 國定假日表/年度工作天/管道定義 等を除外
+    const m = SHEET_RE.exec(String(sheetName).trim());
+    if(!m) continue;             // メタデータ・空シート等は除外
+    const yy = m[1], mm = m[2], suffix = m[3];
+    const ym = `20${yy}/${mm}`;
+    const cfg = SHEET_CONFIG[suffix];
+    if(!cfg) continue;
+
     const sheet = wb.Sheets[sheetName];
     const rows = XLSX.utils.sheet_to_json(sheet, {header:1, defval:null, raw:true});
+    const c = cfg.cols;
+    const dbg = { sheet:sheetName, ym, suffix, kept:0, skippedSubtotal:0, skippedZeroAmt:0, skippedNoChannel:0, channels:{}, bizes:{} };
 
-    let monthRowCount = 0;
-    const sheetDbg = { sheet:sheetName, ym, blocks:[] };
+    for(let i = cfg.headerRow + 1; i < rows.length; i++){
+      const r = rows[i];
+      if(!r) continue;
 
-    for(const block of BLOCKS){
-      const c = block.cols;
-      const blockDbg = { name:block.name, kept:0, skippedHeader:0, skippedNoChannel:0, skippedNoBiz:0, channels:{}, bizes:{} };
+      const rawBiz = r[c.biz];
+      const rawTrim = rawBiz==null ? '' : String(rawBiz).trim();
+      if(SKIP_BIZ.has(rawTrim)){ dbg.skippedSubtotal++; continue; }
+      const biz = normalizeBiz(rawTrim);
 
-      for(let i=0; i<rows.length; i++){
-        const r = rows[i];
-        if(!r) continue;
+      const qty = num(r[c.qty]);
+      const amt = num(r[c.amt]);
+      if(amt === 0){ dbg.skippedZeroAmt++; continue; }
 
-        const rawBiz = r[c.biz];
-        // null / 空 / "事業" header / "總計" 系の小計列はスキップ
-        if(rawBiz===null || rawBiz===undefined || rawBiz==="") { continue; }
-        const rawTrim = String(rawBiz).trim();
-        if(rawTrim === "事業" || rawTrim === "事業別" || rawTrim === "總計" || rawTrim === "(空白)" || rawTrim === "(全部)") {
-          blockDbg.skippedHeader++; continue;
-        }
-        // 事業名の正規化（學習→學習商品、數位經典→數位典藏）
-        const biz = normalizeBiz(rawTrim);
-
-        const qty = num(r[c.qty]);
-        // taxed:true のブロックは含稅列を /1.05 して未稅換算
-        // （TM・經代銷の元ファイル数式 =AC/0.105 / =AO/0.105 は 1.05 のタイポで 10 倍値）
-        const rawAmt = num(r[c.amt]);
-        const amt = block.taxed ? rawAmt / 1.05 : rawAmt;
-        // 金額が 0 の行は除外（数量があっても削除する仕様）
-        if(amt === 0){
-          blockDbg.skippedZeroAmt = (blockDbg.skippedZeroAmt||0) + 1;
+      let channel;
+      if(cfg.channelMap){
+        const chRaw = r[c.channel];
+        const chKey = chRaw==null ? '' : String(chRaw).trim();
+        channel = cfg.channelMap[chKey];
+        if(!channel){
+          dbg.skippedNoChannel++;
+          dbg.channels[chKey || '(空)'] = (dbg.channels[chKey||'(空)']||0) + 1;
           continue;
         }
-
-        // 管道判定
-        let channel;
-        if(block.channelMap){
-          // WEB/KOL ブロックは F 列の値で判別
-          const chRaw = r[c.channel];
-          const chKey = chRaw===null||chRaw===undefined ? "" : String(chRaw).trim();
-          channel = block.channelMap[chKey];
-          if(!channel){
-            blockDbg.skippedNoChannel++;
-            blockDbg.channels[chKey || "(空)"] = (blockDbg.channels[chKey||"(空)"]||0) + 1;
-            continue;
-          }
-          blockDbg.channels[chKey] = (blockDbg.channels[chKey]||0) + 1;
-        } else {
-          channel = block.fixed;
-        }
-
-        const code = r[c.code]==null ? "" : String(r[c.code]).trim();
-        const prod = r[c.prod]==null ? "" : String(r[c.prod]).trim();
-
-        allRows.push({
-          年月: ym,
-          事業別: biz,
-          管道: channel,
-          商品代號: code,
-          商品名稱: prod,
-          數量: qty,
-          未稅金額: roundTo(amt, 2),
-        });
-        blockDbg.kept++;
-        blockDbg.bizes[biz] = (blockDbg.bizes[biz]||0) + 1;
-        monthRowCount++;
+        dbg.channels[chKey] = (dbg.channels[chKey]||0) + 1;
+      } else {
+        channel = cfg.fixed;
+        dbg.channels[channel] = (dbg.channels[channel]||0) + 1;
       }
 
-      sheetDbg.blocks.push(blockDbg);
-    }
+      const code = r[c.code]==null ? '' : String(r[c.code]).trim();
+      // 商品名稱は元ファイルにないため空。儀表板で商品主檔から補完。
 
-    if(monthRowCount > 0) months.push(ym);
-    debug.push(sheetDbg);
+      allRows.push({
+        年月: ym,
+        事業別: biz,
+        管道: channel,
+        商品代號: code,
+        商品名稱: '',
+        數量: qty,
+        未稅金額: roundTo(amt, 2),
+      });
+      dbg.kept++;
+      dbg.bizes[biz] = (dbg.bizes[biz]||0) + 1;
+      monthsSet.add(ym);
+    }
+    debug.push(dbg);
   }
 
+  const months = Array.from(monthsSet).sort();
   return { rows:allRows, months, debug };
 }
 
@@ -335,28 +318,25 @@ function renderResult(result){
     <div class="stat"><div class="lbl">${s.lbl}</div><div class="val">${s.val}</div></div>
   `).join("");
 
-  // 區塊明細
+  // 各シート明細
   const detail = document.getElementById("block-detail");
-  let html = `<summary>📊 各月份 × 各區塊統計（點擊展開）</summary>`;
+  let html = `<summary>📊 各工作表統計（點擊展開）</summary>`;
   for(const sd of result.debug){
     html += `<div style="margin-top:8px;padding:6px 10px;background:#fff;border:1px solid var(--border);border-radius:5px">`;
-    html += `<div style="font-weight:600;color:var(--accent)">${sd.sheet} (${sd.ym})</div>`;
-    for(const bk of sd.blocks){
-      html += `<div class="stat-line">— ${bk.name}: 採用 ${bk.kept} 筆`;
-      if(bk.skippedZeroAmt) html += `, <span style="color:var(--warn)">金額0排除 ${bk.skippedZeroAmt}</span>`;
-      if(bk.skippedHeader) html += `, 跳過header ${bk.skippedHeader}`;
-      if(bk.skippedNoChannel) html += `, <span style="color:var(--bad)">未識別管道 ${bk.skippedNoChannel}</span>`;
-      if(Object.keys(bk.channels).length>0){
-        const chs = Object.entries(bk.channels).map(([k,v])=>`${k}=${v}`).join(", ");
-        html += ` | 管道分布: ${chs}`;
-      }
-      if(Object.keys(bk.bizes).length>0){
-        const bzs = Object.entries(bk.bizes).map(([k,v])=>`${k}=${v}`).join(", ");
-        html += ` | 事業: ${bzs}`;
-      }
-      html += `</div>`;
+    html += `<div style="font-weight:600;color:var(--accent)">${sd.sheet} (${sd.ym} / ${sd.suffix})</div>`;
+    html += `<div class="stat-line">採用 ${sd.kept} 筆`;
+    if(sd.skippedSubtotal) html += `, 跳過小計 ${sd.skippedSubtotal}`;
+    if(sd.skippedZeroAmt) html += `, <span style="color:var(--warn)">金額0排除 ${sd.skippedZeroAmt}</span>`;
+    if(sd.skippedNoChannel) html += `, <span style="color:var(--bad)">未識別管道 ${sd.skippedNoChannel}</span>`;
+    if(Object.keys(sd.channels).length>0){
+      const chs = Object.entries(sd.channels).map(([k,v])=>`${k}=${v}`).join(", ");
+      html += ` | 管道: ${chs}`;
     }
-    html += `</div>`;
+    if(Object.keys(sd.bizes).length>0){
+      const bzs = Object.entries(sd.bizes).map(([k,v])=>`${k}=${v}`).join(", ");
+      html += ` | 事業: ${bzs}`;
+    }
+    html += `</div></div>`;
   }
   // 全体的な事業/管道分布
   html += `<div style="margin-top:10px;padding:6px 10px;background:#eff6ff;border:1px solid #bfdbfe;border-radius:5px">`;
