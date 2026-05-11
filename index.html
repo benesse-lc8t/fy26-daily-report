@@ -2106,11 +2106,24 @@ function formatWeekLabel(start, end){
 function aggregateByWeek(biz, ch, weeks){
   const result = [];
   for(const wk of weeks){
+    const startStr = dateToISO(wk.start);
+    const endStr   = dateToISO(wk.end);
     let total = 0;
     if(STATE.actualRows){
       for(const r of STATE.actualRows){
         if(!r.date) continue;
         if(r.date < wk.start || r.date > wk.end) continue;
+        if(biz !== 'all' && r.biz !== biz) continue;
+        if(ch  !== 'all' && r.ch  !== ch)  continue;
+        total += r.amt;
+      }
+    }
+    // FY25 日次データ（2025/4〜2026/3）も同じ週範囲で取り込む。
+    // FY26 actualRows は 2026/4 以降のみで重複しない。
+    if(STATE.fy25 && STATE.fy25.daily){
+      for(const r of STATE.fy25.daily){
+        if(!r.date) continue;
+        if(r.date < startStr || r.date > endStr) continue;
         if(biz !== 'all' && r.biz !== biz) continue;
         if(ch  !== 'all' && r.ch  !== ch)  continue;
         total += r.amt;
