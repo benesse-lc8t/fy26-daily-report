@@ -466,24 +466,34 @@ const BIZ_LIST = ["學習商品","學習周邊","生活周邊","Mirafeel","數�
 const CHANNEL_LIST = ["WEB","TM","KOL","EC","經代銷"];
 const MONTHS = ["4月","5月","6月","7月","8月","9月","10月","11月","12月","1月","2月","3月"];
 
-// 月別テーマ：四半期で青の濃淡、月ごとに斜線パターンの角度を回転
+// 月別テーマ：四半期で青の濃淡、月ごとにドット密度（なし→極小→小）
 // Q1(4-6月)=薄青 / Q2(7-9月)=中青 / Q3(10-12月)=濃青 / Q4(1-3月)=紺
+// 四半期内3ヶ月は dots: none→xs→s と段階的に増加し、四半期境界で色が深まり dots がリセット
 const QUARTER_GRADIENTS = [
   ["#0EA5E9","#38BDF8"], // Q1: 期初・明るい
   ["#0284C7","#0EA5E9"], // Q2
   ["#0369A1","#0284C7"], // Q3
   ["#0C4A6E","#0369A1"], // Q4: 期末・深い
 ];
+const DOT_LEVELS = [
+  null,                                       // なし
+  { size:14, radius:0.9, alpha:0.22 },        // 極小
+  { size:14, radius:1.8, alpha:0.24 },        // 小
+];
 function applyMonthTheme(month){
   const i = MONTHS.indexOf(month);
   if(i < 0) return;
   const [c1, c2] = QUARTER_GRADIENTS[Math.floor(i/3)];
-  const angle = i * 15; // 4月=0°, 5月=15°, ... 3月=165°
+  const dot = DOT_LEVELS[i % 3];
   const header = document.querySelector("header");
   if(!header) return;
-  header.style.background =
-    `repeating-linear-gradient(${angle}deg, rgba(255,255,255,.10) 0 6px, transparent 6px 18px), ` +
-    `linear-gradient(135deg, ${c1}, ${c2})`;
+  const base = `linear-gradient(135deg, ${c1}, ${c2})`;
+  if(!dot){
+    header.style.background = base;
+  } else {
+    const overlay = `radial-gradient(circle, rgba(255,255,255,${dot.alpha}) ${dot.radius}px, transparent ${dot.radius+0.6}px) 0 0 / ${dot.size}px ${dot.size}px`;
+    header.style.background = `${overlay}, ${base}`;
+  }
 }
 
 const CHANNEL_MAP = {
