@@ -83,10 +83,17 @@
   nav.tabs .tab-col-2 .tab-btn.active{background:#E11D48;color:#fff;font-weight:500}
   nav.tabs .tab-col-2 .tab-btn.active:hover{background:#E11D48;color:#fff}
 
+  /* Column 3: gray (β/仮稼働中タブ) */
+  nav.tabs .tab-col-3{display:flex;flex-direction:column;gap:6px}
+  nav.tabs .tab-col-3 .tab-btn{background:#F1F5F9;color:#64748B;border:none;border-radius:6px;padding:7px 10px;font-size:12px;font-weight:500;cursor:pointer;transition:all .15s;font-family:inherit;text-align:left;width:100%}
+  nav.tabs .tab-col-3 .tab-btn:hover{background:#E2E8F0;color:#475569}
+  nav.tabs .tab-col-3 .tab-btn.active{background:#64748B;color:#fff;font-weight:500}
+  nav.tabs .tab-col-3 .tab-btn.active:hover{background:#64748B;color:#fff}
+
   @media (max-width: 900px){
     .layout{flex-direction:column}
     nav.tabs{width:100%;position:static;max-height:none;border-right:none;flex-direction:row;flex-wrap:wrap}
-    nav.tabs .tab-col-1, nav.tabs .tab-col-2{flex-direction:row;flex-wrap:wrap}
+    nav.tabs .tab-col-1, nav.tabs .tab-col-2, nav.tabs .tab-col-3{flex-direction:row;flex-wrap:wrap}
     nav.tabs .tab-divider{width:100%;margin:4px 0}
   }
 
@@ -320,12 +327,15 @@
     <button class="tab-btn" data-tab="biz-學習周邊">學習周邊</button>
     <button class="tab-btn" data-tab="biz-生活周邊">生活周邊</button>
     <button class="tab-btn" data-tab="biz-Mirafeel">Mirafeel</button>
-    <button class="tab-btn" data-tab="biz-數位典藏">數位典藏（β版）</button>
     <button class="tab-btn" data-tab="ch-WEB">WEB</button>
     <button class="tab-btn" data-tab="ch-TM">TM</button>
     <button class="tab-btn" data-tab="ch-KOL">KOL</button>
     <button class="tab-btn" data-tab="ch-EC">EC</button>
     <button class="tab-btn" data-tab="ch-經代銷">經代銷</button>
+  </div>
+  <div class="tab-divider"></div>
+  <div class="tab-col tab-col-3">
+    <button class="tab-btn" data-tab="biz-數位典藏">數位典藏（β版）</button>
   </div>
 </nav>
 
@@ -456,6 +466,9 @@
    ============================================================ */
 
 const BIZ_LIST = ["學習商品","學習周邊","生活周邊","Mirafeel","數位典藏"];
+// 「全社」合計から 數位典藏（β）を除外する。data.json の構造は維持し、
+// 數位典藏 単独タブ（biz='數位典藏'）は引き続き正常に集計される。
+const BIZ_LIST_TOTAL = ["學習商品","學習周邊","生活周邊","Mirafeel"];
 const CHANNEL_LIST = ["WEB","TM","KOL","EC","經代銷"];
 const MONTHS = ["4月","5月","6月","7月","8月","9月","10月","11月","12月","1月","2月","3月"];
 
@@ -1483,7 +1496,7 @@ function renderPaceBanner(monthLabel, monthBudget, monthActual){
 function bgt(biz, ch, month){
   const src = isYoY() ? STATE.fy25 : STATE.budget;
   if(!src || !src.amount) return 0;
-  const bizes = biz==='all' ? BIZ_LIST : (Array.isArray(biz)?biz:[biz]);
+  const bizes = biz==='all' ? BIZ_LIST_TOTAL : (Array.isArray(biz)?biz:[biz]);
   const chs   = ch==='all'  ? CHANNEL_LIST : (Array.isArray(ch)?ch:[ch]);
   let s = 0;
   for(const b of bizes) for(const c of chs){
@@ -1493,7 +1506,7 @@ function bgt(biz, ch, month){
 }
 function act(biz, ch, month){
   if(!STATE.actuals || !STATE.actuals[month]) return 0;
-  const bizes = biz==='all' ? BIZ_LIST : (Array.isArray(biz)?biz:[biz]);
+  const bizes = biz==='all' ? BIZ_LIST_TOTAL : (Array.isArray(biz)?biz:[biz]);
   const chs   = ch==='all'  ? CHANNEL_LIST : (Array.isArray(ch)?ch:[ch]);
   let s = 0;
   const md = STATE.actuals[month];
@@ -1516,7 +1529,7 @@ function monthsThru(month){
 function bgtQty(biz, ch, month){
   const src = isYoY() ? STATE.fy25 : STATE.budget;
   if(!src || !src.qty) return 0;
-  const bizes = biz==='all' ? BIZ_LIST : (Array.isArray(biz)?biz:[biz]);
+  const bizes = biz==='all' ? BIZ_LIST_TOTAL : (Array.isArray(biz)?biz:[biz]);
   const chs   = ch==='all'  ? CHANNEL_LIST : (Array.isArray(ch)?ch:[ch]);
   let s = 0;
   for(const b of bizes) for(const c of chs){
@@ -1527,7 +1540,7 @@ function bgtQty(biz, ch, month){
 // 套数集計（実績）
 function actQty(biz, ch, month){
   if(!STATE.actuals || !STATE.actuals[month]) return 0;
-  const bizes = biz==='all' ? BIZ_LIST : (Array.isArray(biz)?biz:[biz]);
+  const bizes = biz==='all' ? BIZ_LIST_TOTAL : (Array.isArray(biz)?biz:[biz]);
   const chs   = ch==='all'  ? CHANNEL_LIST : (Array.isArray(ch)?ch:[ch]);
   let s = 0;
   const md = STATE.actuals[month];
@@ -1655,8 +1668,8 @@ function kpiCardHTML(label, sub, budget, actual){
 }
 
 function renderBizSection(){
-  renderRateTable("biz-table", "事業", BIZ_LIST, 'biz', 'all');
-  renderRateChart("chart-biz", BIZ_LIST, 'biz', 'all');
+  renderRateTable("biz-table", "事業", BIZ_LIST_TOTAL, 'biz', 'all');
+  renderRateChart("chart-biz", BIZ_LIST_TOTAL, 'biz', 'all');
 }
 function renderChannelSection(){
   renderRateTable("ch-table", "管道", CHANNEL_LIST, 'ch', 'all');
@@ -2007,7 +2020,7 @@ function renderDetailTab(filterType, filterValue){
   const ch  = filterType === 'ch'  ? filterValue : 'all';
   const breakdownType  = filterType === 'biz' ? 'ch' : 'biz';
   const breakdownLabel = breakdownType === 'biz' ? '事業' : '管道';
-  const breakdownDims  = breakdownType === 'biz' ? BIZ_LIST : CHANNEL_LIST;
+  const breakdownDims  = breakdownType === 'biz' ? BIZ_LIST_TOTAL : CHANNEL_LIST;
 
   const idPrefix = `${filterType}-${filterValue}`;
   const m = STATE.selectedMonth;
