@@ -2077,7 +2077,7 @@ function renderDetailTab(filterType, filterValue){
 }
 
 /* ============================================================
-   Tab: 週次推移（直近10週）
+   Tab: 週次推移（直近30週）
    ============================================================ */
 // 月曜日の日付を返す（dateの週の月曜日）
 function getMondayOfWeek(date){
@@ -2193,7 +2193,7 @@ function renderWeeklyTab(){
   const filter = STATE.weeklyFilter;
 
   let html = '<div class="card">';
-  html += '<h2>週別趨勢（直近10週）<span class="pill" id="weekly-pill">最新日期：—</span></h2>';
+  html += '<h2>週別趨勢（直近30週）<span class="pill" id="weekly-pill">最新日期：—</span></h2>';
 
   // セレクター
   html += '<div class="filter-row">';
@@ -2253,7 +2253,7 @@ function renderWeeklyContent(){
 
   pillEl.textContent = `最新日期：${formatYMD(latestDate)}`;
 
-  const weeks = getWeeksInRange(latestDate, 10);
+  const weeks = getWeeksInRange(latestDate, 30);
   const data = aggregateByWeek(biz, ch, weeks);
   const yoy = isYoY();
   const dataPrev = yoy ? aggregateByWeekFY25(biz, ch, weeks) : null;
