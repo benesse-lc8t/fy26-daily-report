@@ -24,6 +24,7 @@
     --muted:#0369A1;
     --accent:#0284C7;
     --accent-dark:#0C4A6E;
+    --month-accent:#0C4A6E;
     --accent-light:#BAE6FD;
     --subheader:#E0F2FE;
     --stripe:#F0F9FF;
@@ -138,7 +139,7 @@
   .kpi-card .rate-lbl{font-size:11px;color:var(--muted);margin-bottom:2px;font-weight:500}
 
   /* Pace banner */
-  .pace-banner{background:#fff;border:0.5px solid var(--border);border-radius:10px;margin-top:14px;padding:14px 0;box-shadow:0 1px 4px rgba(12,74,110,.07);display:grid;grid-template-columns:1.3fr 1fr 1.5fr 1.2fr;position:relative;overflow:hidden;align-items:center}
+  .pace-banner{background:#fff;border:0.5px solid var(--border);border-radius:10px;margin-top:14px;padding:14px 0;box-shadow:0 1px 4px rgba(12,74,110,.07);display:grid;grid-template-columns:1.3fr 1fr 1.2fr;position:relative;overflow:hidden;align-items:center}
   .pace-banner::before{content:"";position:absolute;left:0;top:0;width:6px;height:100%}
   .pace-banner.pace-good::before{background:linear-gradient(180deg,#15803D,#22C55E)}
   .pace-banner.pace-onpace::before{background:linear-gradient(180deg,var(--accent-dark),var(--accent))}
@@ -160,21 +161,13 @@
   .pace-banner.pace-bad .progress-rate{color:var(--bad)}
   .pace-banner.pace-na .progress-rate{color:#94A3B8}
 
-  .pace-status{display:flex;align-items:center;justify-content:center}
-  .pace-status .pace-badge{padding:9px 22px;border-radius:24px;font-weight:700;font-size:15px;letter-spacing:.6px}
-  .pace-banner.pace-good .pace-badge{background:var(--good-bg);color:var(--good);border:2px solid var(--good)}
-  .pace-banner.pace-onpace .pace-badge{background:var(--subheader);color:var(--accent-dark);border:2px solid var(--accent-dark)}
-  .pace-banner.pace-warn .pace-badge{background:var(--warn-bg);color:var(--warn);border:2px solid var(--warn)}
-  .pace-banner.pace-bad .pace-badge{background:var(--bad-bg);color:var(--bad);border:2px solid var(--bad)}
-  .pace-banner.pace-na .pace-badge{background:var(--stripe);color:var(--muted);border:2px solid #94A3B8}
-
   .pace-empty{background:var(--stripe);border:1px dashed var(--border);border-radius:12px;padding:14px;text-align:center;color:var(--muted);font-size:12px;margin-top:14px}
 
   /* Tables */
   table.grid{width:100%;border-collapse:collapse;font-size:14px}
   table.grid th,table.grid td{border:1px solid var(--border);padding:7px 10px;text-align:right;white-space:nowrap;font-variant-numeric:tabular-nums;font-weight:500;color:var(--ink)}
   table.grid th{font-weight:600;text-align:center;font-size:13px}
-  table.grid th.l1{background:var(--accent-dark);color:#fff;border-color:var(--accent-dark)}
+  table.grid th.l1{background:var(--month-accent);color:#fff;border-color:var(--month-accent)}
   table.grid th.l2{background:var(--subheader);color:var(--secondary);border-color:var(--border)}
   table.grid td.dim{text-align:left;font-weight:600;background:var(--stripe);color:var(--accent-dark)}
   table.grid tbody tr:nth-child(even) td:not(.dim){background:var(--stripe)}
@@ -485,6 +478,7 @@ function applyMonthTheme(month){
   if(i < 0) return;
   const [c1, c2] = QUARTER_GRADIENTS[Math.floor(i/3)];
   const dot = DOT_LEVELS[i % 3];
+  document.documentElement.style.setProperty('--month-accent', c1);
   const header = document.querySelector("header");
   if(!header) return;
   const base = `linear-gradient(135deg, ${c1}, ${c2})`;
@@ -1457,12 +1451,12 @@ function renderPaceBanner(monthLabel, monthBudget, monthActual){
   const achRate = monthActual / monthBudget * 100;
   const progRate = tp.pct > 0 ? Math.floor(achRate / tp.pct * 100) : null;
 
-  let cls, badge;
-  if(progRate == null){          cls = 'pace-na';     badge = '— 無資料'; }
-  else if(progRate >= 110){      cls = 'pace-good';   badge = '✓ 大幅超前'; }
-  else if(progRate >= 100){      cls = 'pace-onpace'; badge = '✓ 順利達成'; }
-  else if(progRate >= 80){       cls = 'pace-warn';   badge = '△ 略為落後'; }
-  else {                         cls = 'pace-bad';    badge = '✗ 進度落後'; }
+  let cls;
+  if(progRate == null){          cls = 'pace-na';     }
+  else if(progRate >= 110){      cls = 'pace-good';   }
+  else if(progRate >= 100){      cls = 'pace-onpace'; }
+  else if(progRate >= 80){       cls = 'pace-warn';   }
+  else {                         cls = 'pace-bad';    }
 
   container.innerHTML = `
     <div class="pace-banner ${cls}">
@@ -1475,9 +1469,6 @@ function renderPaceBanner(monthLabel, monthBudget, monthActual){
         <div class="pace-lbl">達成進捗率</div>
         <div class="pace-val progress-rate">${progRate == null ? "—" : progRate + '<span class="pace-unit">%</span>'}</div>
         <div class="pace-sub">當月達成率 ÷ 時間進捗率</div>
-      </div>
-      <div class="pace-cell pace-status">
-        <div class="pace-badge">${badge}</div>
       </div>
       <div class="pace-cell">
         <div class="pace-lbl">資料最終日</div>
