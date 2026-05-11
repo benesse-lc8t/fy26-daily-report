@@ -24,6 +24,7 @@
     --muted:#0369A1;
     --accent:#0284C7;
     --accent-dark:#0C4A6E;
+    --month-accent:#0C4A6E;
     --accent-light:#BAE6FD;
     --subheader:#E0F2FE;
     --stripe:#F0F9FF;
@@ -82,10 +83,17 @@
   nav.tabs .tab-col-2 .tab-btn.active{background:#E11D48;color:#fff;font-weight:500}
   nav.tabs .tab-col-2 .tab-btn.active:hover{background:#E11D48;color:#fff}
 
+  /* Column 3: gray (β/仮稼働中タブ) */
+  nav.tabs .tab-col-3{display:flex;flex-direction:column;gap:6px}
+  nav.tabs .tab-col-3 .tab-btn{background:#F1F5F9;color:#64748B;border:none;border-radius:6px;padding:7px 10px;font-size:12px;font-weight:500;cursor:pointer;transition:all .15s;font-family:inherit;text-align:left;width:100%}
+  nav.tabs .tab-col-3 .tab-btn:hover{background:#E2E8F0;color:#475569}
+  nav.tabs .tab-col-3 .tab-btn.active{background:#64748B;color:#fff;font-weight:500}
+  nav.tabs .tab-col-3 .tab-btn.active:hover{background:#64748B;color:#fff}
+
   @media (max-width: 900px){
     .layout{flex-direction:column}
     nav.tabs{width:100%;position:static;max-height:none;border-right:none;flex-direction:row;flex-wrap:wrap}
-    nav.tabs .tab-col-1, nav.tabs .tab-col-2{flex-direction:row;flex-wrap:wrap}
+    nav.tabs .tab-col-1, nav.tabs .tab-col-2, nav.tabs .tab-col-3{flex-direction:row;flex-wrap:wrap}
     nav.tabs .tab-divider{width:100%;margin:4px 0}
   }
 
@@ -138,7 +146,7 @@
   .kpi-card .rate-lbl{font-size:11px;color:var(--muted);margin-bottom:2px;font-weight:500}
 
   /* Pace banner */
-  .pace-banner{background:#fff;border:0.5px solid var(--border);border-radius:10px;margin-top:14px;padding:14px 0;box-shadow:0 1px 4px rgba(12,74,110,.07);display:grid;grid-template-columns:1.3fr 1fr 1.5fr 1.2fr;position:relative;overflow:hidden;align-items:center}
+  .pace-banner{background:#fff;border:0.5px solid var(--border);border-radius:10px;margin-top:14px;padding:14px 0;box-shadow:0 1px 4px rgba(12,74,110,.07);display:grid;grid-template-columns:1.3fr 1fr 1.2fr;position:relative;overflow:hidden;align-items:center}
   .pace-banner::before{content:"";position:absolute;left:0;top:0;width:6px;height:100%}
   .pace-banner.pace-good::before{background:linear-gradient(180deg,#15803D,#22C55E)}
   .pace-banner.pace-onpace::before{background:linear-gradient(180deg,var(--accent-dark),var(--accent))}
@@ -160,21 +168,13 @@
   .pace-banner.pace-bad .progress-rate{color:var(--bad)}
   .pace-banner.pace-na .progress-rate{color:#94A3B8}
 
-  .pace-status{display:flex;align-items:center;justify-content:center}
-  .pace-status .pace-badge{padding:9px 22px;border-radius:24px;font-weight:700;font-size:15px;letter-spacing:.6px}
-  .pace-banner.pace-good .pace-badge{background:var(--good-bg);color:var(--good);border:2px solid var(--good)}
-  .pace-banner.pace-onpace .pace-badge{background:var(--subheader);color:var(--accent-dark);border:2px solid var(--accent-dark)}
-  .pace-banner.pace-warn .pace-badge{background:var(--warn-bg);color:var(--warn);border:2px solid var(--warn)}
-  .pace-banner.pace-bad .pace-badge{background:var(--bad-bg);color:var(--bad);border:2px solid var(--bad)}
-  .pace-banner.pace-na .pace-badge{background:var(--stripe);color:var(--muted);border:2px solid #94A3B8}
-
   .pace-empty{background:var(--stripe);border:1px dashed var(--border);border-radius:12px;padding:14px;text-align:center;color:var(--muted);font-size:12px;margin-top:14px}
 
   /* Tables */
   table.grid{width:100%;border-collapse:collapse;font-size:14px}
   table.grid th,table.grid td{border:1px solid var(--border);padding:7px 10px;text-align:right;white-space:nowrap;font-variant-numeric:tabular-nums;font-weight:500;color:var(--ink)}
   table.grid th{font-weight:600;text-align:center;font-size:13px}
-  table.grid th.l1{background:var(--accent-dark);color:#fff;border-color:var(--accent-dark)}
+  table.grid th.l1{background:var(--month-accent);color:#fff;border-color:var(--month-accent)}
   table.grid th.l2{background:var(--subheader);color:var(--secondary);border-color:var(--border)}
   table.grid td.dim{text-align:left;font-weight:600;background:var(--stripe);color:var(--accent-dark)}
   table.grid tbody tr:nth-child(even) td:not(.dim){background:var(--stripe)}
@@ -327,12 +327,15 @@
     <button class="tab-btn" data-tab="biz-學習周邊">學習周邊</button>
     <button class="tab-btn" data-tab="biz-生活周邊">生活周邊</button>
     <button class="tab-btn" data-tab="biz-Mirafeel">Mirafeel</button>
-    <button class="tab-btn" data-tab="biz-數位典藏">數位典藏（β版）</button>
     <button class="tab-btn" data-tab="ch-WEB">WEB</button>
     <button class="tab-btn" data-tab="ch-TM">TM</button>
     <button class="tab-btn" data-tab="ch-KOL">KOL</button>
     <button class="tab-btn" data-tab="ch-EC">EC</button>
     <button class="tab-btn" data-tab="ch-經代銷">經代銷</button>
+  </div>
+  <div class="tab-divider"></div>
+  <div class="tab-col tab-col-3">
+    <button class="tab-btn" data-tab="biz-數位典藏">數位典藏（β版）</button>
   </div>
 </nav>
 
@@ -463,27 +466,41 @@
    ============================================================ */
 
 const BIZ_LIST = ["學習商品","學習周邊","生活周邊","Mirafeel","數位典藏"];
+// 「全社」合計から 數位典藏（β）を除外する。data.json の構造は維持し、
+// 數位典藏 単独タブ（biz='數位典藏'）は引き続き正常に集計される。
+const BIZ_LIST_TOTAL = ["學習商品","學習周邊","生活周邊","Mirafeel"];
 const CHANNEL_LIST = ["WEB","TM","KOL","EC","經代銷"];
 const MONTHS = ["4月","5月","6月","7月","8月","9月","10月","11月","12月","1月","2月","3月"];
 
-// 月別テーマ：四半期で青の濃淡、月ごとに斜線パターンの角度を回転
+// 月別テーマ：四半期で青の濃淡、月ごとにドット密度（なし→極小→小）
 // Q1(4-6月)=薄青 / Q2(7-9月)=中青 / Q3(10-12月)=濃青 / Q4(1-3月)=紺
+// 四半期内3ヶ月は dots: none→xs→s と段階的に増加し、四半期境界で色が深まり dots がリセット
 const QUARTER_GRADIENTS = [
   ["#0EA5E9","#38BDF8"], // Q1: 期初・明るい
   ["#0284C7","#0EA5E9"], // Q2
   ["#0369A1","#0284C7"], // Q3
   ["#0C4A6E","#0369A1"], // Q4: 期末・深い
 ];
+const DOT_LEVELS = [
+  null,                                       // なし
+  { size:14, radius:0.9, alpha:0.22 },        // 極小
+  { size:14, radius:1.8, alpha:0.24 },        // 小
+];
 function applyMonthTheme(month){
   const i = MONTHS.indexOf(month);
   if(i < 0) return;
   const [c1, c2] = QUARTER_GRADIENTS[Math.floor(i/3)];
-  const angle = i * 15; // 4月=0°, 5月=15°, ... 3月=165°
+  const dot = DOT_LEVELS[i % 3];
+  document.documentElement.style.setProperty('--month-accent', c1);
   const header = document.querySelector("header");
   if(!header) return;
-  header.style.background =
-    `repeating-linear-gradient(${angle}deg, rgba(255,255,255,.10) 0 6px, transparent 6px 18px), ` +
-    `linear-gradient(135deg, ${c1}, ${c2})`;
+  const base = `linear-gradient(135deg, ${c1}, ${c2})`;
+  if(!dot){
+    header.style.background = base;
+  } else {
+    const overlay = `radial-gradient(circle, rgba(255,255,255,${dot.alpha}) ${dot.radius}px, transparent ${dot.radius+0.6}px) 0 0 / ${dot.size}px ${dot.size}px`;
+    header.style.background = `${overlay}, ${base}`;
+  }
 }
 
 const CHANNEL_MAP = {
@@ -1447,12 +1464,12 @@ function renderPaceBanner(monthLabel, monthBudget, monthActual){
   const achRate = monthActual / monthBudget * 100;
   const progRate = tp.pct > 0 ? Math.floor(achRate / tp.pct * 100) : null;
 
-  let cls, badge;
-  if(progRate == null){          cls = 'pace-na';     badge = '— 無資料'; }
-  else if(progRate >= 110){      cls = 'pace-good';   badge = '✓ 大幅超前'; }
-  else if(progRate >= 100){      cls = 'pace-onpace'; badge = '✓ 順利達成'; }
-  else if(progRate >= 80){       cls = 'pace-warn';   badge = '△ 略為落後'; }
-  else {                         cls = 'pace-bad';    badge = '✗ 進度落後'; }
+  let cls;
+  if(progRate == null){          cls = 'pace-na';     }
+  else if(progRate >= 110){      cls = 'pace-good';   }
+  else if(progRate >= 100){      cls = 'pace-onpace'; }
+  else if(progRate >= 80){       cls = 'pace-warn';   }
+  else {                         cls = 'pace-bad';    }
 
   container.innerHTML = `
     <div class="pace-banner ${cls}">
@@ -1465,9 +1482,6 @@ function renderPaceBanner(monthLabel, monthBudget, monthActual){
         <div class="pace-lbl">達成進捗率</div>
         <div class="pace-val progress-rate">${progRate == null ? "—" : progRate + '<span class="pace-unit">%</span>'}</div>
         <div class="pace-sub">當月達成率 ÷ 時間進捗率</div>
-      </div>
-      <div class="pace-cell pace-status">
-        <div class="pace-badge">${badge}</div>
       </div>
       <div class="pace-cell">
         <div class="pace-lbl">資料最終日</div>
@@ -1482,7 +1496,7 @@ function renderPaceBanner(monthLabel, monthBudget, monthActual){
 function bgt(biz, ch, month){
   const src = isYoY() ? STATE.fy25 : STATE.budget;
   if(!src || !src.amount) return 0;
-  const bizes = biz==='all' ? BIZ_LIST : (Array.isArray(biz)?biz:[biz]);
+  const bizes = biz==='all' ? BIZ_LIST_TOTAL : (Array.isArray(biz)?biz:[biz]);
   const chs   = ch==='all'  ? CHANNEL_LIST : (Array.isArray(ch)?ch:[ch]);
   let s = 0;
   for(const b of bizes) for(const c of chs){
@@ -1492,7 +1506,7 @@ function bgt(biz, ch, month){
 }
 function act(biz, ch, month){
   if(!STATE.actuals || !STATE.actuals[month]) return 0;
-  const bizes = biz==='all' ? BIZ_LIST : (Array.isArray(biz)?biz:[biz]);
+  const bizes = biz==='all' ? BIZ_LIST_TOTAL : (Array.isArray(biz)?biz:[biz]);
   const chs   = ch==='all'  ? CHANNEL_LIST : (Array.isArray(ch)?ch:[ch]);
   let s = 0;
   const md = STATE.actuals[month];
@@ -1515,7 +1529,7 @@ function monthsThru(month){
 function bgtQty(biz, ch, month){
   const src = isYoY() ? STATE.fy25 : STATE.budget;
   if(!src || !src.qty) return 0;
-  const bizes = biz==='all' ? BIZ_LIST : (Array.isArray(biz)?biz:[biz]);
+  const bizes = biz==='all' ? BIZ_LIST_TOTAL : (Array.isArray(biz)?biz:[biz]);
   const chs   = ch==='all'  ? CHANNEL_LIST : (Array.isArray(ch)?ch:[ch]);
   let s = 0;
   for(const b of bizes) for(const c of chs){
@@ -1526,7 +1540,7 @@ function bgtQty(biz, ch, month){
 // 套数集計（実績）
 function actQty(biz, ch, month){
   if(!STATE.actuals || !STATE.actuals[month]) return 0;
-  const bizes = biz==='all' ? BIZ_LIST : (Array.isArray(biz)?biz:[biz]);
+  const bizes = biz==='all' ? BIZ_LIST_TOTAL : (Array.isArray(biz)?biz:[biz]);
   const chs   = ch==='all'  ? CHANNEL_LIST : (Array.isArray(ch)?ch:[ch]);
   let s = 0;
   const md = STATE.actuals[month];
@@ -1654,8 +1668,8 @@ function kpiCardHTML(label, sub, budget, actual){
 }
 
 function renderBizSection(){
-  renderRateTable("biz-table", "事業", BIZ_LIST, 'biz', 'all');
-  renderRateChart("chart-biz", BIZ_LIST, 'biz', 'all');
+  renderRateTable("biz-table", "事業", BIZ_LIST_TOTAL, 'biz', 'all');
+  renderRateChart("chart-biz", BIZ_LIST_TOTAL, 'biz', 'all');
 }
 function renderChannelSection(){
   renderRateTable("ch-table", "管道", CHANNEL_LIST, 'ch', 'all');
@@ -2006,7 +2020,7 @@ function renderDetailTab(filterType, filterValue){
   const ch  = filterType === 'ch'  ? filterValue : 'all';
   const breakdownType  = filterType === 'biz' ? 'ch' : 'biz';
   const breakdownLabel = breakdownType === 'biz' ? '事業' : '管道';
-  const breakdownDims  = breakdownType === 'biz' ? BIZ_LIST : CHANNEL_LIST;
+  const breakdownDims  = breakdownType === 'biz' ? BIZ_LIST_TOTAL : CHANNEL_LIST;
 
   const idPrefix = `${filterType}-${filterValue}`;
   const m = STATE.selectedMonth;
@@ -2092,11 +2106,24 @@ function formatWeekLabel(start, end){
 function aggregateByWeek(biz, ch, weeks){
   const result = [];
   for(const wk of weeks){
+    const startStr = dateToISO(wk.start);
+    const endStr   = dateToISO(wk.end);
     let total = 0;
     if(STATE.actualRows){
       for(const r of STATE.actualRows){
         if(!r.date) continue;
         if(r.date < wk.start || r.date > wk.end) continue;
+        if(biz !== 'all' && r.biz !== biz) continue;
+        if(ch  !== 'all' && r.ch  !== ch)  continue;
+        total += r.amt;
+      }
+    }
+    // FY25 日次データ（2025/4〜2026/3）も同じ週範囲で取り込む。
+    // FY26 actualRows は 2026/4 以降のみで重複しない。
+    if(STATE.fy25 && STATE.fy25.daily){
+      for(const r of STATE.fy25.daily){
+        if(!r.date) continue;
+        if(r.date < startStr || r.date > endStr) continue;
         if(biz !== 'all' && r.biz !== biz) continue;
         if(ch  !== 'all' && r.ch  !== ch)  continue;
         total += r.amt;
