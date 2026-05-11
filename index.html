@@ -466,26 +466,24 @@ const BIZ_LIST = ["學習商品","學習周邊","生活周邊","Mirafeel","數�
 const CHANNEL_LIST = ["WEB","TM","KOL","EC","經代銷"];
 const MONTHS = ["4月","5月","6月","7月","8月","9月","10月","11月","12月","1月","2月","3月"];
 
-// 月別テーマカラー（ヘッダーのグラデーション）
-const MONTH_THEMES = {
-  "4月":  ["#DB2777","#F472B6"], // 桜
-  "5月":  ["#15803D","#4ADE80"], // 新緑
-  "6月":  ["#6D28D9","#A78BFA"], // 紫陽花
-  "7月":  ["#0E7490","#22D3EE"], // 海・夏空
-  "8月":  ["#C2410C","#FB923C"], // ひまわり
-  "9月":  ["#BE123C","#FB7185"], // 秋桜
-  "10月": ["#9A3412","#F97316"], // 紅葉
-  "11月": ["#78350F","#B45309"], // 晩秋
-  "12月": ["#14532D","#B91C1C"], // 冬・聖夜
-  "1月":  ["#1E3A8A","#93C5FD"], // 新年・雪
-  "2月":  ["#831843","#DB2777"], // 梅・節分
-  "3月":  ["#9D174D","#F9A8D4"]  // 春の訪れ
-};
+// 月別テーマ：四半期で青の濃淡、月ごとに斜線パターンの角度を回転
+// Q1(4-6月)=薄青 / Q2(7-9月)=中青 / Q3(10-12月)=濃青 / Q4(1-3月)=紺
+const QUARTER_GRADIENTS = [
+  ["#0EA5E9","#38BDF8"], // Q1: 期初・明るい
+  ["#0284C7","#0EA5E9"], // Q2
+  ["#0369A1","#0284C7"], // Q3
+  ["#0C4A6E","#0369A1"], // Q4: 期末・深い
+];
 function applyMonthTheme(month){
-  const theme = MONTH_THEMES[month];
-  if(!theme) return;
+  const i = MONTHS.indexOf(month);
+  if(i < 0) return;
+  const [c1, c2] = QUARTER_GRADIENTS[Math.floor(i/3)];
+  const angle = i * 15; // 4月=0°, 5月=15°, ... 3月=165°
   const header = document.querySelector("header");
-  if(header) header.style.background = `linear-gradient(135deg, ${theme[0]}, ${theme[1]})`;
+  if(!header) return;
+  header.style.background =
+    `repeating-linear-gradient(${angle}deg, rgba(255,255,255,.10) 0 6px, transparent 6px 18px), ` +
+    `linear-gradient(135deg, ${c1}, ${c2})`;
 }
 
 const CHANNEL_MAP = {
