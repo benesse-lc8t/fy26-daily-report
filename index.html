@@ -991,6 +991,8 @@ function convNormalizeBiz(name){
 // 新形式：月毎に WEB&KOL / EC / TM の3シートに分割。シート名 "<YYMM><suffix>"。
 // 經代銷 はFY26新形式では存在せず、空のプレースホルダーシート（2606〜2703）はスキップ。
 const CONV_SHEET_RE = /^(\d{2})(\d{2})\s*(WEB&KOL|EC|TM)$/;
+// 數位典藏 WEB 月別工作表：<YYMM>WEB數位典藏（欄位：B=訂購日期, C=起訂年月YYYYMM, G=數量, I=銷售額未稅）
+const DIGI_WEB_RE = /^(\d{2})(\d{2})WEB數位典藏$/;
 const CONV_SKIP_BIZ = new Set(['', '0', '事業', '事業別', '總計', '(空白)', '(全部)']);
 const CONV_SHEET_CONFIG = {
   // ヘッダー行は2（行0-1にピボットフィルタ情報）。データは行3以降。
@@ -1067,23 +1069,22 @@ async function convertOriginalActuals(wb, onProgress){
       monthsSet.add(ym);
     }
   }
-  // 數位典藏WEB 固定工作表（B=訂購日期, C=起訂年月YYYYMM, G=訂購數量, I=銷售額未稅）
-  const digiWebSheet = wb.Sheets['數位典藏WEB'];
-  if(digiWebSheet){
+  // 數位典藏WEB 月別工作表（<YYMM>WEB數位典藏）
+  const digiWebSheets = wb.SheetNames.filter(n => DIGI_WEB_RE.test(n.trim()));
+  for(let si = 0; si < digiWebSheets.length; si++){
+    const sheetName = digiWebSheets[si];
+    const md = DIGI_WEB_RE.exec(sheetName.trim());
+    const ym = `20${md[1]}/${md[2]}`;
     if(onProgress){
-      onProgress('處理 數位典藏WEB', monthSheets.length / (monthSheets.length + 1));
+      onProgress(`處理 ${sheetName}（${monthSheets.length + si + 1}/${monthSheets.length + digiWebSheets.length}）`,
+        (monthSheets.length + si) / (monthSheets.length + digiWebSheets.length));
       await new Promise(r => setTimeout(r, 0));
     }
-    const dwRows = XLSX.utils.sheet_to_json(digiWebSheet, {header:1, defval:null, raw:true});
+    const sheet = wb.Sheets[sheetName];
+    const dwRows = XLSX.utils.sheet_to_json(sheet, {header:1, defval:null, raw:true});
     for(let i = 1; i < dwRows.length; i++){
       const r = dwRows[i];
       if(!r) continue;
-      const rawYM = r[2];
-      if(!rawYM) continue;
-      // 起訂年月は数値 202605 または文字列 "202605" で格納されている
-      const ymStr = String(Math.round(Number(rawYM)));
-      if(!/^\d{6}$/.test(ymStr)) continue;
-      const ym = ymStr.substring(0, 4) + '/' + ymStr.substring(4, 6);
       const qty = num(r[6]);   // G: 訂購數量
       const amt = num(r[8]);   // I: 銷售額（未稅）
       if(amt === 0) continue;
