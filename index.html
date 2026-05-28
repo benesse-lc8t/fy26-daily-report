@@ -184,6 +184,11 @@
   table.grid tbody tr:nth-child(even) td.rate{background:var(--stripe)}
   table.grid td.subtotal{background:var(--subheader);color:var(--accent-dark);font-weight:600}
   .scroll-x{overflow-x:auto}
+  /* 週次趨勢表格：第一欄（指標名稱）凍結 */
+  #weekly-table th:first-child,
+  #weekly-table td:first-child{position:sticky;left:0;z-index:2;min-width:130px}
+  #weekly-table thead th:first-child{background:var(--month-accent);color:#fff;z-index:3}
+  #weekly-table tbody td:first-child{background:var(--stripe);color:var(--accent-dark)}
 
   /* Rate badge (pill style for achievement rate) */
   .rate-badge{display:inline-block;padding:3px 13px;border-radius:20px;font-weight:600;font-size:13px;font-variant-numeric:tabular-nums;letter-spacing:.3px;min-width:60px;text-align:center}
