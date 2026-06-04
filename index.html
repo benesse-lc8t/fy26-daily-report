@@ -47,7 +47,7 @@
   body{margin:0;font-family:"Segoe UI","Microsoft JhengHei","PingFang TC",sans-serif;background:var(--bg);color:var(--ink);font-size:16px}
 
   /* Header */
-  header{background:linear-gradient(135deg,#0C2D6B,#1347A3,#1565C0);color:#fff;padding:15px 28px;display:flex;align-items:center;gap:24px;box-shadow:0 2px 16px rgba(0,0,0,.4);max-width:1600px;margin:0 auto}
+  header{background:#0C2D6B;color:#fff;padding:15px 28px;display:flex;align-items:center;gap:24px;box-shadow:0 2px 16px rgba(0,0,0,.4);max-width:1600px;margin:0 auto}
   header .brand{font-size:20px;font-weight:700;letter-spacing:.6px}
   header .month-bar{display:flex;align-items:center;gap:8px;background:rgba(255,255,255,.12);padding:6px 14px;border-radius:8px}
   header .month-bar label{font-size:14px;color:rgba(255,255,255,.85)}
@@ -95,6 +95,8 @@
   nav.tabs .tab-col-3 .tab-btn:hover{background:#E2E8F0;color:#475569}
   nav.tabs .tab-col-3 .tab-btn.active{background:#64748B;color:#fff;font-weight:500}
   nav.tabs .tab-col-3 .tab-btn.active:hover{background:#64748B;color:#fff}
+  nav.tabs .sidebar-feedback-link{display:block;background:#EFF6FF;color:#1D4ED8;border:1px solid #BFDBFE;border-radius:6px;padding:9px 10px;font-size:13px;font-weight:600;text-align:center;text-decoration:none;transition:all .15s;letter-spacing:.3px}
+  nav.tabs .sidebar-feedback-link:hover{background:#DBEAFE;border-color:#93C5FD}
 
   @media (max-width: 900px){
     .layout{flex-direction:column}
@@ -348,6 +350,8 @@
   <div class="tab-col tab-col-3">
     <button class="tab-btn" data-tab="biz-數位典藏">數位典藏（β版）</button>
   </div>
+  <div class="tab-divider"></div>
+  <a class="sidebar-feedback-link" href="https://benessetw.atlassian.net/wiki/spaces/WS/pages/620691613/1." target="_blank" rel="noopener">💬 需求與建議</a>
 </nav>
 
 <main>
