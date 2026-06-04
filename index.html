@@ -500,18 +500,8 @@ const DOT_LEVELS = [
 function applyMonthTheme(month){
   const i = MONTHS.indexOf(month);
   if(i < 0) return;
-  const [c1, c2] = QUARTER_GRADIENTS[Math.floor(i/3)];
-  const dot = DOT_LEVELS[i % 3];
+  const [c1] = QUARTER_GRADIENTS[Math.floor(i/3)];
   document.documentElement.style.setProperty('--month-accent', c1);
-  const header = document.querySelector("header");
-  if(!header) return;
-  const base = `linear-gradient(135deg, ${c1}, ${c2})`;
-  if(!dot){
-    header.style.background = base;
-  } else {
-    const overlay = `radial-gradient(circle, rgba(255,255,255,${dot.alpha}) ${dot.radius}px, transparent ${dot.radius+0.6}px) 0 0 / ${dot.size}px ${dot.size}px`;
-    header.style.background = `${overlay}, ${base}`;
-  }
 }
 
 const CHANNEL_MAP = {
