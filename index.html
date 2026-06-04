@@ -2934,6 +2934,8 @@ function getHandPuppetCodes(){
   return codes;
 }
 
+const PUPPET_UNIT_PRICE = 199; // 手偶固定單價（含套組中的手偶部分）
+
 function aggregateHandPuppet(codes){
   const data = {
     monthly: {},      // month → {qty, amt}
@@ -2947,18 +2949,19 @@ function aggregateHandPuppet(codes){
   for(const r of STATE.actualRows){
     if(!codes.has(r.code)) continue;
     if(!MONTHS.includes(r.month)) continue;
+    const puppetAmt = r.qty * PUPPET_UNIT_PRICE; // 固定199元/套計算
     data.monthly[r.month].qty += r.qty;
-    data.monthly[r.month].amt += r.amt;
+    data.monthly[r.month].amt += puppetAmt;
     if(CHANNEL_LIST.includes(r.ch)){
       data.byChannel[r.ch].qty += r.qty;
-      data.byChannel[r.ch].amt += r.amt;
+      data.byChannel[r.ch].amt += puppetAmt;
     }
     if(!data.products[r.code]){
       const fallback = STATE.master?.products?.[r.code]?.name || '';
       data.products[r.code] = { name: r.name || fallback, qty: 0, amt: 0 };
     }
     data.products[r.code].qty += r.qty;
-    data.products[r.code].amt += r.amt;
+    data.products[r.code].amt += puppetAmt;
     if(r.name && r.name.length > data.products[r.code].name.length){
       data.products[r.code].name = r.name;
     }
