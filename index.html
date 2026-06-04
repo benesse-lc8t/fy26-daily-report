@@ -2934,7 +2934,8 @@ function getHandPuppetCodes(){
   return codes;
 }
 
-const PUPPET_UNIT_PRICE = 199; // 手偶固定單價（含套組中的手偶部分）
+const PUPPET_BUNDLE_PRICE = 190; // 套組中手偶部分的固定未稅單價
+const PUPPET_PURE_CODE = '20250FXAM'; // 純手偶商品：使用實際未稅金額
 
 function aggregateHandPuppet(codes){
   const data = {
@@ -2949,7 +2950,8 @@ function aggregateHandPuppet(codes){
   for(const r of STATE.actualRows){
     if(!codes.has(r.code)) continue;
     if(!MONTHS.includes(r.month)) continue;
-    const puppetAmt = r.qty * PUPPET_UNIT_PRICE; // 固定199元/套計算
+    // 純手偶商品用實際未稅金額；套組內的手偶部分固定190元（未稅）
+    const puppetAmt = r.code === PUPPET_PURE_CODE ? r.amt : r.qty * PUPPET_BUNDLE_PRICE;
     data.monthly[r.month].qty += r.qty;
     data.monthly[r.month].amt += puppetAmt;
     if(CHANNEL_LIST.includes(r.ch)){
