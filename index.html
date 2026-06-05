@@ -1604,10 +1604,10 @@ function fmtYuanSigned(v){
 }
 
 /* ---------- Formatters ---------- */
-// 万元単位、整数（切り捨て）、千区切り
+// 万元単位、整数（四捨五入）、千区切り
 function fmtAmt(n){
   if(!isFinite(n)) return "—";
-  return Math.floor(n/10000).toLocaleString();
+  return Math.round(n/10000).toLocaleString();
 }
 function fmtRate(b, a){
   if(b<=0) return a>0 ? "—" : "—";
