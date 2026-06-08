@@ -317,6 +317,24 @@
   .prevday-btn{font-size:12px;font-weight:600;color:var(--secondary);background:var(--subheader);border:0.5px solid var(--border);border-radius:8px;padding:6px 14px;cursor:pointer}
   .prevday-btn:hover{background:var(--border)}
 
+  .prevday-filter-row{display:flex;flex-wrap:wrap;align-items:center;gap:14px;margin-bottom:16px}
+  .prevday-dropdown-wrap{position:relative}
+  .prevday-dropdown-btn{font-size:12px;font-weight:600;color:var(--accent-dark);background:var(--subheader);border:0.5px solid var(--border);border-radius:8px;padding:7px 14px;cursor:pointer;display:inline-flex;align-items:center;gap:6px;min-width:140px;justify-content:space-between}
+  .prevday-dropdown-btn:hover{background:var(--border)}
+  .prevday-dropdown-btn .caret{font-size:10px;color:var(--muted)}
+  .prevday-dropdown-panel{position:absolute;top:calc(100% + 6px);left:0;z-index:20;background:var(--card);border:0.5px solid var(--border);border-radius:10px;box-shadow:0 8px 24px rgba(0,0,0,.35);padding:10px;min-width:160px}
+  .prevday-dropdown-actions{display:flex;gap:6px;margin-bottom:8px;padding-bottom:8px;border-bottom:1px dashed var(--border)}
+  .prevday-dropdown-item{display:flex;align-items:center;gap:8px;font-size:13px;color:var(--secondary);padding:4px 2px;cursor:pointer;white-space:nowrap}
+  .prevday-dropdown-item input{cursor:pointer}
+  .prevday-stack-toggle{display:inline-flex;align-items:center;gap:6px}
+  .prevday-stack-lbl{font-size:12px;color:var(--muted);font-weight:500}
+  .prevday-stack-toggle button{font-size:12px;font-weight:600;color:var(--secondary);background:var(--card);border:0.5px solid var(--border);border-radius:8px;padding:6px 14px;cursor:pointer}
+  .prevday-stack-toggle button.active{background:var(--accent);border-color:var(--accent);color:#fff}
+  .prevday-overview-row{display:flex;flex-wrap:wrap;gap:18px;align-items:stretch}
+  .prevday-overview-row .kpi-card{flex:1 1 360px}
+  .prevday-chart-box{flex:1 1 420px;min-height:280px;position:relative}
+  .prevday-chart-box canvas{max-height:320px}
+
 </style>
 </head>
 <body>
@@ -426,8 +444,20 @@
 
     <div class="card">
       <h2>整體績效</h2>
-      <div class="kpi-card" id="prevday-kpi" style="max-width:520px"></div>
-      <div class="legend">※ 「預估目標」＝所選日期中屬於工作天的天數 ÷ 當月總工作天數 × 當月預算，跨月份時逐月估算後加總；如所選日期均為假日，則預估目標為 0，達成率不予顯示。</div>
+      <div class="prevday-filter-row">
+        <div class="prevday-dropdown-wrap" id="prevday-biz-filter"></div>
+        <div class="prevday-dropdown-wrap" id="prevday-ch-filter"></div>
+        <div class="prevday-stack-toggle">
+          <span class="prevday-stack-lbl">直條圖堆疊維度：</span>
+          <button type="button" data-stack="ch">依管道別</button>
+          <button type="button" data-stack="biz">依事業別</button>
+        </div>
+      </div>
+      <div class="prevday-overview-row">
+        <div class="kpi-card" id="prevday-kpi"></div>
+        <div class="prevday-chart-box"><canvas id="prevday-chart"></canvas></div>
+      </div>
+      <div class="legend">※ 「預估目標」＝所選日期中屬於工作天的天數 ÷ 當月總工作天數 × 當月預算，跨月份時逐月估算後加總；如所選日期均為假日，則預估目標為 0，達成率不予顯示。上方篩選器可縮限事業別／管道別範圍，將同步影響本卡片、下方拆解表與直條圖組成。</div>
     </div>
 
     <div class="card">
@@ -585,6 +615,10 @@ const STATE = {
   fy25:null,              // {amount, qty, daily}: FY25 actuals for YoY comparison
   prevDaySelected:null,   // Set of "YYYY-MM-DD"：「前日業績」タブで選択された日付
   prevDayCollapsed:null,  // Set of monthLabel：「前日業績」タブで折りたたまれている月
+  prevDayBizFilter:null,  // Set of biz：絞り込みフィルタ（事業別）
+  prevDayChFilter:null,   // Set of channel：絞り込みフィルタ（管道別）
+  prevDayStackBy:'ch',    // 'biz' | 'ch'：直條圖の積み上げ次元
+  prevDayDropdownOpen:null, // 'biz' | 'ch' | null：開いているドロップダウン
 };
 
 // YoY 對象タブ（前年比モードで表示するもの）
@@ -672,6 +706,12 @@ function destroyCharts(){
     try { STATE.charts[k].destroy(); } catch(e){}
   }
   STATE.charts = {};
+}
+function destroyChart(canvasId){
+  if(STATE.charts[canvasId]){
+    try { STATE.charts[canvasId].destroy(); } catch(e){}
+    delete STATE.charts[canvasId];
+  }
 }
 
 /* ---------- Status helpers ---------- */
@@ -1833,8 +1873,12 @@ function estimateTargetForDates(biz, ch, selectedDates){
 function renderPrevDayTab(){
   if(!STATE.budget) return;
   destroyCharts();
-  if(!STATE.prevDaySelected) STATE.prevDaySelected = new Set();
+  if(!STATE.prevDaySelected)  STATE.prevDaySelected  = new Set();
+  if(!STATE.prevDayBizFilter) STATE.prevDayBizFilter = new Set(BIZ_LIST_TOTAL);
+  if(!STATE.prevDayChFilter)  STATE.prevDayChFilter  = new Set(CHANNEL_LIST);
+  if(!STATE.prevDayStackBy)   STATE.prevDayStackBy   = 'ch';
   renderPrevDayDatePicker();
+  renderPrevDayFilters();
   renderPrevDaySummary();
 
   const clearBtn = document.getElementById("prevday-clear-all");
@@ -1846,6 +1890,85 @@ function renderPrevDayTab(){
     };
   }
 }
+
+const PREVDAY_BIZ_COLORS = ['#0284C7','#22C55E','#F59E0B','#A855F7','#EC4899'];
+const PREVDAY_CH_COLORS  = ['#0C4A6E','#0284C7','#7DD3FC','#FBBF24','#94A3B8'];
+
+function buildDropdownHTML(id, label, options, selectedSet){
+  const allSelected = options.length > 0 && options.every(o=>selectedSet.has(o));
+  const summary = allSelected ? `${label}：全部`
+    : selectedSet.size === 0 ? `${label}：未選擇`
+    : `${label}：已選 ${selectedSet.size}/${options.length}`;
+  const open = STATE.prevDayDropdownOpen === id;
+  let html = `<button type="button" class="prevday-dropdown-btn" data-dd-toggle="${id}">${summary} <span class="caret">▾</span></button>`;
+  html += `<div class="prevday-dropdown-panel"${open ? '' : ' style="display:none"'}>`;
+  html += `<div class="prevday-dropdown-actions">`;
+  html += `<button type="button" class="prevday-mini-btn" data-dd-action="all" data-dd="${id}">全選</button>`;
+  html += `<button type="button" class="prevday-mini-btn" data-dd-action="none" data-dd="${id}">清除</button>`;
+  html += `</div>`;
+  for(const opt of options){
+    const checked = selectedSet.has(opt) ? "checked" : "";
+    html += `<label class="prevday-dropdown-item"><input type="checkbox" data-dd="${id}" value="${opt}" ${checked}>${opt}</label>`;
+  }
+  html += `</div>`;
+  return html;
+}
+
+function renderPrevDayFilters(){
+  const bizWrap = document.getElementById("prevday-biz-filter");
+  const chWrap  = document.getElementById("prevday-ch-filter");
+  if(!bizWrap || !chWrap) return;
+
+  const specs = [
+    { id:'biz', label:'事業別', options:BIZ_LIST_TOTAL, set:STATE.prevDayBizFilter, wrap:bizWrap },
+    { id:'ch',  label:'管道別', options:CHANNEL_LIST,    set:STATE.prevDayChFilter,  wrap:chWrap  },
+  ];
+
+  for(const spec of specs){
+    spec.wrap.innerHTML = buildDropdownHTML(spec.id, spec.label, spec.options, spec.set);
+
+    spec.wrap.querySelector('[data-dd-toggle]').addEventListener("click", e=>{
+      e.stopPropagation();
+      STATE.prevDayDropdownOpen = (STATE.prevDayDropdownOpen === spec.id) ? null : spec.id;
+      renderPrevDayFilters();
+    });
+    spec.wrap.querySelector('.prevday-dropdown-panel').addEventListener("click", e=>e.stopPropagation());
+    spec.wrap.querySelectorAll('input[type="checkbox"]').forEach(cb=>{
+      cb.addEventListener("change", e=>{
+        if(e.target.checked) spec.set.add(e.target.value);
+        else spec.set.delete(e.target.value);
+        renderPrevDayFilters();
+        renderPrevDaySummary();
+      });
+    });
+    spec.wrap.querySelectorAll('button[data-dd-action]').forEach(btn=>{
+      btn.addEventListener("click", e=>{
+        e.stopPropagation();
+        spec.set.clear();
+        if(btn.dataset.ddAction === "all") spec.options.forEach(o=>spec.set.add(o));
+        renderPrevDayFilters();
+        renderPrevDaySummary();
+      });
+    });
+  }
+
+  document.querySelectorAll(".prevday-stack-toggle button[data-stack]").forEach(btn=>{
+    btn.classList.toggle("active", btn.dataset.stack === STATE.prevDayStackBy);
+    btn.onclick = ()=>{
+      STATE.prevDayStackBy = btn.dataset.stack;
+      renderPrevDayFilters();
+      renderPrevDaySummary();
+    };
+  });
+}
+
+// ドロップダウン外クリックで閉じる（パネル内は stopPropagation 済み）
+document.addEventListener("click", ()=>{
+  if(STATE.prevDayDropdownOpen != null){
+    STATE.prevDayDropdownOpen = null;
+    renderPrevDayFilters();
+  }
+});
 
 function renderPrevDayDatePicker(){
   const container = document.getElementById("prevday-datepicker");
@@ -1928,6 +2051,7 @@ function renderPrevDaySummary(){
   if(!kpiEl) return;
 
   const selected = Array.from(STATE.prevDaySelected || []).sort();
+  destroyChart('prevday-chart');
 
   if(selected.length === 0){
     if(pill) pill.textContent = "請選擇日期";
@@ -1937,24 +2061,29 @@ function renderPrevDaySummary(){
     return;
   }
 
+  // 篩選器（事業別／管道別）：縮限統計範圍，同步影響 KPI、拆解表、直條圖
+  const effBiz = BIZ_LIST_TOTAL.filter(b => STATE.prevDayBizFilter.has(b));
+  const effCh  = CHANNEL_LIST.filter(c => STATE.prevDayChFilter.has(c));
+
   const wdCount = selected.filter(isWorkingDay).length;
   if(pill) pill.textContent = `已選 ${selected.length} 天（${selected[0]} ～ ${selected[selected.length-1]}）`;
 
   const dateSet = new Set(selected);
-  const byBiz = {}; BIZ_LIST_TOTAL.forEach(b=>byBiz[b]={amt:0});
-  const byCh  = {}; CHANNEL_LIST.forEach(c=>byCh[c]={amt:0});
+  const byBiz = {}; effBiz.forEach(b=>byBiz[b]={amt:0});
+  const byCh  = {}; effCh.forEach(c=>byCh[c]={amt:0});
   let totalAmt = 0;
   // 主儀表板の act('all','all',...) と同様、數位典藏（β版）は「全社」集計から除外
   for(const r of (STATE.actualRows || [])){
     if(!BIZ_LIST_TOTAL.includes(r.biz)) continue;
+    if(!effBiz.includes(r.biz) || !effCh.includes(r.ch)) continue;
     const iso = dateToISO(r.date);
     if(!dateSet.has(iso)) continue;
-    if(byBiz[r.biz]) byBiz[r.biz].amt += r.amt;
-    if(byCh[r.ch])   byCh[r.ch].amt   += r.amt;
+    byBiz[r.biz].amt += r.amt;
+    byCh[r.ch].amt   += r.amt;
     totalAmt += r.amt;
   }
 
-  const totalTarget = estimateTargetForDates('all', 'all', selected);
+  const totalTarget = estimateTargetForDates(effBiz, effCh, selected);
 
   kpiEl.innerHTML = `
     <div class="lbl">選定期間績效 <span class="small">${selected[0]} ～ ${selected[selected.length-1]}（共 ${selected.length} 天，含 ${wdCount} 個工作天）</span></div>
@@ -1966,12 +2095,17 @@ function renderPrevDaySummary(){
     </div>
   `;
 
-  renderPrevDayBreakdownTable(bizTableEl, "事業", BIZ_LIST_TOTAL, 'biz', byBiz, selected);
-  renderPrevDayBreakdownTable(chTableEl, "管道", CHANNEL_LIST, 'ch', byCh, selected);
+  renderPrevDayBreakdownTable(bizTableEl, "事業", effBiz, 'biz', byBiz, selected, effCh);
+  renderPrevDayBreakdownTable(chTableEl, "管道", effCh, 'ch', byCh, selected, effBiz);
+  renderPrevDayChart(selected, effBiz, effCh, byBiz, byCh);
 }
 
-function renderPrevDayBreakdownTable(el, dimLabel, dims, dimType, aggMap, selectedDates){
+function renderPrevDayBreakdownTable(el, dimLabel, dims, dimType, aggMap, selectedDates, otherFilter){
   if(!el) return;
+  if(dims.length === 0){
+    el.innerHTML = `<tbody><tr><td class="na" style="padding:16px;text-align:center">尚未勾選任何「${dimLabel}」，請於上方「整體績效」篩選器中選擇。</td></tr></tbody>`;
+    return;
+  }
   let html = `<thead><tr>`;
   html += `<th class="l1">${dimLabel}</th><th class="l1">預估目標</th><th class="l1">實績</th><th class="l1">達成率</th>`;
   html += `</tr></thead><tbody>`;
@@ -1979,8 +2113,8 @@ function renderPrevDayBreakdownTable(el, dimLabel, dims, dimType, aggMap, select
   let tT = 0, tA = 0;
   for(const d of dims){
     const target = dimType === 'biz'
-      ? estimateTargetForDates(d, 'all', selectedDates)
-      : estimateTargetForDates('all', d, selectedDates);
+      ? estimateTargetForDates(d, otherFilter, selectedDates)
+      : estimateTargetForDates(otherFilter, d, selectedDates);
     const actual = aggMap[d] ? aggMap[d].amt : 0;
     tT += target; tA += actual;
     html += `<tr><td class="dim">${d}</td><td>${fmtAmt(target)}</td><td>${fmtAmt(actual)}</td>${rateCellHTML(target, actual)}</tr>`;
@@ -1988,6 +2122,53 @@ function renderPrevDayBreakdownTable(el, dimLabel, dims, dimType, aggMap, select
   html += `<tr class="total"><td class="dim">合計</td><td>${fmtAmt(tT)}</td><td>${fmtAmt(tA)}</td>${rateCellHTML(tT, tA)}</tr>`;
   html += `</tbody>`;
   el.innerHTML = html;
+}
+
+// 篩選後の事業別／管道別を、選択した次元で積み上げた単一バー（実績組成）
+function renderPrevDayChart(selectedDates, effBiz, effCh, byBiz, byCh){
+  const canvas = document.getElementById("prevday-chart");
+  if(!canvas || typeof Chart === "undefined") return;
+
+  const stackBy = STATE.prevDayStackBy === 'biz' ? 'biz' : 'ch';
+  const segments = stackBy === 'biz' ? effBiz : effCh;
+  const aggMap   = stackBy === 'biz' ? byBiz  : byCh;
+  const colors   = stackBy === 'biz' ? PREVDAY_BIZ_COLORS : PREVDAY_CH_COLORS;
+
+  if(segments.length === 0){
+    return;
+  }
+
+  const datasets = segments.map((seg, i) => ({
+    label: seg,
+    data: [Math.round((aggMap[seg] ? aggMap[seg].amt : 0) / 10000)],
+    backgroundColor: colors[i % colors.length],
+    stack: 'total',
+    borderRadius: 3,
+  }));
+
+  const ctx = canvas.getContext("2d");
+  STATE.charts['prevday-chart'] = new Chart(ctx, {
+    type: 'bar',
+    data: { labels: ['所選期間實績組成'], datasets },
+    options: {
+      indexAxis: 'y',
+      responsive: true,
+      maintainAspectRatio: false,
+      scales: {
+        x: { stacked: true, beginAtZero: true, title: { display:true, text:'萬元' } },
+        y: { stacked: true },
+      },
+      plugins: {
+        legend: { position: 'bottom', labels: { boxWidth: 12, font: { size: 11 } } },
+        tooltip: {
+          backgroundColor:'#0C4A6E', titleColor:'#fff', bodyColor:'#fff',
+          callbacks: {
+            label: (c)=> `${c.dataset.label}：${Number(c.raw).toLocaleString()} 萬`,
+          },
+        },
+      },
+    },
+  });
 }
 
 // 達成率テーブル：dim × 9列（年間/当月/累計 × 預算/實績/達成率）
