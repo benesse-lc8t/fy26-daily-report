@@ -448,9 +448,9 @@
         <div class="prevday-dropdown-wrap" id="prevday-biz-filter"></div>
         <div class="prevday-dropdown-wrap" id="prevday-ch-filter"></div>
         <div class="prevday-stack-toggle">
-          <span class="prevday-stack-lbl">直條圖堆疊維度：</span>
-          <button type="button" data-stack="ch">依管道別</button>
-          <button type="button" data-stack="biz">依事業別</button>
+          <span class="prevday-stack-lbl">橫條分組依據：</span>
+          <button type="button" data-stack="ch">依管道別（內部依事業別堆疊）</button>
+          <button type="button" data-stack="biz">依事業別（內部依管道別堆疊）</button>
         </div>
       </div>
       <div class="prevday-overview-row">
@@ -2071,6 +2071,7 @@ function renderPrevDaySummary(){
   const dateSet = new Set(selected);
   const byBiz = {}; effBiz.forEach(b=>byBiz[b]={amt:0});
   const byCh  = {}; effCh.forEach(c=>byCh[c]={amt:0});
+  const byBizCh = {}; effBiz.forEach(b=>{ byBizCh[b] = {}; effCh.forEach(c=>byBizCh[b][c]=0); });
   let totalAmt = 0;
   // 主儀表板の act('all','all',...) と同様、數位典藏（β版）は「全社」集計から除外
   for(const r of (STATE.actualRows || [])){
@@ -2080,6 +2081,7 @@ function renderPrevDaySummary(){
     if(!dateSet.has(iso)) continue;
     byBiz[r.biz].amt += r.amt;
     byCh[r.ch].amt   += r.amt;
+    byBizCh[r.biz][r.ch] += r.amt;
     totalAmt += r.amt;
   }
 
@@ -2097,7 +2099,7 @@ function renderPrevDaySummary(){
 
   renderPrevDayBreakdownTable(bizTableEl, "事業", effBiz, 'biz', byBiz, selected, effCh);
   renderPrevDayBreakdownTable(chTableEl, "管道", effCh, 'ch', byCh, selected, effBiz);
-  renderPrevDayChart(selected, effBiz, effCh, byBiz, byCh);
+  renderPrevDayChart(effBiz, effCh, byBizCh);
 }
 
 function renderPrevDayBreakdownTable(el, dimLabel, dims, dimType, aggMap, selectedDates, otherFilter){
@@ -2124,23 +2126,27 @@ function renderPrevDayBreakdownTable(el, dimLabel, dims, dimType, aggMap, select
   el.innerHTML = html;
 }
 
-// 篩選後の事業別／管道別を、選択した次元で積み上げた単一バー（実績組成）
-function renderPrevDayChart(selectedDates, effBiz, effCh, byBiz, byCh){
+// 篩選後の管道（または事業）ごとに横棒を1本ずつ並べ、内部をもう一方の次元で積み上げる複数横棒グラフ
+function renderPrevDayChart(effBiz, effCh, byBizCh){
   const canvas = document.getElementById("prevday-chart");
   if(!canvas || typeof Chart === "undefined") return;
 
-  const stackBy = STATE.prevDayStackBy === 'biz' ? 'biz' : 'ch';
-  const segments = stackBy === 'biz' ? effBiz : effCh;
-  const aggMap   = stackBy === 'biz' ? byBiz  : byCh;
-  const colors   = stackBy === 'biz' ? PREVDAY_BIZ_COLORS : PREVDAY_CH_COLORS;
+  // 'ch'：每個管道一條橫條，內部依事業別堆疊（預設）／'biz'：軸對調，每個事業一條橫條，內部依管道別堆疊
+  const stackBy  = STATE.prevDayStackBy === 'biz' ? 'biz' : 'ch';
+  const bars     = stackBy === 'ch' ? effCh  : effBiz;
+  const segments = stackBy === 'ch' ? effBiz : effCh;
+  const colors   = stackBy === 'ch' ? PREVDAY_BIZ_COLORS : PREVDAY_CH_COLORS;
 
-  if(segments.length === 0){
+  if(bars.length === 0 || segments.length === 0){
     return;
   }
 
   const datasets = segments.map((seg, i) => ({
     label: seg,
-    data: [Math.round((aggMap[seg] ? aggMap[seg].amt : 0) / 10000)],
+    data: bars.map(bar => {
+      const amt = stackBy === 'ch' ? (byBizCh[seg] ? byBizCh[seg][bar] : 0) : (byBizCh[bar] ? byBizCh[bar][seg] : 0);
+      return Math.round((amt || 0) / 10000);
+    }),
     backgroundColor: colors[i % colors.length],
     stack: 'total',
     borderRadius: 3,
@@ -2149,7 +2155,7 @@ function renderPrevDayChart(selectedDates, effBiz, effCh, byBiz, byCh){
   const ctx = canvas.getContext("2d");
   STATE.charts['prevday-chart'] = new Chart(ctx, {
     type: 'bar',
-    data: { labels: ['所選期間實績組成'], datasets },
+    data: { labels: bars, datasets },
     options: {
       indexAxis: 'y',
       responsive: true,
