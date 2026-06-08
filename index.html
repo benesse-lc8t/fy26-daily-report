@@ -297,6 +297,22 @@
 
   .legend{font-size:11px;color:var(--muted);margin-top:6px}
 
+  .prevday-month-group{margin-bottom:14px}
+  .prevday-month-hd{display:flex;align-items:center;gap:8px;margin-bottom:8px;font-size:14px;font-weight:700;color:var(--accent-dark)}
+  .prevday-mini-btn{font-size:11px;font-weight:500;color:var(--accent);background:var(--subheader);border:0.5px solid var(--border);border-radius:8px;padding:2px 10px;cursor:pointer}
+  .prevday-mini-btn:hover{background:var(--border)}
+  .prevday-date-grid{display:flex;flex-wrap:wrap;gap:6px}
+  .prevday-date-chip{display:inline-flex;align-items:center;gap:5px;font-size:12px;font-variant-numeric:tabular-nums;color:var(--secondary);background:var(--card);border:0.5px solid var(--border);border-radius:8px;padding:5px 10px;cursor:pointer;user-select:none;transition:all .12s}
+  .prevday-date-chip:hover{border-color:var(--accent)}
+  .prevday-date-chip input{cursor:pointer}
+  .prevday-date-chip input:checked ~ *{}
+  .prevday-date-chip:has(input:checked){background:var(--accent);border-color:var(--accent);color:#fff}
+  .prevday-date-chip.holiday{color:var(--bad)}
+  .prevday-date-chip.holiday:has(input:checked){background:var(--bad);border-color:var(--bad);color:#fff}
+  .prevday-actions{margin-top:12px;display:flex;align-items:center;gap:10px}
+  .prevday-btn{font-size:12px;font-weight:600;color:var(--secondary);background:var(--subheader);border:0.5px solid var(--border);border-radius:8px;padding:6px 14px;cursor:pointer}
+  .prevday-btn:hover{background:var(--border)}
+
 </style>
 </head>
 <body>
@@ -327,6 +343,7 @@
 <nav class="tabs" id="tabs">
   <div class="tab-col tab-col-1">
     <button class="tab-btn" data-tab="main">主儀表板</button>
+    <button class="tab-btn" data-tab="prevday">前日業績</button>
     <button class="tab-btn" data-tab="trend">月別推移</button>
     <button class="tab-btn" data-tab="weekly">週別趨勢</button>
     <button class="tab-btn" data-tab="vstarget">對目標</button>
@@ -385,6 +402,42 @@
       </div>
       <div class="chart-box"><canvas id="chart-ch"></canvas></div>
       <div class="legend">※ 棒：累計預算 vs 累計實績（萬元，左軸）／折線：累計達成率（%，右軸）。</div>
+    </div>
+
+  </div>
+
+  <!-- ===== Tab: 前日業績（自選日期區間統計） ===== -->
+  <div class="tab-panel" id="panel-prevday">
+
+    <div class="card">
+      <h2>選擇日期 <span class="pill" id="prevday-pill">請選擇日期</span></h2>
+      <div class="legend" style="margin-bottom:10px">
+        ※ 可任意勾選不連續日期，常見情境：「前一日」「前一工作天＋連假」「端午／春節等連續假期」。系統會加總所選日期的實績。
+      </div>
+      <div id="prevday-datepicker"></div>
+      <div class="prevday-actions">
+        <button type="button" class="prevday-btn" id="prevday-clear-all">清除全部選取</button>
+      </div>
+    </div>
+
+    <div class="card">
+      <h2>整體績效</h2>
+      <div class="kpi-card" id="prevday-kpi" style="max-width:520px"></div>
+      <div class="legend">※ 「預估目標」＝所選日期中屬於工作天的天數 ÷ 當月總工作天數 × 當月預算，跨月份時逐月估算後加總；如所選日期均為假日，則預估目標為 0，達成率不予顯示。</div>
+    </div>
+
+    <div class="card">
+      <h2>依事業別</h2>
+      <div class="scroll-x">
+        <table class="grid" id="prevday-biz-table"></table>
+      </div>
+    </div>
+
+    <div class="card">
+      <h2>依通路別</h2>
+      <div class="scroll-x">
+        <table class="grid" id="prevday-ch-table"></table>
+      </div>
     </div>
 
   </div>
@@ -526,6 +579,7 @@ const STATE = {
   activeTab:"main",
   compareMode:"budget",   // 'budget' | 'yoy'
   fy25:null,              // {amount, qty, daily}: FY25 actuals for YoY comparison
+  prevDaySelected:null,   // Set of "YYYY-MM-DD"：「前日業績」タブで選択された日付
 };
 
 // YoY 對象タブ（前年比モードで表示するもの）
@@ -554,6 +608,7 @@ function switchTab(tabId){
   destroyCharts();
   if(!STATE.budget) return;
   if(tabId === "main") renderMainTab();
+  else if(tabId === "prevday") renderPrevDayTab();
   else if(tabId === "trend") renderTrendTab();
   else if(tabId.startsWith("biz-")) renderBizTab(tabId.substring(4));
   else if(tabId.startsWith("ch-"))  renderChannelTab(tabId.substring(3));
@@ -1713,6 +1768,197 @@ function renderBizSection(){
 function renderChannelSection(){
   renderRateTable("ch-table", "管道", CHANNEL_LIST, 'ch', 'all');
   renderRateChart("chart-ch", CHANNEL_LIST, 'ch', 'all');
+}
+
+/* ============================================================
+   Tab: 前日業績（自選日期區間統計）
+   ============================================================ */
+function isWorkingDay(iso){
+  if(!iso) return false;
+  if(STATE.holidays && STATE.holidays.has(iso)) return false;
+  const d = parseExcelDate(iso);
+  if(!d) return false;
+  const dow = d.getUTCDay();
+  return dow !== 0 && dow !== 6;
+}
+
+// 実績データに含まれる日付（ISO文字列）の一覧をユニーク・昇順で取得
+function getAvailableDates(){
+  const set = new Set();
+  for(const r of (STATE.actualRows || [])){
+    const iso = dateToISO(r.date);
+    if(iso) set.add(iso);
+  }
+  return Array.from(set).sort();
+}
+
+// 日付（ISO）→ FY26月ラベル（"4月"〜"3月"）
+function isoToMonthLabel(iso){
+  const m = parseInt(iso.slice(5,7), 10);
+  return `${m}月`;
+}
+
+// 選択日付を月ラベルごとにグルーピング
+function groupDatesByMonth(dates){
+  const groups = {};
+  for(const iso of dates){
+    const label = isoToMonthLabel(iso);
+    (groups[label] = groups[label] || []).push(iso);
+  }
+  return groups;
+}
+
+// 区間の見込み目標：月ごとに「選択した工作天数 ÷ 当月総工作天数 × 当月予算」を加算
+function estimateTargetForDates(biz, ch, selectedDates){
+  if(!STATE.workingDays) return 0;
+  const groups = groupDatesByMonth(selectedDates);
+  let total = 0;
+  for(const monthLabel of Object.keys(groups)){
+    const monthBudget = bgt(biz, ch, monthLabel);
+    if(monthBudget <= 0) continue;
+    const ym = monthLabelToYM(monthLabel);
+    const totalWD = ym ? STATE.workingDays[ym] : null;
+    if(!totalWD) continue;
+    const selWD = groups[monthLabel].filter(isWorkingDay).length;
+    total += monthBudget * (selWD / totalWD);
+  }
+  return total;
+}
+
+function renderPrevDayTab(){
+  if(!STATE.budget) return;
+  destroyCharts();
+  if(!STATE.prevDaySelected) STATE.prevDaySelected = new Set();
+  renderPrevDayDatePicker();
+  renderPrevDaySummary();
+
+  const clearBtn = document.getElementById("prevday-clear-all");
+  if(clearBtn){
+    clearBtn.onclick = ()=>{
+      STATE.prevDaySelected.clear();
+      renderPrevDayDatePicker();
+      renderPrevDaySummary();
+    };
+  }
+}
+
+function renderPrevDayDatePicker(){
+  const container = document.getElementById("prevday-datepicker");
+  if(!container) return;
+  const dates = getAvailableDates();
+  if(dates.length === 0){
+    container.innerHTML = '<div class="legend">尚無實績日期資料，請先於「📥 匯入」分頁載入資料。</div>';
+    return;
+  }
+  const groups = groupDatesByMonth(dates);
+  let html = '';
+  for(const monthLabel of MONTHS){
+    const list = groups[monthLabel];
+    if(!list || list.length === 0) continue;
+    html += `<div class="prevday-month-group">`;
+    html += `<div class="prevday-month-hd"><span>${monthLabel}</span>`;
+    html += `<button type="button" class="prevday-mini-btn" data-action="select-month" data-month="${monthLabel}">全選</button>`;
+    html += `<button type="button" class="prevday-mini-btn" data-action="clear-month" data-month="${monthLabel}">清除</button>`;
+    html += `</div><div class="prevday-date-grid">`;
+    for(const iso of list){
+      const checked = STATE.prevDaySelected.has(iso) ? "checked" : "";
+      const day = parseInt(iso.slice(8,10), 10);
+      const wd = isWorkingDay(iso);
+      html += `<label class="prevday-date-chip${wd?'':' holiday'}"><input type="checkbox" value="${iso}" ${checked}>${day}日${wd?'':'（假）'}</label>`;
+    }
+    html += `</div></div>`;
+  }
+  container.innerHTML = html;
+
+  container.querySelectorAll('input[type="checkbox"]').forEach(cb=>{
+    cb.addEventListener("change", e=>{
+      if(e.target.checked) STATE.prevDaySelected.add(e.target.value);
+      else STATE.prevDaySelected.delete(e.target.value);
+      renderPrevDaySummary();
+    });
+  });
+  container.querySelectorAll('button[data-action]').forEach(btn=>{
+    btn.addEventListener("click", ()=>{
+      const monthLabel = btn.dataset.month;
+      const action = btn.dataset.action;
+      for(const iso of (groups[monthLabel] || [])){
+        if(action === "select-month") STATE.prevDaySelected.add(iso);
+        else STATE.prevDaySelected.delete(iso);
+      }
+      renderPrevDayDatePicker();
+      renderPrevDaySummary();
+    });
+  });
+}
+
+function renderPrevDaySummary(){
+  const pill = document.getElementById("prevday-pill");
+  const kpiEl = document.getElementById("prevday-kpi");
+  const bizTableEl = document.getElementById("prevday-biz-table");
+  const chTableEl = document.getElementById("prevday-ch-table");
+  if(!kpiEl) return;
+
+  const selected = Array.from(STATE.prevDaySelected || []).sort();
+
+  if(selected.length === 0){
+    if(pill) pill.textContent = "請選擇日期";
+    kpiEl.innerHTML = `<div class="lbl">尚未選擇日期</div><div class="legend" style="margin-top:8px">請於上方勾選欲統計的日期（可複選不連續日期）。</div>`;
+    if(bizTableEl) bizTableEl.innerHTML = '';
+    if(chTableEl) chTableEl.innerHTML = '';
+    return;
+  }
+
+  const wdCount = selected.filter(isWorkingDay).length;
+  if(pill) pill.textContent = `已選 ${selected.length} 天（${selected[0]} ～ ${selected[selected.length-1]}）`;
+
+  const dateSet = new Set(selected);
+  const byBiz = {}; BIZ_LIST_TOTAL.forEach(b=>byBiz[b]={amt:0});
+  const byCh  = {}; CHANNEL_LIST.forEach(c=>byCh[c]={amt:0});
+  let totalAmt = 0;
+  // 主儀表板の act('all','all',...) と同様、數位典藏（β版）は「全社」集計から除外
+  for(const r of (STATE.actualRows || [])){
+    if(!BIZ_LIST_TOTAL.includes(r.biz)) continue;
+    const iso = dateToISO(r.date);
+    if(!dateSet.has(iso)) continue;
+    if(byBiz[r.biz]) byBiz[r.biz].amt += r.amt;
+    if(byCh[r.ch])   byCh[r.ch].amt   += r.amt;
+    totalAmt += r.amt;
+  }
+
+  const totalTarget = estimateTargetForDates('all', 'all', selected);
+
+  kpiEl.innerHTML = `
+    <div class="lbl">選定期間績效 <span class="small">${selected[0]} ～ ${selected[selected.length-1]}（共 ${selected.length} 天，含 ${wdCount} 個工作天）</span></div>
+    <div class="row"><span class="k">預估目標</span><span class="v">${fmtAmt(totalTarget)} <span style="font-size:11px;color:#9ca3af;font-weight:500">萬</span></span></div>
+    <div class="row"><span class="k">實績</span><span class="v">${fmtAmt(totalAmt)} <span style="font-size:11px;color:#9ca3af;font-weight:500">萬</span></span></div>
+    <div class="rate-row">
+      <div class="rate-lbl">達成率</div>
+      <div class="rate ${rateClass(totalTarget, totalAmt)}">${fmtRate(totalTarget, totalAmt)}</div>
+    </div>
+  `;
+
+  renderPrevDayBreakdownTable(bizTableEl, "事業", BIZ_LIST_TOTAL, 'biz', byBiz, selected);
+  renderPrevDayBreakdownTable(chTableEl, "管道", CHANNEL_LIST, 'ch', byCh, selected);
+}
+
+function renderPrevDayBreakdownTable(el, dimLabel, dims, dimType, aggMap, selectedDates){
+  if(!el) return;
+  let html = `<thead><tr>`;
+  html += `<th class="l1">${dimLabel}</th><th class="l1">預估目標</th><th class="l1">實績</th><th class="l1">達成率</th>`;
+  html += `</tr></thead><tbody>`;
+
+  let tT = 0, tA = 0;
+  for(const d of dims){
+    const target = dimType === 'biz'
+      ? estimateTargetForDates(d, 'all', selectedDates)
+      : estimateTargetForDates('all', d, selectedDates);
+    const actual = aggMap[d] ? aggMap[d].amt : 0;
+    tT += target; tA += actual;
+    html += `<tr><td class="dim">${d}</td><td>${fmtAmt(target)}</td><td>${fmtAmt(actual)}</td>${rateCellHTML(target, actual)}</tr>`;
+  }
+  html += `<tr class="total"><td class="dim">合計</td><td>${fmtAmt(tT)}</td><td>${fmtAmt(tA)}</td>${rateCellHTML(tT, tA)}</tr>`;
+  html += `</tbody>`;
+  el.innerHTML = html;
 }
 
 // 達成率テーブル：dim × 9列（年間/当月/累計 × 預算/實績/達成率）
