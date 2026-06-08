@@ -298,7 +298,11 @@
   .legend{font-size:11px;color:var(--muted);margin-top:6px}
 
   .prevday-month-group{margin-bottom:14px}
-  .prevday-month-hd{display:flex;align-items:center;gap:8px;margin-bottom:8px;font-size:14px;font-weight:700;color:var(--accent-dark)}
+  .prevday-month-group.collapsed{margin-bottom:6px}
+  .prevday-month-hd{display:flex;align-items:center;gap:8px;margin-bottom:8px;font-size:14px;font-weight:700;color:var(--accent-dark);cursor:pointer;user-select:none}
+  .prevday-month-group.collapsed .prevday-month-hd{margin-bottom:0;opacity:.7}
+  .prevday-month-toggle{display:inline-block;width:14px;font-size:11px;color:var(--muted)}
+  .prevday-sel-badge{font-size:11px;font-weight:600;color:#fff;background:var(--accent);border-radius:10px;padding:1px 9px}
   .prevday-mini-btn{font-size:11px;font-weight:500;color:var(--accent);background:var(--subheader);border:0.5px solid var(--border);border-radius:8px;padding:2px 10px;cursor:pointer}
   .prevday-mini-btn:hover{background:var(--border)}
   .prevday-date-grid{display:flex;flex-wrap:wrap;gap:6px}
@@ -580,6 +584,7 @@ const STATE = {
   compareMode:"budget",   // 'budget' | 'yoy'
   fy25:null,              // {amount, qty, daily}: FY25 actuals for YoY comparison
   prevDaySelected:null,   // Set of "YYYY-MM-DD"：「前日業績」タブで選択された日付
+  prevDayCollapsed:null,  // Set of monthLabel：「前日業績」タブで折りたたまれている月
 };
 
 // YoY 對象タブ（前年比モードで表示するもの）
@@ -1851,15 +1856,28 @@ function renderPrevDayDatePicker(){
     return;
   }
   const groups = groupDatesByMonth(dates);
+  // 最新月份（進行中）優先顯示在最上方，已結束月份由新到舊排列在後
+  const monthOrder = MONTHS.filter(m => groups[m] && groups[m].length > 0).reverse();
+
+  // 初回のみ：最新月份を展開、それ以外（既に終わった月）は折りたたみ
+  if(!STATE.prevDayCollapsed){
+    STATE.prevDayCollapsed = new Set(monthOrder.slice(1));
+  }
+
   let html = '';
-  for(const monthLabel of MONTHS){
+  for(const monthLabel of monthOrder){
     const list = groups[monthLabel];
-    if(!list || list.length === 0) continue;
-    html += `<div class="prevday-month-group">`;
-    html += `<div class="prevday-month-hd"><span>${monthLabel}</span>`;
+    const collapsed = STATE.prevDayCollapsed.has(monthLabel);
+    const selCount = list.filter(iso => STATE.prevDaySelected.has(iso)).length;
+    html += `<div class="prevday-month-group${collapsed ? ' collapsed' : ''}">`;
+    html += `<div class="prevday-month-hd" data-toggle-month="${monthLabel}">`;
+    html += `<span class="prevday-month-toggle">${collapsed ? '▶' : '▼'}</span>`;
+    html += `<span>${monthLabel}</span>`;
+    if(selCount > 0) html += `<span class="prevday-sel-badge">已選 ${selCount}</span>`;
     html += `<button type="button" class="prevday-mini-btn" data-action="select-month" data-month="${monthLabel}">全選</button>`;
     html += `<button type="button" class="prevday-mini-btn" data-action="clear-month" data-month="${monthLabel}">清除</button>`;
-    html += `</div><div class="prevday-date-grid">`;
+    html += `</div>`;
+    html += `<div class="prevday-date-grid"${collapsed ? ' style="display:none"' : ''}>`;
     for(const iso of list){
       const checked = STATE.prevDaySelected.has(iso) ? "checked" : "";
       const day = parseInt(iso.slice(8,10), 10);
@@ -1874,11 +1892,22 @@ function renderPrevDayDatePicker(){
     cb.addEventListener("change", e=>{
       if(e.target.checked) STATE.prevDaySelected.add(e.target.value);
       else STATE.prevDaySelected.delete(e.target.value);
+      renderPrevDayDatePicker();
       renderPrevDaySummary();
     });
   });
+  container.querySelectorAll('[data-toggle-month]').forEach(hd=>{
+    hd.addEventListener("click", e=>{
+      if(e.target.closest('button[data-action]')) return;
+      const monthLabel = hd.dataset.toggleMonth;
+      if(STATE.prevDayCollapsed.has(monthLabel)) STATE.prevDayCollapsed.delete(monthLabel);
+      else STATE.prevDayCollapsed.add(monthLabel);
+      renderPrevDayDatePicker();
+    });
+  });
   container.querySelectorAll('button[data-action]').forEach(btn=>{
-    btn.addEventListener("click", ()=>{
+    btn.addEventListener("click", e=>{
+      e.stopPropagation();
       const monthLabel = btn.dataset.month;
       const action = btn.dataset.action;
       for(const iso of (groups[monthLabel] || [])){
