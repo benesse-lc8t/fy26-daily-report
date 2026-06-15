@@ -2955,36 +2955,36 @@ function renderBizSkuContentHTML(biz, codeSet){
   </tr>`;
   html += `</tbody></table></div></div></div>`;
 
-  // Monthly detail table (Month × channel amounts)
-  html += `<details style="margin-top:10px"><summary style="font-size:12px;font-weight:600;color:var(--secondary);cursor:pointer;padding:4px 0">▸ 月份 × 管道明細</summary>
+  // Monthly detail table (Month × channel qty)
+  html += `<details open style="margin-top:10px"><summary style="font-size:12px;font-weight:600;color:var(--secondary);cursor:pointer;padding:4px 0">▸ 月份 × 管道（套數）</summary>
     <div class="scroll-x" style="margin-top:8px"><table class="grid">
     <thead><tr><th class="l1">月份</th>`;
-  CHANNEL_LIST.forEach(c => { html += `<th class="l2">${c}<br><span style="font-size:9px;font-weight:400">套/萬</span></th>`; });
-  html += `<th class="l2">合計(萬)</th></tr></thead><tbody>`;
-  let colTotals = {}; CHANNEL_LIST.forEach(c => colTotals[c] = {qty:0,amt:0}); let grandAmt = 0;
+  CHANNEL_LIST.forEach(c => { html += `<th class="l2">${c}</th>`; });
+  html += `<th class="l2">合計(套)</th></tr></thead><tbody>`;
+  let colTotals = {}; CHANNEL_LIST.forEach(c => colTotals[c] = {qty:0,amt:0}); let grandQty = 0;
   for(const m of MONTHS){
     const d = monthly[m];
-    const hasAny = d.amt > 0;
+    const hasAny = d.qty > 0;
     html += `<tr><td class="dim">${m}</td>`;
     CHANNEL_LIST.forEach(c => {
       const cd = d.byChannel[c];
       colTotals[c].qty += cd.qty; colTotals[c].amt += cd.amt;
-      html += cd.amt > 0
-        ? `<td>${cd.qty.toLocaleString()}<br><span style="color:var(--secondary)">${Math.round(cd.amt/10000)}</span></td>`
+      html += cd.qty > 0
+        ? `<td>${Math.round(cd.qty).toLocaleString()}</td>`
         : `<td class="na">—</td>`;
     });
-    grandAmt += d.amt;
-    html += `<td>${hasAny ? Math.round(d.amt/10000).toLocaleString() : '<span class="na">—</span>'}</td></tr>`;
+    grandQty += d.qty;
+    html += `<td>${hasAny ? Math.round(d.qty).toLocaleString() : '<span class="na">—</span>'}</td></tr>`;
   }
   html += `<tr class="total"><td class="dim">合計</td>`;
   CHANNEL_LIST.forEach(c => {
-    html += colTotals[c].amt > 0
-      ? `<td>${colTotals[c].qty.toLocaleString()}<br><span>${Math.round(colTotals[c].amt/10000)}</span></td>`
+    html += colTotals[c].qty > 0
+      ? `<td>${Math.round(colTotals[c].qty).toLocaleString()}</td>`
       : `<td>—</td>`;
   });
-  html += `<td>${Math.round(grandAmt/10000).toLocaleString()}</td></tr>`;
+  html += `<td>${Math.round(grandQty).toLocaleString()}</td></tr>`;
   html += `</tbody></table></div></details>`;
-  html += `<div class="legend" style="margin-top:6px">※ 月份金額單位：萬元。套數為原始筆數合計，無月份預算對比。</div>`;
+  html += `<div class="legend" style="margin-top:6px">※ 套數為原始筆數合計，無月份預算對比。左側圖表為金額（萬元）。</div>`;
 
   return html;
 }
