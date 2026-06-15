@@ -335,6 +335,18 @@
   .prevday-chart-box{flex:1 1 420px;min-height:280px;position:relative}
   .prevday-chart-box canvas{max-height:320px}
 
+  /* ── 品項月別分析 (SKU Trend) ── */
+  .sku-trend-selectors{display:flex;flex-wrap:wrap;gap:12px;align-items:flex-end;margin-bottom:16px;padding:14px 16px;background:var(--stripe);border:0.5px solid var(--border);border-radius:8px}
+  .sku-trend-selectors .sku-sel-group{display:flex;flex-direction:column;gap:4px}
+  .sku-trend-selectors label{font-size:11px;font-weight:600;color:var(--secondary)}
+  .sku-trend-selectors select{padding:7px 28px 7px 10px;border:1px solid var(--border);border-radius:7px;background:var(--card);font-size:13px;cursor:pointer;font-family:inherit;color:var(--ink);appearance:none;background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='10' height='6'%3E%3Cpath d='M0 0l5 6 5-6z' fill='%230284C7'/%3E%3C/svg%3E");background-repeat:no-repeat;background-position:right 10px center;min-width:120px}
+  .sku-trend-selectors select#sku-trend-code{min-width:280px}
+  .sku-trend-selectors select:focus{outline:none;border-color:var(--accent)}
+  .sku-trend-tip{font-size:11px;color:var(--muted);margin-top:2px;align-self:flex-end;padding-bottom:2px}
+  #sku-trend-content .placeholder-msg{text-align:center;padding:48px 0;color:var(--muted);font-size:14px}
+  .sku-trend-info{display:flex;flex-wrap:wrap;gap:16px;margin-bottom:14px;padding:10px 14px;background:var(--stripe);border-left:3px solid var(--accent);border-radius:0 6px 6px 0;font-size:12px;color:var(--secondary)}
+  .sku-trend-info strong{color:var(--accent-dark)}
+
   /* ── 業績卡片 Tab ── */
   .cards-toolbar{display:flex;align-items:center;gap:10px;flex-wrap:wrap;margin-bottom:0}
   .cards-view-lbl{font-size:13px;color:var(--secondary);font-weight:500}
@@ -671,6 +683,8 @@ const STATE = {
   prevDayStackBy:'ch',    // 'biz' | 'ch'：直條圖の積み上げ次元
   prevDayDropdownOpen:null, // 'biz' | 'ch' | null：開いているドロップダウン
   cardsViewBy:'biz',      // 'biz' | 'ch'：業績卡片の分組依據
+  skuTrendBiz:'學習商品', // 品項月別分析：選択中の事業別
+  skuTrendCode:null,      // 品項月別分析：選択中の商品コード
 };
 
 // YoY 對象タブ（前年比モードで表示するもの）
@@ -2760,17 +2774,249 @@ function renderTrendTab(){
   });
   html += '</div>';
 
-  // ===== Sections =====
+  // ===== SKU Trend section =====
+  html += renderSkuTrendSectionHTML();
+
+  // ===== Regular Sections =====
   for(const s of sections){
     html += renderTrendSectionHTML(s);
   }
 
   document.getElementById("panel-trend").innerHTML = html;
 
+  // ===== Wire SKU section handlers =====
+  setupSkuTrendHandlers();
+
   // ===== Charts (DOM 設置後) =====
+  if(STATE.skuTrendCode) renderSkuTrendChart();
   for(const s of sections){
     renderTrendChart(s);
   }
+}
+
+/* ============================================================
+   品項月別分析 (SKU Trend within 月別推移)
+   ============================================================ */
+const SKU_TREND_CH_COLORS = {
+  'WEB':   '#0C4A6E',
+  'TM':    '#D97706',
+  'KOL':   '#16A34A',
+  'EC':    '#0EA5E9',
+  '經代銷': '#94A3B8',
+};
+
+function getSkuProductList(biz){
+  // Build {code→{name,totalAmt}} from actualRows for the given biz
+  const map = new Map();
+  for(const r of (STATE.actualRows || [])){
+    if(!r.code) continue;
+    if(!BIZ_LIST_TOTAL.includes(r.biz)) continue;
+    if(biz !== 'all' && r.biz !== biz) continue;
+    if(!map.has(r.code)){
+      const masterName = STATE.master?.products?.[r.code]?.name || '';
+      map.set(r.code, { code:r.code, name:'', totalAmt:0 });
+      if(masterName) map.get(r.code).name = masterName;
+    }
+    const entry = map.get(r.code);
+    entry.totalAmt += r.amt;
+    const candidate = r.name || '';
+    if(candidate.length > entry.name.length) entry.name = candidate;
+  }
+  return [...map.values()]
+    .filter(p => p.totalAmt > 0)
+    .sort((a, b) => b.totalAmt - a.totalAmt);
+}
+
+function aggregateSkuTrend(code){
+  // Returns { '4月': { WEB:0, TM:0, KOL:0, EC:0, 經代銷:0, _total:0 }, ... }
+  const result = {};
+  for(const m of MONTHS){
+    result[m] = {};
+    for(const c of CHANNEL_LIST) result[m][c] = 0;
+    result[m]._total = 0;
+  }
+  for(const r of (STATE.actualRows || [])){
+    if(r.code !== code) continue;
+    if(!CHANNEL_LIST.includes(r.ch)) continue;
+    if(!MONTHS.includes(r.month)) continue;
+    result[r.month][r.ch] += r.amt;
+    result[r.month]._total += r.amt;
+  }
+  return result;
+}
+
+function renderSkuTrendSectionHTML(){
+  const curBiz  = STATE.skuTrendBiz || '學習商品';
+  const curCode = STATE.skuTrendCode || '';
+  const products = getSkuProductList(curBiz);
+
+  // Biz selector
+  let bizOptions = BIZ_LIST_TOTAL.map(b =>
+    `<option value="${b}"${b === curBiz ? ' selected' : ''}>${b}</option>`
+  ).join('');
+
+  // Product selector (top 150 max to keep dropdown manageable)
+  let codeOptions = `<option value="">── 請選擇品項 ──</option>`;
+  products.slice(0, 150).forEach(p => {
+    const label = p.name ? `${p.code}　${p.name}　(${Math.round(p.totalAmt/10000)}萬)` : `${p.code}　(${Math.round(p.totalAmt/10000)}萬)`;
+    codeOptions += `<option value="${p.code}"${p.code === curCode ? ' selected' : ''}>${label}</option>`;
+  });
+
+  let html = `<div class="card" id="trend-sku-analysis">
+    <h2>品項月別分析 <span class="pill">單品 × 管道拆解</span></h2>
+    <div class="sku-trend-selectors">
+      <div class="sku-sel-group">
+        <label>事業別</label>
+        <select id="sku-trend-biz">${bizOptions}</select>
+      </div>
+      <div class="sku-sel-group">
+        <label>品項（共 ${products.length} 件，依銷售額排序）</label>
+        <select id="sku-trend-code">${codeOptions}</select>
+      </div>
+      <span class="sku-trend-tip">※ 僅顯示有實績的品項，無預算對比</span>
+    </div>
+    <div id="sku-trend-content">`;
+
+  if(curCode){
+    html += renderSkuTrendContentHTML(curCode);
+  } else {
+    html += `<div class="placeholder-msg">← 請於上方選擇欲分析的品項</div>`;
+  }
+
+  html += `</div></div>`;
+  return html;
+}
+
+function renderSkuTrendContentHTML(code){
+  const data = aggregateSkuTrend(code);
+  const products = getSkuProductList(STATE.skuTrendBiz || '學習商品');
+  const prod = products.find(p => p.code === code);
+  const name = prod ? (prod.name || code) : code;
+  const totalAmt = prod ? prod.totalAmt : 0;
+
+  let html = `<div class="sku-trend-info">
+    <span>商品代號：<strong>${code}</strong></span>
+    <span>名稱：<strong>${name}</strong></span>
+    <span>FY26 累計：<strong>${Math.round(totalAmt/10000).toLocaleString()} 萬</strong></span>
+  </div>`;
+
+  // Chart canvas
+  html += `<div class="chart-table-row">
+    <div class="chart-side"><div class="chart-box tall"><canvas id="chart-sku-trend"></canvas></div></div>
+    <div class="table-side"><div class="scroll-x"><table class="grid">`;
+
+  // Table header: 月份 + channels + 合計
+  html += `<thead><tr><th class="l1">月份</th>`;
+  CHANNEL_LIST.forEach(c => { html += `<th class="l2">${c}</th>`; });
+  html += `<th class="l2">合計</th></tr></thead><tbody>`;
+
+  let totals = {}; CHANNEL_LIST.forEach(c => totals[c] = 0); let grandTotal = 0;
+  for(const m of MONTHS){
+    const d = data[m];
+    const hasAny = d._total > 0;
+    html += `<tr><td class="dim">${m}</td>`;
+    CHANNEL_LIST.forEach(c => {
+      totals[c] += d[c];
+      html += hasAny || d[c] > 0
+        ? `<td>${d[c] > 0 ? Math.round(d[c]/10000).toLocaleString() : '<span class="na">—</span>'}</td>`
+        : `<td class="na">—</td>`;
+    });
+    grandTotal += d._total;
+    html += `<td>${hasAny ? Math.round(d._total/10000).toLocaleString() : '<span class="na">—</span>'}</td></tr>`;
+  }
+
+  // Total row
+  html += `<tr class="total"><td class="dim">合計</td>`;
+  CHANNEL_LIST.forEach(c => {
+    html += `<td>${totals[c] > 0 ? Math.round(totals[c]/10000).toLocaleString() : '—'}</td>`;
+  });
+  html += `<td>${Math.round(grandTotal/10000).toLocaleString()}</td></tr>`;
+  html += `</tbody></table></div></div></div>`;
+
+  return html;
+}
+
+function renderSkuTrendChart(){
+  const code = STATE.skuTrendCode;
+  if(!code) return;
+  const canvas = document.getElementById("chart-sku-trend");
+  if(!canvas || typeof Chart === 'undefined') return;
+  destroyChart('chart-sku-trend');
+
+  const data = aggregateSkuTrend(code);
+
+  const datasets = CHANNEL_LIST.map(ch => ({
+    label: ch,
+    data: MONTHS.map(m => Math.round(data[m][ch] / 10000)),
+    backgroundColor: SKU_TREND_CH_COLORS[ch] || '#94A3B8',
+    stack: 'total',
+    borderRadius: 2,
+  }));
+
+  STATE.charts['chart-sku-trend'] = new Chart(canvas.getContext('2d'), {
+    type: 'bar',
+    data: { labels: MONTHS, datasets },
+    options: {
+      responsive: true, maintainAspectRatio: false,
+      scales: {
+        x: { stacked: true, grid: { color: 'rgba(0,0,0,.04)' } },
+        y: { stacked: true, beginAtZero: true, title: { display: true, text: '萬元' },
+             grid: { color: 'rgba(0,0,0,.06)' } },
+      },
+      plugins: {
+        legend: { position: 'bottom', labels: { boxWidth: 12, font: { size: 11 } } },
+        tooltip: {
+          backgroundColor: '#0C4A6E', titleColor: '#fff', bodyColor: '#fff',
+          callbacks: {
+            label: ctx => `${ctx.dataset.label}：${Number(ctx.raw).toLocaleString()} 萬`,
+            footer: items => {
+              const s = items.reduce((a, i) => a + Number(i.raw), 0);
+              return `合計：${s.toLocaleString()} 萬`;
+            },
+          },
+        },
+      },
+    },
+  });
+}
+
+function setupSkuTrendHandlers(){
+  const bizSel  = document.getElementById('sku-trend-biz');
+  const codeSel = document.getElementById('sku-trend-code');
+  if(!bizSel || !codeSel) return;
+
+  bizSel.onchange = () => {
+    STATE.skuTrendBiz  = bizSel.value;
+    STATE.skuTrendCode = null;
+    // Rebuild product dropdown
+    const products = getSkuProductList(STATE.skuTrendBiz);
+    let opts = `<option value="">── 請選擇品項 ──</option>`;
+    products.slice(0, 150).forEach(p => {
+      const label = p.name ? `${p.code}　${p.name}　(${Math.round(p.totalAmt/10000)}萬)` : `${p.code}　(${Math.round(p.totalAmt/10000)}萬)`;
+      opts += `<option value="${p.code}">${label}</option>`;
+    });
+    codeSel.innerHTML = opts;
+    // Update count label
+    const lbl = codeSel.previousElementSibling;
+    if(lbl) lbl.textContent = `品項（共 ${products.length} 件，依銷售額排序）`;
+    // Clear content
+    const content = document.getElementById('sku-trend-content');
+    if(content) content.innerHTML = `<div class="placeholder-msg">← 請於上方選擇欲分析的品項</div>`;
+    destroyChart('chart-sku-trend');
+  };
+
+  codeSel.onchange = () => {
+    STATE.skuTrendCode = codeSel.value || null;
+    const content = document.getElementById('sku-trend-content');
+    if(!content) return;
+    if(!STATE.skuTrendCode){
+      content.innerHTML = `<div class="placeholder-msg">← 請於上方選擇欲分析的品項</div>`;
+      destroyChart('chart-sku-trend');
+      return;
+    }
+    content.innerHTML = renderSkuTrendContentHTML(STATE.skuTrendCode);
+    renderSkuTrendChart();
+  };
 }
 
 function renderTrendSectionHTML(s){
