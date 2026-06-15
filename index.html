@@ -2994,13 +2994,12 @@ function renderBizSkuContentHTML(biz, codeSet){
   return html;
 }
 
-function renderBizSkuChart(biz){
-  const codeSet  = getBizSkuFilter(biz);
+function renderBizSkuChartWith(biz, codeSet){
   const canvasId = `chart-biz-sku-${bizSafe(biz)}`;
   const canvas   = document.getElementById(canvasId);
   if(!canvas || typeof Chart === 'undefined') return;
   destroyChart(canvasId);
-  if(codeSet.size === 0) return;
+  if(!codeSet || codeSet.size === 0) return;
 
   const monthly = aggregateSkuByMonth(codeSet, biz);
 
@@ -3036,6 +3035,10 @@ function renderBizSkuChart(biz){
   });
 }
 
+function renderBizSkuChart(biz){
+  renderBizSkuChartWith(biz, getBizSkuFilter(biz));
+}
+
 function setupBizSkuHandlers(biz){
   const safeBiz  = bizSafe(biz);
   const listEl   = document.getElementById(`biz-sku-list-${safeBiz}`);
@@ -3046,32 +3049,50 @@ function setupBizSkuHandlers(biz){
   const products = getSkuProductList(biz);
   const selSet   = getBizSkuFilter(biz);
 
+  const searchInput = listEl.closest('.biz-sku-filter')?.querySelector('.biz-sku-search');
+
+  // Returns codes that are both selected AND match current search query
+  function effectiveCodes(){
+    const q = searchInput ? searchInput.value.trim().toLowerCase() : '';
+    if(!q) return selSet;
+    const visible = new Set();
+    listEl.querySelectorAll('label:not(.hidden) .biz-sku-cb').forEach(cb => {
+      if(selSet.has(cb.value)) visible.add(cb.value);
+    });
+    return visible.size > 0 ? visible : new Set();
+  }
+
   function updateCount(){
     if(countEl) countEl.textContent = `已選 ${selSet.size} / ${products.length} 件`;
   }
 
   function refreshContent(){
     if(!contentEl) return;
-    contentEl.innerHTML = renderBizSkuContentHTML(biz, selSet);
-    renderBizSkuChart(biz);
+    const codes = effectiveCodes();
+    contentEl.innerHTML = renderBizSkuContentHTML(biz, codes);
+    renderBizSkuChartWith(biz, codes);
   }
 
-  // Search filter
-  const searchInput = listEl.closest('.biz-sku-filter')?.querySelector('.biz-sku-search');
+  // Search filter — hide labels AND refresh stats with matched subset
   if(searchInput){
     searchInput.oninput = () => {
       const q = searchInput.value.trim().toLowerCase();
       listEl.querySelectorAll('label').forEach(lbl => {
         lbl.classList.toggle('hidden', q.length > 0 && !lbl.textContent.toLowerCase().includes(q));
       });
+      refreshContent();
     };
   }
 
-  // 全選 / 清除 buttons
+  // 全選 / 清除 buttons — only affect visible (non-hidden) items when search is active
   listEl.closest('.biz-sku-filter')?.querySelectorAll('.biz-sku-action').forEach(btn => {
     btn.onclick = () => {
       const action = btn.dataset.action;
-      listEl.querySelectorAll('.biz-sku-cb').forEach(cb => {
+      const q = searchInput ? searchInput.value.trim() : '';
+      const scope = q
+        ? listEl.querySelectorAll('label:not(.hidden) .biz-sku-cb')
+        : listEl.querySelectorAll('.biz-sku-cb');
+      scope.forEach(cb => {
         cb.checked = (action === 'all');
         if(action === 'all') selSet.add(cb.value);
         else selSet.delete(cb.value);
