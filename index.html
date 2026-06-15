@@ -2801,6 +2801,11 @@ function renderTrendTab(){
 /* ============================================================
    品項複選篩選 — 嵌入於各事業的月別推移 section 內
    ============================================================ */
+function bizSafe(biz){
+  const i = BIZ_LIST_TOTAL.indexOf(biz);
+  return i >= 0 ? `b${i}` : bizSafe(biz);
+}
+
 const BIZ_SKU_CH_COLORS = {
   'WEB':   '#0C4A6E',
   'TM':    '#D97706',
@@ -2907,20 +2912,20 @@ function renderBizSkuFilterHTML(biz, products, selectedSet){
       checkboxes += `<label title="${p.code}"><input type="checkbox" class="biz-sku-cb" data-biz="${biz}" value="${p.code}"${chk}><span>${nameLabel}</span><span style="color:var(--muted);margin-left:4px;font-size:10px">${amtLabel}</span></label>`;
     });
   }
-  return `<div class="biz-sku-filter" id="biz-sku-filter-${biz.replace(/[^a-zA-Z0-9]/g,'_')}">
+  return `<div class="biz-sku-filter" id="biz-sku-filter-${bizSafe(biz)}">
     <div class="biz-sku-filter-toolbar">
       <span class="sku-label">品項篩選</span>
       <input type="text" class="biz-sku-search" data-biz="${biz}" placeholder="搜尋品項名稱…">
       <button type="button" class="biz-sku-action" data-biz="${biz}" data-action="all">全選</button>
       <button type="button" class="biz-sku-action" data-biz="${biz}" data-action="none">清除</button>
-      <span class="biz-sku-count" id="biz-sku-count-${biz.replace(/[^a-zA-Z0-9]/g,'_')}">已選 ${selCount} / ${total} 件</span>
+      <span class="biz-sku-count" id="biz-sku-count-${bizSafe(biz)}">已選 ${selCount} / ${total} 件</span>
     </div>
-    <div class="biz-sku-list" id="biz-sku-list-${biz.replace(/[^a-zA-Z0-9]/g,'_')}">${checkboxes}</div>
+    <div class="biz-sku-list" id="biz-sku-list-${bizSafe(biz)}">${checkboxes}</div>
   </div>`;
 }
 
 function renderBizSkuContentHTML(biz, codeSet){
-  const canvasId = `chart-biz-sku-${biz.replace(/[^a-zA-Z0-9]/g,'_')}`;
+  const canvasId = `chart-biz-sku-${bizSafe(biz)}`;
   if(codeSet.size === 0){
     return `<div class="biz-sku-empty">請於上方勾選至少一件品項</div>`;
   }
@@ -2984,14 +2989,14 @@ function renderBizSkuContentHTML(biz, codeSet){
   });
   html += `<td>${Math.round(grandQty).toLocaleString()}</td></tr>`;
   html += `</tbody></table></div></details>`;
-  html += `<div class="legend" style="margin-top:6px">※ 套數為原始筆數合計，無月份預算對比。左側圖表為金額（萬元）。</div>`;
+  html += `<div class="legend" style="margin-top:6px">※ 套數為原始筆數合計。左側圖表為金額（萬元）。</div>`;
 
   return html;
 }
 
 function renderBizSkuChart(biz){
   const codeSet  = getBizSkuFilter(biz);
-  const canvasId = `chart-biz-sku-${biz.replace(/[^a-zA-Z0-9]/g,'_')}`;
+  const canvasId = `chart-biz-sku-${bizSafe(biz)}`;
   const canvas   = document.getElementById(canvasId);
   if(!canvas || typeof Chart === 'undefined') return;
   destroyChart(canvasId);
@@ -3032,7 +3037,7 @@ function renderBizSkuChart(biz){
 }
 
 function setupBizSkuHandlers(biz){
-  const safeBiz  = biz.replace(/[^a-zA-Z0-9]/g,'_');
+  const safeBiz  = bizSafe(biz);
   const listEl   = document.getElementById(`biz-sku-list-${safeBiz}`);
   const countEl  = document.getElementById(`biz-sku-count-${safeBiz}`);
   const contentEl= document.getElementById(`biz-sku-content-${safeBiz}`);
@@ -3091,7 +3096,7 @@ function renderTrendSectionHTML(s){
   // ── 四大事業 section：嵌入品項複選篩選器 ──
   if(BIZ_LIST_TOTAL.includes(s.biz) && s.ch === 'all'){
     const biz      = s.biz;
-    const safeBiz  = biz.replace(/[^a-zA-Z0-9]/g,'_');
+    const safeBiz  = bizSafe(biz);
     const products = getSkuProductList(biz);
     const selSet   = getBizSkuFilter(biz);
 
