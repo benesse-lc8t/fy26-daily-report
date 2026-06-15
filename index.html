@@ -2989,7 +2989,7 @@ function renderBizSkuContentHTML(biz, codeSet){
   });
   html += `<td>${Math.round(grandQty).toLocaleString()}</td></tr>`;
   html += `</tbody></table></div></details>`;
-  html += `<div class="legend" style="margin-top:6px">※ 套數為原始筆數合計。左側圖表為金額（萬元）。</div>`;
+  html += `<div class="legend" style="margin-top:6px">※ 套數為原始筆數合計。</div>`;
 
   return html;
 }
@@ -3005,7 +3005,7 @@ function renderBizSkuChartWith(biz, codeSet){
 
   const datasets = CHANNEL_LIST.map(ch => ({
     label: ch,
-    data: MONTHS.map(m => Math.round(monthly[m].byChannel[ch].amt / 10000)),
+    data: MONTHS.map(m => Math.round(monthly[m].byChannel[ch].qty)),
     backgroundColor: BIZ_SKU_CH_COLORS[ch] || '#94A3B8',
     stack: 'total',
     borderRadius: 2,
@@ -3018,7 +3018,7 @@ function renderBizSkuChartWith(biz, codeSet){
       responsive: true, maintainAspectRatio: false,
       scales: {
         x: { stacked: true, grid: { color: 'rgba(0,0,0,.04)' } },
-        y: { stacked: true, beginAtZero: true, title: { display:true, text:'金額（萬元）' },
+        y: { stacked: true, beginAtZero: true, title: { display:true, text:'套數' },
              grid: { color: 'rgba(0,0,0,.06)' } },
       },
       plugins: {
@@ -3026,8 +3026,8 @@ function renderBizSkuChartWith(biz, codeSet){
         tooltip: {
           backgroundColor: '#0C4A6E', titleColor:'#fff', bodyColor:'#fff',
           callbacks: {
-            label: ctx => `${ctx.dataset.label}：${Number(ctx.raw).toLocaleString()} 萬`,
-            footer: items => `合計：${items.reduce((a,i)=>a+Number(i.raw),0).toLocaleString()} 萬`,
+            label: ctx => `${ctx.dataset.label}：${Number(ctx.raw).toLocaleString()} 套`,
+            footer: items => `合計：${items.reduce((a,i)=>a+Number(i.raw),0).toLocaleString()} 套`,
           },
         },
       },
