@@ -2832,7 +2832,7 @@ function getSkuProductList(biz){
     if(candidate.length > entry.name.length) entry.name = candidate;
   }
   return [...map.values()]
-    .filter(p => p.totalAmt > 0)
+    .filter(p => Math.round(p.totalAmt / 10000) > 0)
     .sort((a, b) => b.totalAmt - a.totalAmt);
 }
 
