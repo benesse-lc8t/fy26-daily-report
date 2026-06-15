@@ -335,6 +335,55 @@
   .prevday-chart-box{flex:1 1 420px;min-height:280px;position:relative}
   .prevday-chart-box canvas{max-height:320px}
 
+  /* ── 業績卡片 Tab ── */
+  .cards-toolbar{display:flex;align-items:center;gap:10px;flex-wrap:wrap;margin-bottom:0}
+  .cards-view-lbl{font-size:13px;color:var(--secondary);font-weight:500}
+  .cards-view-btn{font-size:12px;font-weight:600;color:var(--secondary);background:var(--card);border:0.5px solid var(--border);border-radius:8px;padding:6px 14px;cursor:pointer}
+  .cards-view-btn.active{background:var(--accent);border-color:var(--accent);color:#fff}
+  .cards-last-date{font-size:11px;color:var(--muted);margin-left:auto}
+  .cards-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(540px,1fr));gap:18px}
+  @media(max-width:640px){.cards-grid{grid-template-columns:1fr}}
+
+  .bc{background:var(--card);border:0.5px solid var(--border);border-radius:12px;overflow:hidden;box-shadow:0 4px 16px rgba(0,0,0,.3)}
+  .bc-hero{padding:12px 16px 10px;border-left:5px solid var(--bc-color,#0284C7)}
+  .bc-hero-top{display:flex;align-items:baseline;gap:10px;margin-bottom:8px;flex-wrap:wrap}
+  .bc-name{font-size:14px;font-weight:700;color:var(--bc-color,#0C4A6E)}
+  .bc-sub{font-size:10px;color:var(--muted);font-weight:400}
+  .bc-cumul{font-size:22px;font-weight:700;letter-spacing:-0.5px;color:var(--bc-color,#0C4A6E);margin-left:auto}
+  .bc-cumul-unit{font-size:11px;font-weight:400;margin-left:2px}
+  .bc-target-label{font-size:10px;color:var(--muted);margin-left:4px}
+  .bc-bars{display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-top:2px}
+  .bc-bar-row{}
+  .bc-bar-labels{display:flex;justify-content:space-between;align-items:baseline;margin-bottom:3px}
+  .bc-bar-key{font-size:9px;color:var(--muted)}
+  .bc-bar-val{font-size:13px;font-weight:700}
+  .bc-bar-val.good{color:var(--good)}
+  .bc-bar-val.warn{color:var(--warn)}
+  .bc-bar-val.bad{color:var(--bad)}
+  .bc-bar-track{height:5px;background:rgba(0,0,0,.1);border-radius:3px;overflow:hidden}
+  .bc-bar-fill{height:100%;border-radius:3px;transition:width .3s}
+
+  .bc-table{width:100%;border-collapse:collapse;table-layout:fixed;font-size:11px}
+  .bc-table thead tr{background:var(--stripe)}
+  .bc-table th{font-size:9px;font-weight:500;color:var(--muted);padding:4px 6px;text-align:right;border-bottom:0.5px solid var(--border);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+  .bc-table th:first-child{text-align:left;width:62px}
+  .bc-table td{padding:3px 6px;text-align:right;border-bottom:0.5px solid var(--border-light,#F0F4F8);color:var(--ink);font-variant-numeric:tabular-nums}
+  .bc-table td:first-child{text-align:left;color:var(--secondary);font-size:10px}
+  .bc-table .row-pri td{font-size:12px;font-weight:600}
+  .bc-table .row-pri td:first-child{font-size:10px}
+  .bc-table .row-dim td{font-size:10px;color:var(--muted)}
+  .bc-table .row-total{background:var(--stripe)}
+  .bc-table .row-total td{font-weight:700;font-size:12px}
+  .bc-rate-cell{display:flex;flex-direction:column;align-items:flex-end;gap:2px;padding:2px 6px 3px}
+  .bc-rate-num{font-size:10px;font-weight:600;line-height:1}
+  .bc-rate-num.good{color:var(--good)}
+  .bc-rate-num.warn{color:var(--warn)}
+  .bc-rate-num.bad{color:var(--bad)}
+  .bc-rate-num.na{color:var(--muted)}
+  .bc-rate-track{height:3px;width:32px;background:rgba(0,0,0,.08);border-radius:2px;overflow:hidden}
+  .bc-rate-fill{height:100%;border-radius:2px}
+  .bc-foot{font-size:10px;color:var(--muted);padding:4px 12px 6px;background:var(--stripe);border-top:0.5px solid var(--border)}
+
 </style>
 </head>
 <body>
@@ -366,6 +415,7 @@
   <div class="tab-col tab-col-1">
     <button class="tab-btn" data-tab="main">主儀表板</button>
     <button class="tab-btn" data-tab="prevday">前日業績</button>
+    <button class="tab-btn" data-tab="cards">業績卡片</button>
     <button class="tab-btn" data-tab="trend">月別推移</button>
     <button class="tab-btn" data-tab="weekly">週別趨勢</button>
     <button class="tab-btn" data-tab="vstarget">對目標</button>
@@ -489,6 +539,7 @@
   <div class="tab-panel" id="panel-ch-KOL"></div>
   <div class="tab-panel" id="panel-ch-EC"></div>
   <div class="tab-panel" id="panel-ch-經代銷"></div>
+  <div class="tab-panel" id="panel-cards"></div>
   <div class="tab-panel" id="panel-weekly"></div>
   <div class="tab-panel" id="panel-aov"></div>
   <div class="tab-panel" id="panel-sku"></div>
@@ -619,6 +670,7 @@ const STATE = {
   prevDayChFilter:null,   // Set of channel：絞り込みフィルタ（管道別）
   prevDayStackBy:'ch',    // 'biz' | 'ch'：直條圖の積み上げ次元
   prevDayDropdownOpen:null, // 'biz' | 'ch' | null：開いているドロップダウン
+  cardsViewBy:'biz',      // 'biz' | 'ch'：業績卡片の分組依據
 };
 
 // YoY 對象タブ（前年比モードで表示するもの）
@@ -656,6 +708,7 @@ function switchTab(tabId){
   else if(tabId === "aov") renderAovTab();
   else if(tabId === "sku") renderSkuTab();
   else if(tabId === "handpuppet") renderHandPuppetTab();
+  else if(tabId === "cards") renderCardsTab();
 }
 document.getElementById("tabs").addEventListener("click", e=>{
   const btn = e.target.closest(".tab-btn");
@@ -1755,6 +1808,7 @@ function initMonthSelector(){
     else if(t === "aov") renderAovTab();
     else if(t === "sku") renderSkuTab();
     else if(t === "handpuppet") renderHandPuppetTab();
+    else if(t === "cards") renderCardsTab();
   };
 }
 
@@ -2174,6 +2228,264 @@ function renderPrevDayChart(effBiz, effCh, byBizCh){
         },
       },
     },
+  });
+}
+
+/* ============================================================
+   業績卡片 Tab
+   ============================================================ */
+const CARDS_BIZ_COLORS = {
+  '全社':     '#0C4A6E',
+  '學習商品': '#0284C7',
+  '學習周邊': '#D97706',
+  '生活周邊': '#16A34A',
+  'Mirafeel': '#9333EA',
+};
+const CARDS_CH_COLORS = {
+  'WEB':   '#0C4A6E',
+  'KOL':   '#0284C7',
+  'EC':    '#0EA5E9',
+  'TM':    '#D97706',
+  '經代銷': '#64748B',
+};
+
+function getLastDayAmt(biz, ch){
+  if(!STATE.actualRows) return 0;
+  let lastISO = null;
+  for(const r of STATE.actualRows){
+    const iso = dateToISO(r.date);
+    if(iso && (!lastISO || iso > lastISO)) lastISO = iso;
+  }
+  if(!lastISO) return 0;
+  const bizes = biz === 'all' ? BIZ_LIST_TOTAL : (Array.isArray(biz) ? biz : [biz]);
+  const chs   = ch  === 'all' ? CHANNEL_LIST   : (Array.isArray(ch)  ? ch  : [ch]);
+  const bSet = new Set(bizes), cSet = new Set(chs);
+  let s = 0;
+  for(const r of STATE.actualRows){
+    if(!bSet.has(r.biz) || !cSet.has(r.ch)) continue;
+    if(dateToISO(r.date) !== lastISO) continue;
+    s += r.amt;
+  }
+  return s;
+}
+
+function getLastDayISO(){
+  if(!STATE.actualRows) return null;
+  let last = null;
+  for(const r of STATE.actualRows){
+    const iso = dateToISO(r.date);
+    if(iso && (!last || iso > last)) last = iso;
+  }
+  return last;
+}
+
+function cardRateClass(actual, budget){
+  if(!budget) return 'na';
+  const r = actual / budget * 100;
+  if(r >= 70) return 'good';
+  if(r >= 40) return 'warn';
+  return 'bad';
+}
+function cardRateColorHex(cls){
+  return cls === 'good' ? '#16A34A' : cls === 'warn' ? '#D97706' : cls === 'bad' ? '#A32D2D' : '#94A3B8';
+}
+
+function bcRateCell(actual, budget){
+  if(!budget) return '<td><div class="bc-rate-cell"><span class="bc-rate-num na">-</span></div></td>';
+  const r = Math.round(actual / budget * 100);
+  const cls = cardRateClass(actual, budget);
+  const hex = cardRateColorHex(cls);
+  const w = Math.min(100, r);
+  return `<td style="padding:0"><div class="bc-rate-cell">
+    <span class="bc-rate-num ${cls}">${r}%</span>
+    <div class="bc-rate-track"><div class="bc-rate-fill" style="width:${w}%;background:${hex}"></div></div>
+  </div></td>`;
+}
+
+function bcPaceCell(actual, budget, timePacePct){
+  if(!budget || !timePacePct) return '<td><div class="bc-rate-cell"><span class="bc-rate-num na">-</span></div></td>';
+  const rateR = actual / budget * 100;
+  const pace  = Math.round(rateR / timePacePct * 100);
+  const cls   = pace >= 100 ? 'good' : pace >= 70 ? 'warn' : 'bad';
+  const hex   = cardRateColorHex(cls);
+  const w     = Math.min(100, Math.round(pace / 200 * 100));
+  return `<td style="padding:0"><div class="bc-rate-cell">
+    <span class="bc-rate-num ${cls}">${pace}%</span>
+    <div class="bc-rate-track"><div class="bc-rate-fill" style="width:${w}%;background:${hex}"></div></div>
+  </div></td>`;
+}
+
+function renderOneCard(name, color, subLabel, bizArg, chArg, colDims, colLabel, month, cumMonths, timePace){
+  const lastAmt    = getLastDayAmt(bizArg, chArg);
+  const totalWD    = (STATE.workingDays && timePace) ? timePace.total : null;
+  const dailyTgt   = totalWD ? bgt(bizArg, chArg, month) / totalWD : 0;
+  const monthAct   = act(bizArg, chArg, month);
+  const cumAct     = sumOver(bizArg, chArg, cumMonths, act);
+  const cumBgt     = sumOver(bizArg, chArg, cumMonths, bgt);
+  const cumDiff    = cumAct - cumBgt;
+  const yearBgt    = sumOver(bizArg, chArg, MONTHS, bgt);
+  const yearAct    = sumOver(bizArg, chArg, MONTHS, act);
+  const ratePct    = cumBgt > 0 ? Math.round(cumAct / cumBgt * 100) : 0;
+  const tpPct      = timePace ? timePace.pct : 0;
+  const pacePct    = tpPct > 0 ? Math.round((cumAct / cumBgt * 100) / tpPct * 100) : 0;
+  const rateClass_ = cumBgt > 0 ? cardRateClass(cumAct, cumBgt) : 'na';
+  const paceClass_ = tpPct > 0 && cumBgt > 0 ? (pacePct >= 100 ? 'good' : pacePct >= 70 ? 'warn' : 'bad') : 'na';
+  const rateHex    = cardRateColorHex(rateClass_);
+  const paceHex    = cardRateColorHex(paceClass_);
+  const rateW      = Math.min(100, ratePct);
+  const paceW      = Math.min(100, Math.round(pacePct / 200 * 100));
+
+  // per-column data
+  const cols = colDims.map(d => {
+    const b = colLabel === 'ch' ? bizArg : d;
+    const c = colLabel === 'ch' ? d : chArg;
+    return {
+      last:    getLastDayAmt(b, c),
+      daily:   totalWD ? bgt(b, c, month) / totalWD : 0,
+      monthA:  act(b, c, month),
+      cumA:    sumOver(b, c, cumMonths, act),
+      cumB:    sumOver(b, c, cumMonths, bgt),
+      diff:    sumOver(b, c, cumMonths, act) - sumOver(b, c, cumMonths, bgt),
+    };
+  });
+
+  const fmtV  = v => v === 0 ? '<span style="color:#94A3B8">0</span>' : fmtAmt(v);
+  const fmtD  = v => { const r = Math.round(v/10000); return r >= 0 ? `<span class="bc-rate-num good">+${r.toLocaleString()}</span>` : `<span class="bc-rate-num bad">${r.toLocaleString()}</span>`; };
+  const fmtG  = v => `<span style="color:var(--muted);font-size:10px">${fmtAmt(v)}</span>`;
+
+  let html = `<div class="bc" style="--bc-color:${color}">`;
+
+  // Hero
+  html += `<div class="bc-hero">
+    <div class="bc-hero-top">
+      <span class="bc-name">${name}</span>
+      ${subLabel ? `<span class="bc-sub">${subLabel}</span>` : ''}
+      <span class="bc-cumul">${fmtAmt(cumAct)}<span class="bc-cumul-unit">萬</span></span>
+      <span class="bc-target-label">累計目標 ${fmtAmt(cumBgt)} 萬</span>
+    </div>
+    <div class="bc-bars">
+      <div class="bc-bar-row">
+        <div class="bc-bar-labels">
+          <span class="bc-bar-key">累計達成率</span>
+          <span class="bc-bar-val ${rateClass_}">${cumBgt > 0 ? ratePct + '%' : '-'}</span>
+        </div>
+        <div class="bc-bar-track"><div class="bc-bar-fill" style="width:${rateW}%;background:${rateHex}"></div></div>
+      </div>
+      <div class="bc-bar-row">
+        <div class="bc-bar-labels">
+          <span class="bc-bar-key">時間進度達成</span>
+          <span class="bc-bar-val ${paceClass_}">${tpPct > 0 && cumBgt > 0 ? pacePct + '%' : '-'}</span>
+        </div>
+        <div class="bc-bar-track"><div class="bc-bar-fill" style="width:${paceW}%;background:${paceHex}"></div></div>
+      </div>
+    </div>
+  </div>`;
+
+  // Table
+  const colHeaders = [...colDims, '合計'];
+  html += `<table class="bc-table"><thead><tr><th></th>`;
+  colHeaders.forEach(h => { html += `<th>${h}</th>`; });
+  html += `</tr></thead><tbody>`;
+
+  // 前日業績
+  html += `<tr class="row-pri"><td>前日業績</td>`;
+  cols.forEach(c => { html += `<td>${fmtV(c.last)}</td>`; });
+  html += `<td>${fmtV(lastAmt)}</td></tr>`;
+
+  // 日均目標
+  html += `<tr class="row-dim"><td>日均目標</td>`;
+  cols.forEach(c => { html += `<td>${fmtG(c.daily)}</td>`; });
+  html += `<td>${fmtG(dailyTgt)}</td></tr>`;
+
+  // 當月累計
+  html += `<tr class="row-pri" style="background:var(--stripe)"><td>當月累計</td>`;
+  cols.forEach(c => { html += `<td>${fmtV(c.monthA)}</td>`; });
+  html += `<td>${fmtV(monthAct)}</td></tr>`;
+
+  // 累計目標
+  html += `<tr class="row-dim"><td>累計目標</td>`;
+  cols.forEach(c => { html += `<td>${fmtG(c.cumB)}</td>`; });
+  html += `<td>${fmtG(cumBgt)}</td></tr>`;
+
+  // 累計實績
+  html += `<tr class="row-pri"><td>累計實績</td>`;
+  cols.forEach(c => { html += `<td>${fmtV(c.cumA)}</td>`; });
+  html += `<td>${fmtV(cumAct)}</td></tr>`;
+
+  // 差異
+  html += `<tr class="row-dim"><td>差　　異</td>`;
+  cols.forEach(c => { html += `<td>${fmtD(c.diff)}</td>`; });
+  html += `<td>${fmtD(cumDiff)}</td></tr>`;
+
+  // 達成率
+  html += `<tr><td style="font-size:9px;color:var(--secondary);padding:2px 6px">達成率</td>`;
+  cols.forEach(c => { html += bcRateCell(c.cumA, c.cumB); });
+  html += bcRateCell(cumAct, cumBgt);
+  html += `</tr>`;
+
+  // 時間進度達成
+  html += `<tr><td style="font-size:9px;color:var(--secondary);padding:2px 6px">進度達成</td>`;
+  cols.forEach(c => { html += bcPaceCell(c.cumA, c.cumB, tpPct); });
+  html += bcPaceCell(cumAct, cumBgt, tpPct);
+  html += `</tr>`;
+
+  html += `</tbody></table>`;
+
+  const lastISO = getLastDayISO();
+  html += `<div class="bc-foot">累計：4月～${month}　差異 <span class="${cumDiff >= 0 ? 'bc-rate-num good' : 'bc-rate-num bad'}">${Math.round(cumDiff/10000) >= 0 ? '+' : ''}${Math.round(cumDiff/10000).toLocaleString()} 萬</span>　最新資料：${lastISO || '-'}　時間進度 ${timePace ? Math.round(timePace.pct) + '%' : '-'}</div>`;
+  html += `</div>`;
+  return html;
+}
+
+function renderCardsTab(){
+  if(!STATE.budget) return;
+  const panel = document.getElementById("panel-cards");
+  if(!panel) return;
+
+  const month     = STATE.selectedMonth;
+  const cumMonths = monthsThru(month);
+  const timePace  = getTimeProgress(month);
+  const viewBy    = STATE.cardsViewBy || 'biz';
+  const lastISO   = getLastDayISO();
+
+  let html = `<div class="card" style="margin-bottom:16px">
+    <div class="cards-toolbar">
+      <span class="cards-view-lbl">卡片分組依據：</span>
+      <button class="cards-view-btn${viewBy==='biz'?' active':''}" data-cards-view="biz">依事業別（內部依管道）</button>
+      <button class="cards-view-btn${viewBy==='ch'?' active':''}" data-cards-view="ch">依管道別（內部依事業）</button>
+      <span class="cards-last-date">最新資料：${lastISO || '-'}　本月：${month}</span>
+    </div>
+  </div>
+  <div class="cards-grid">`;
+
+  if(viewBy === 'biz'){
+    const bizCards = [
+      { name:'全社合計', color: CARDS_BIZ_COLORS['全社'],     sub:null,               biz:'all', ch:'all'  },
+      { name:'學習商品', color: CARDS_BIZ_COLORS['學習商品'], sub:null,               biz:'學習商品', ch:'all' },
+      { name:'學習周邊', color: CARDS_BIZ_COLORS['學習周邊'], sub:'周邊商品 內訳',    biz:'學習周邊', ch:'all' },
+      { name:'生活周邊', color: CARDS_BIZ_COLORS['生活周邊'], sub:'周邊商品 內訳',    biz:'生活周邊', ch:'all' },
+      { name:'Mirafeel', color: CARDS_BIZ_COLORS['Mirafeel'], sub:null,               biz:'Mirafeel', ch:'all' },
+    ];
+    bizCards.forEach(card => {
+      html += renderOneCard(card.name, card.color, card.sub, card.biz, card.ch, CHANNEL_LIST, 'ch', month, cumMonths, timePace);
+    });
+  } else {
+    const chCards = CHANNEL_LIST.map(ch => ({
+      name: ch, color: CARDS_CH_COLORS[ch] || '#64748B', sub: null, biz: 'all', ch,
+    }));
+    chCards.forEach(card => {
+      html += renderOneCard(card.name, card.color, null, card.biz, card.ch, BIZ_LIST_TOTAL, 'biz', month, cumMonths, timePace);
+    });
+  }
+
+  html += `</div>`;
+  panel.innerHTML = html;
+
+  panel.querySelectorAll('.cards-view-btn[data-cards-view]').forEach(btn => {
+    btn.onclick = () => {
+      STATE.cardsViewBy = btn.dataset.cardsView;
+      renderCardsTab();
+    };
   });
 }
 
