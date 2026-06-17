@@ -1805,12 +1805,9 @@ function rateCellHTML(b, a){
 /* ---------- Month selector ---------- */
 function initMonthSelector(){
   const sel = document.getElementById("month-select");
-  // 默認：実績がある最新月、なければ4月
-  let defaultMonth = "4月";
-  if(STATE.actuals){
-    const have = MONTHS.filter(m => STATE.actuals[m]);
-    if(have.length > 0) defaultMonth = have[have.length-1];
-  }
+  // 默認：依今天的實際月份（例如現在是6月就預設6月）
+  const nowMonth = `${new Date().getMonth()+1}月`;
+  const defaultMonth = MONTHS.includes(nowMonth) ? nowMonth : "4月";
   STATE.selectedMonth = STATE.selectedMonth || defaultMonth;
   sel.innerHTML = MONTHS.map(m=>`<option value="${m}" ${m===STATE.selectedMonth?"selected":""}>${m}</option>`).join("");
   sel.disabled = false;
