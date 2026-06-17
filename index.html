@@ -4423,10 +4423,10 @@ function renderTrendChart(s){
   const rateArr = [];
   for(const m of MONTHS){
     const b = bgt(s.biz, s.ch, m);
-    budgetArr.push(Math.floor(b/10000));
+    budgetArr.push(Math.round(b/10000));
     if(hasActualData(m)){
       const a = act(s.biz, s.ch, m);
-      actualArr.push(Math.floor(a/10000));
+      actualArr.push(Math.round(a/10000));
       rateArr.push(b > 0 ? +(a/b*100).toFixed(1) : null);
     } else {
       actualArr.push(null);
