@@ -19,7 +19,8 @@ BIZ_NAME_MAP = {'學習': '學習商品', '數位經典': '數位典藏'}
 SKIP_BIZ = {'', '0', '事業', '事業別', '總計', '(空白)', '(全部)'}
 MONTHS = ['4月','5月','6月','7月','8月','9月','10月','11月','12月','1月','2月','3月']
 
-SHEET_RE = re.compile(r'^(\d{2})(\d{2})\s*(WEB&KOL|EC|TM)$')
+SHEET_RE      = re.compile(r'^(\d{2})(\d{2})\s*(WEB&KOL|EC|TM)$')
+SHEET_RE_DIGI = re.compile(r'^(\d{2})(\d{2})WEB數位典藏$')
 
 SHEET_CONFIG = {
     'WEB&KOL': {'header_row':2, 'biz':0,'code':1,'date':2,'channel':3,'qty':4,'amt':5,
@@ -52,7 +53,35 @@ def main(excel_path):
     actual_rows = []
 
     for sheet_name in wb.sheetnames:
-        m = SHEET_RE.match(sheet_name.strip())
+        sname = sheet_name.strip()
+
+        # --- WEB數位典藏 sheets: <YYMM>WEB數位典藏 ---
+        md = SHEET_RE_DIGI.match(sname)
+        if md:
+            mm = md.group(2)
+            month_label = f'{int(mm)}月'
+            ws = wb[sheet_name]
+            all_rows = list(ws.iter_rows(values_only=True))
+            kept = skip_zero = 0
+            # header row 0; data from row 1
+            # cols: 0=seq, 1=date, 2=起訂年月, 3=管道代碼, 4=方案, 5=單價, 6=qty, 7=訂購金額, 8=銷售額(amt), 9=稅
+            for row in all_rows[1:]:
+                if not row: continue
+                amt = num(row[8])
+                if amt == 0: skip_zero += 1; continue
+                qty = num(row[6])
+                actual_rows.append({
+                    'month': month_label, 'biz': '數位典藏', 'ch': 'WEB',
+                    'code': '', 'name': '',
+                    'qty': qty, 'amt': round(amt, 2),
+                    'date': parse_date(row[1]),
+                })
+                kept += 1
+            print(f'  {sheet_name}: {kept} rows kept, {skip_zero} zero-amt skipped')
+            continue
+
+        # --- Standard sheets: WEB&KOL / EC / TM ---
+        m = SHEET_RE.match(sname)
         if not m: continue
         yy, mm, suffix = m.group(1), m.group(2), m.group(3)
         month_label = f'{int(mm)}月'
