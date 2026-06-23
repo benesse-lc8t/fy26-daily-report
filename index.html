@@ -2583,8 +2583,8 @@ function renderRateChart(canvasId, dims, dimType, fixedFilter){
     const ch  = dimType === 'ch'  ? d : fixedFilter;
     const cb = sumOver(biz, ch, cumMonths, bgt);
     const ca = sumOver(biz, ch, cumMonths, act);
-    budgetArr.push(Math.floor(cb/10000));
-    actualArr.push(Math.floor(ca/10000));
+    budgetArr.push(Math.round(cb/10000));
+    actualArr.push(Math.round(ca/10000));
     rateArr.push(cb>0 ? +(ca/cb*100).toFixed(1) : null);
   }
 
