@@ -463,6 +463,7 @@
   <div class="tab-divider"></div>
   <div class="tab-col tab-col-3">
     <button class="tab-btn" data-tab="biz-數位典藏">數位典藏（β版）</button>
+    <button class="tab-btn" data-tab="kol">KOL檔期（β版）</button>
   </div>
   <div class="tab-divider"></div>
   <a class="sidebar-feedback-link" href="https://benessetw.atlassian.net/wiki/spaces/WS/pages/620691613/1." target="_blank" rel="noopener">💬 需求與建議</a>
@@ -569,6 +570,7 @@
   <div class="tab-panel" id="panel-aov"></div>
   <div class="tab-panel" id="panel-sku"></div>
   <div class="tab-panel" id="panel-handpuppet"></div>
+  <div class="tab-panel" id="panel-kol"></div>
 
   <!-- ===== Tab 14: Loader ===== -->
   <div class="tab-panel" id="panel-loader">
@@ -736,6 +738,7 @@ function switchTab(tabId){
   else if(tabId === "aov") renderAovTab();
   else if(tabId === "sku") renderSkuTab();
   else if(tabId === "handpuppet") renderHandPuppetTab();
+  else if(tabId === "kol") renderKolTab();
   else if(tabId === "cards") renderCardsTab();
 }
 document.getElementById("tabs").addEventListener("click", e=>{
@@ -895,6 +898,7 @@ function applyDataJSON(data){
   STATE.workingDays = data.workingDays || null;
   STATE.holidays = data.holidays ? new Set(data.holidays) : null;
   STATE.fy25 = data.fy25 || null;
+  STATE.kolSchedule = data.kolSchedule || [];
   STATE.generatedAt = data.generatedAt;
 
   updateHeaderTimestamp(STATE.generatedAt);
@@ -4273,6 +4277,202 @@ function handPuppetKpiCard(label, sub, classKey, qty, amt){
       </div>
     </div>
   `;
+}
+
+/* ============================================================
+   Tab: KOL 檔期 × 業績關聯（β版）
+   ============================================================ */
+const KOL_BIZ_COLORS = {
+  '學習商品':'#0284C7', '學習周邊':'#22C55E', '生活周邊':'#F59E0B',
+  'Mirafeel':'#A855F7', '數位典藏':'#EC4899',
+};
+function kolBizColor(biz){ return KOL_BIZ_COLORS[biz] || '#64748B'; }
+
+// 檔期期間内の KOL 通路業績を集計（事業別＋日付区間で回推）
+function kolAttribute(camp){
+  let amt = 0, qty = 0, cnt = 0;
+  for(const r of (STATE.actualRows || [])){
+    if(r.ch !== 'KOL') continue;
+    if(r.biz !== camp.biz) continue;
+    const iso = dateToISO(r.date);
+    if(!iso || iso < camp.start || iso > camp.end) continue;
+    amt += r.amt; qty += r.qty; cnt++;
+  }
+  return { amt, qty, cnt };
+}
+
+function renderKolTab(){
+  const panel = document.getElementById("panel-kol");
+  destroyCharts();
+
+  const sched = STATE.kolSchedule || [];
+  if(sched.length === 0){
+    panel.innerHTML = `<div class="placeholder">⚠ 尚未載入 KOL 檔期規劃表（data.json 無 kolSchedule）。<br><span style="font-size:12px;color:var(--muted)">請上傳「KOL檔期規劃表」Excel 後更新 data.json。</span></div>`;
+    return;
+  }
+
+  // 各檔期の業績を集計
+  const camps = sched.map(c => ({ ...c, perf: kolAttribute(c) }));
+
+  // 時間軸範囲：最早開始月の1日 〜 最遅終了月の末日
+  const allStart = camps.map(c => c.start).sort()[0];
+  const allEnd   = camps.map(c => c.end).sort().slice(-1)[0];
+  const rangeStart = new Date(allStart.slice(0,7) + '-01T00:00:00Z');
+  const endD = new Date(allEnd + 'T00:00:00Z');
+  const rangeEnd = new Date(Date.UTC(endD.getUTCFullYear(), endD.getUTCMonth()+1, 0)); // 末日
+  const rsMs = rangeStart.getTime();
+  const totalMs = (rangeEnd.getTime() + 86400000) - rsMs; // +1日で末日を含む
+  const pct = iso => (new Date(iso+'T00:00:00Z').getTime() - rsMs) / totalMs * 100;
+  const dayPct = 86400000 / totalMs * 100;
+
+  // 月グリッド
+  const monthTicks = [];
+  let my = rangeStart.getUTCFullYear(), mm = rangeStart.getUTCMonth();
+  while(true){
+    const d = new Date(Date.UTC(my, mm, 1));
+    if(d.getTime() > rangeEnd.getTime()) break;
+    monthTicks.push({ left: (d.getTime()-rsMs)/totalMs*100, label: `${mm+1}月` });
+    mm++; if(mm > 11){ mm = 0; my++; }
+  }
+
+  // KPI
+  const totAmt = camps.reduce((s,c)=>s+c.perf.amt, 0);
+  const best = camps.slice().sort((a,b)=>b.perf.amt-a.perf.amt)[0];
+
+  let html = '';
+
+  // ===== KPI =====
+  html += '<div class="card">';
+  html += `<h2>KOL 檔期 × 業績關聯 <span class="pill">${camps.length} 檔期</span></h2>`;
+  html += `<div style="font-size:11px;color:var(--secondary);margin:0 0 14px 0;line-height:1.6;padding:10px 14px;background:var(--stripe);border-radius:6px;border-left:3px solid var(--accent)">
+    業績歸屬口徑：以「<strong>事業別＋檔期起訖日（含迄日）</strong>」回推 KOL 通路業績。同事業同時段不重疊檔期，故歸屬乾淨；跨事業可並行不互相干擾。KOL 通路原始資料未標記個別 KOL，故不同事業別的並行檔期各自獨立計算。
+  </div>`;
+  html += '<div class="kpi-grid">';
+  html += `<div class="kpi-card year"><div class="lbl">檔期總數 <span class="small">${allStart.slice(5,7)}/${allStart.slice(8,10)}〜${allEnd.slice(5,7)}/${allEnd.slice(8,10)}</span></div>
+    <div class="row"><span class="k">規劃檔期</span><span class="v">${camps.length} <span style="font-size:11px;color:#94A3B8;font-weight:500">檔</span></span></div></div>`;
+  html += `<div class="kpi-card month"><div class="lbl">歸屬業績合計 <span class="small">檔期期間內</span></div>
+    <div class="row"><span class="k">KOL通路</span><span class="v">${fmtAmt(totAmt)} <span style="font-size:11px;color:#94A3B8;font-weight:500">萬</span></span></div></div>`;
+  html += `<div class="kpi-card cum"><div class="lbl">最強檔期 <span class="small">${best.start.slice(5).replace('-','/')}〜${best.end.slice(5).replace('-','/')}</span></div>
+    <div class="row"><span class="k">${best.kol.length>10?best.kol.slice(0,10)+'…':best.kol}</span><span class="v">${fmtAmt(best.perf.amt)} <span style="font-size:11px;color:#94A3B8;font-weight:500">萬</span></span></div></div>`;
+  html += '</div></div>';
+
+  // ===== 甘特圖時間軸 =====
+  const NAMEW = 168;
+  html += '<div class="card"><h2>KOL 檔期時間軸（甘特圖）</h2>';
+  html += `<div style="font-size:11px;color:var(--muted);margin-bottom:10px">色塊＝檔期期間，長度＝天數，數字＝該檔期歸屬 KOL 通路業績（萬）。顏色代表事業別。</div>`;
+  html += `<div style="position:relative;overflow-x:auto">`;
+  html += `<div style="min-width:720px;position:relative">`;
+  // gridline overlay
+  html += `<div style="position:absolute;left:${NAMEW}px;right:0;top:22px;bottom:0;pointer-events:none">`;
+  for(const t of monthTicks){
+    html += `<div style="position:absolute;left:${t.left}%;top:0;bottom:0;border-left:1px dashed #E2E8F0"></div>`;
+  }
+  html += `</div>`;
+  // header row (month labels)
+  html += `<div style="display:flex;height:22px;align-items:flex-end">`;
+  html += `<div style="width:${NAMEW}px;flex-shrink:0"></div>`;
+  html += `<div style="flex:1;position:relative">`;
+  for(const t of monthTicks){
+    html += `<div style="position:absolute;left:${t.left}%;font-size:11px;font-weight:700;color:#0C4A6E;padding-left:4px">${t.label}</div>`;
+  }
+  html += `</div></div>`;
+  // campaign rows (chronological)
+  const chrono = camps.slice().sort((a,b)=> a.start<b.start?-1:a.start>b.start?1:0);
+  for(const c of chrono){
+    const left = pct(c.start);
+    const width = Math.max(pct(c.end) + dayPct - left, dayPct);
+    const color = kolBizColor(c.biz);
+    const nameShort = c.kol.length > 14 ? c.kol.slice(0,14) + '…' : c.kol;
+    const amtLbl = fmtAmt(c.perf.amt);
+    html += `<div style="display:flex;align-items:center;height:30px;border-bottom:1px solid #F1F5F9">`;
+    html += `<div style="width:${NAMEW}px;flex-shrink:0;font-size:11px;color:#334155;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;padding-right:8px" title="${c.kol}（${c.biz}）">
+      <span style="display:inline-block;width:8px;height:8px;border-radius:2px;background:${color};margin-right:5px;vertical-align:middle"></span>${nameShort}</div>`;
+    html += `<div style="flex:1;position:relative;height:100%">`;
+    html += `<div style="position:absolute;left:${left}%;width:${width}%;top:6px;height:18px;background:${color};border-radius:3px;display:flex;align-items:center;justify-content:flex-end;min-width:2px" title="${c.kol}｜${c.biz}｜${c.start}〜${c.end}｜${amtLbl}萬">
+      <span style="font-size:10px;font-weight:700;color:#fff;padding:0 5px;white-space:nowrap">${amtLbl}</span></div>`;
+    html += `</div></div>`;
+  }
+  html += `</div></div>`; // min-width, overflow
+  // legend
+  const bizSet = Array.from(new Set(camps.map(c=>c.biz)));
+  html += `<div style="margin-top:12px;display:flex;gap:14px;flex-wrap:wrap;font-size:11px;color:#475569">`;
+  for(const b of bizSet){
+    html += `<span><span style="display:inline-block;width:10px;height:10px;border-radius:2px;background:${kolBizColor(b)};margin-right:4px;vertical-align:middle"></span>${b}</span>`;
+  }
+  html += `</div></div>`;
+
+  // ===== 每日 KOL 業績 × 檔期關聯圖 =====
+  html += '<div class="card"><h2>每日 KOL 通路業績 × 檔期對照</h2>';
+  html += `<div style="font-size:11px;color:var(--muted);margin-bottom:8px">藍柱＝落在任一檔期期間內的當日 KOL 業績；灰柱＝非檔期期間。用來檢視業績高峰是否對到檔期。</div>`;
+  html += '<div class="chart-box tall"><canvas id="chart-kol-daily"></canvas></div>';
+  html += '</div>';
+
+  // ===== 檔期業績明細表（依業績排序）=====
+  html += '<div class="card"><h2>檔期業績明細（依歸屬業績排序）</h2>';
+  html += '<div class="scroll-x"><table class="grid">';
+  html += '<thead><tr><th class="l1">KOL</th><th class="l2">事業別</th><th class="l2">檔期</th><th class="l2">天數</th><th class="l2">歸屬業績(萬)</th><th class="l2">日均(萬)</th><th class="l2">筆數</th></tr></thead><tbody>';
+  const byPerf = camps.slice().sort((a,b)=> b.perf.amt - a.perf.amt);
+  for(const c of byPerf){
+    const days = Math.round((new Date(c.end+'T00:00:00Z') - new Date(c.start+'T00:00:00Z'))/86400000) + 1;
+    const daily = days > 0 ? c.perf.amt/days : 0;
+    const nm = c.kol.length > 22 ? c.kol.slice(0,22)+'…' : c.kol;
+    html += `<tr>`;
+    html += `<td class="dim" title="${c.kol}">${nm}</td>`;
+    html += `<td><span style="display:inline-block;width:8px;height:8px;border-radius:2px;background:${kolBizColor(c.biz)};margin-right:5px;vertical-align:middle"></span>${c.biz||'—'}</td>`;
+    html += `<td>${c.start.slice(5).replace('-','/')}〜${c.end.slice(5).replace('-','/')}</td>`;
+    html += `<td>${days}</td>`;
+    html += `<td>${fmtAmt(c.perf.amt)}</td>`;
+    html += `<td>${daily/10000 >= 0.05 ? (daily/10000).toFixed(1) : Math.round(daily/10000)}</td>`;
+    html += `<td>${c.perf.cnt}</td>`;
+    html += `</tr>`;
+  }
+  html += '</tbody></table></div>';
+  html += `<div class="legend">※ 歸屬業績＝檔期起訖日內、該事業別的 KOL 通路實績合計。日均＝歸屬業績 ÷ 檔期天數。</div>`;
+  html += '</div>';
+
+  panel.innerHTML = html;
+
+  // ===== 每日チャート描画 =====
+  // KOL 通路の日別業績（全事業合計）
+  const dailyMap = {};
+  for(const r of (STATE.actualRows || [])){
+    if(r.ch !== 'KOL') continue;
+    const iso = dateToISO(r.date);
+    if(!iso) continue;
+    dailyMap[iso] = (dailyMap[iso] || 0) + r.amt;
+  }
+  const dailyDates = Object.keys(dailyMap).sort();
+  if(dailyDates.length > 0){
+    const first = dailyDates[0], last = dailyDates[dailyDates.length-1];
+    // first〜last の連続日を生成
+    const labels = [], vals = [], colors = [];
+    let d = new Date(first+'T00:00:00Z'), lastD = new Date(last+'T00:00:00Z');
+    while(d.getTime() <= lastD.getTime()){
+      const iso = dateToISO(d);
+      const inCamp = camps.some(c => iso >= c.start && iso <= c.end);
+      labels.push(`${d.getUTCMonth()+1}/${d.getUTCDate()}`);
+      vals.push(+((dailyMap[iso]||0)/10000).toFixed(2));
+      colors.push(inCamp ? '#0284C7' : '#CBD5E1');
+      d = new Date(d.getTime() + 86400000);
+    }
+    const ctx = document.getElementById("chart-kol-daily").getContext('2d');
+    STATE.charts['chart-kol-daily'] = new Chart(ctx, {
+      type: 'bar',
+      data: { labels, datasets: [{ label:'每日KOL業績', data:vals, backgroundColor:colors, borderWidth:0, borderRadius:2, barPercentage:1.0, categoryPercentage:0.9 }] },
+      options: {
+        responsive:true, maintainAspectRatio:false,
+        plugins: {
+          legend: { display:false },
+          tooltip: { backgroundColor:'#0C4A6E', titleColor:'#fff', bodyColor:'#fff',
+            callbacks: { label: ctx => `${(+ctx.parsed.y).toLocaleString()} 萬` } },
+        },
+        scales: {
+          y: { beginAtZero:true, title:{ display:true, text:'金額（萬元）', font:{size:11,weight:'600'}, color:'#0369A1' }, ticks:{ font:{size:11}, color:'#0369A1' }, grid:{color:'#F0F9FF'} },
+          x: { ticks:{ font:{size:9}, color:'#64748B', maxRotation:90, minRotation:90, autoSkip:true, maxTicksLimit:40 }, grid:{display:false} },
+        },
+      },
+    });
+  }
 }
 
 /* ============================================================
