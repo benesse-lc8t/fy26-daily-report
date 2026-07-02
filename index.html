@@ -1671,6 +1671,21 @@ function getTimeProgress(monthLabel){
   };
 }
 
+// 累計期間（4月〜当月）の時間進捗：各月の経過工作日合計 ÷ 総工作日合計。
+// 累計達成率と分母の期間を揃えるため、業績卡片の「進度達成」はこちらを使う。
+function getCumTimeProgress(cumMonths){
+  if(!STATE.workingDays) return null;
+  let total = 0, elapsed = 0, any = false;
+  for(const m of cumMonths){
+    const tp = getTimeProgress(m);
+    if(!tp) continue;
+    total += tp.total;
+    elapsed += tp.elapsed;
+    any = true;
+  }
+  return (any && total > 0) ? { total, elapsed, pct: elapsed / total * 100 } : null;
+}
+
 function renderPaceBanner(monthLabel, monthBudget, monthActual){
   const container = document.getElementById("pace-banner-container");
   if(!container) return;
@@ -2355,7 +2370,8 @@ function renderOneCard(name, color, subLabel, bizArg, chArg, colDims, colLabel, 
   const yearBgt    = sumOver(bizArg, chArg, MONTHS, bgt);
   const yearAct    = sumOver(bizArg, chArg, MONTHS, act);
   const ratePct    = cumBgt > 0 ? Math.round(cumAct / cumBgt * 100) : 0;
-  const tpPct      = timePace ? timePace.pct : 0;
+  const cumTP      = getCumTimeProgress(cumMonths);
+  const tpPct      = cumTP ? cumTP.pct : 0;
   const pacePct    = tpPct > 0 ? Math.round((cumAct / cumBgt * 100) / tpPct * 100) : 0;
   const rateClass_ = cumBgt > 0 ? cardRateClass(cumAct, cumBgt) : 'na';
   const paceClass_ = tpPct > 0 && cumBgt > 0 ? (pacePct >= 100 ? 'good' : pacePct >= 70 ? 'warn' : 'bad') : 'na';
@@ -2461,7 +2477,7 @@ function renderOneCard(name, color, subLabel, bizArg, chArg, colDims, colLabel, 
   html += `</tbody></table>`;
 
   const lastISO = getLastDayISO();
-  html += `<div class="bc-foot">累計：4月～${month}　差異 <span class="${cumDiff >= 0 ? 'bc-rate-num good' : 'bc-rate-num bad'}">${Math.round(cumDiff/10000) >= 0 ? '+' : ''}${Math.round(cumDiff/10000).toLocaleString()} 萬</span>　最新資料：${lastISO || '-'}　時間進度 ${timePace ? Math.round(timePace.pct) + '%' : '-'}</div>`;
+  html += `<div class="bc-foot">累計：4月～${month}　差異 <span class="${cumDiff >= 0 ? 'bc-rate-num good' : 'bc-rate-num bad'}">${Math.round(cumDiff/10000) >= 0 ? '+' : ''}${Math.round(cumDiff/10000).toLocaleString()} 萬</span>　最新資料：${lastISO || '-'}　累計時間進度 ${cumTP ? Math.round(cumTP.pct) + '%' : '-'}</div>`;
   html += `</div>`;
   return html;
 }
