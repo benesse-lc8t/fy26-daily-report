@@ -2813,9 +2813,10 @@ function renderTrendTab(){
   document.getElementById("panel-trend").innerHTML = html;
 
   // ===== Charts (DOM 設置後) =====
+  const trendRoot = document.getElementById("panel-trend");
   for(const biz of BIZ_LIST_TOTAL){
-    setupBizSkuHandlers(biz);
-    renderBizSkuChart(biz);
+    setupBizSkuHandlers(biz, trendRoot);
+    renderBizSkuChart(biz, trendRoot);
   }
   for(const s of sections){
     if(BIZ_LIST_TOTAL.includes(s.biz) && s.ch === 'all') continue; // handled by biz-sku
@@ -3019,9 +3020,9 @@ function renderBizSkuContentHTML(biz, codeSet){
   return html;
 }
 
-function renderBizSkuChartWith(biz, codeSet){
+function renderBizSkuChartWith(biz, codeSet, root){
   const canvasId = `chart-biz-sku-${bizSafe(biz)}`;
-  const canvas   = document.getElementById(canvasId);
+  const canvas   = (root || document).querySelector('#' + canvasId);
   if(!canvas || typeof Chart === 'undefined') return;
   destroyChart(canvasId);
   if(!codeSet || codeSet.size === 0) return;
@@ -3060,15 +3061,16 @@ function renderBizSkuChartWith(biz, codeSet){
   });
 }
 
-function renderBizSkuChart(biz){
-  renderBizSkuChartWith(biz, getBizSkuFilter(biz));
+function renderBizSkuChart(biz, root){
+  renderBizSkuChartWith(biz, getBizSkuFilter(biz), root);
 }
 
-function setupBizSkuHandlers(biz){
+function setupBizSkuHandlers(biz, root){
+  const scope    = root || document;
   const safeBiz  = bizSafe(biz);
-  const listEl   = document.getElementById(`biz-sku-list-${safeBiz}`);
-  const countEl  = document.getElementById(`biz-sku-count-${safeBiz}`);
-  const contentEl= document.getElementById(`biz-sku-content-${safeBiz}`);
+  const listEl   = scope.querySelector(`#biz-sku-list-${safeBiz}`);
+  const countEl  = scope.querySelector(`#biz-sku-count-${safeBiz}`);
+  const contentEl= scope.querySelector(`#biz-sku-content-${safeBiz}`);
   if(!listEl) return;
 
   const products = getSkuProductList(biz);
@@ -3095,7 +3097,7 @@ function setupBizSkuHandlers(biz){
     if(!contentEl) return;
     const codes = effectiveCodes();
     contentEl.innerHTML = renderBizSkuContentHTML(biz, codes);
-    renderBizSkuChartWith(biz, codes);
+    renderBizSkuChartWith(biz, codes, root);
   }
 
   // Search filter — hide labels AND refresh stats with matched subset
@@ -3260,8 +3262,13 @@ function renderDetailTab(filterType, filterValue){
   document.getElementById(`kpi-${idPrefix}-m`).innerHTML = kpiCardHTML("當月", m, mb, ma);
   document.getElementById(`kpi-${idPrefix}-c`).innerHTML = kpiCardHTML("累計", `4月〜${m}（${cumMonths.length}個月）`, cb, ca);
 
-  // Monthly trend chart
-  renderTrendChart(trendOpts);
+  // Monthly trend chart（四大事業は品項複選版なので biz-sku を配線；scope を panel に限定して trend タブとの ID 衝突を回避）
+  if(BIZ_LIST_TOTAL.includes(biz) && ch === 'all'){
+    setupBizSkuHandlers(biz, panel);
+    renderBizSkuChart(biz, panel);
+  } else {
+    renderTrendChart(trendOpts);
+  }
 
   // Breakdown
   renderRateTable(bdTableId, breakdownLabel, breakdownDims, breakdownType, filterValue);
