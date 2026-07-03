@@ -342,6 +342,10 @@
   .prevday-overview-row .kpi-card{flex:1 1 360px}
   .prevday-chart-box{flex:1 1 420px;min-height:280px;position:relative}
   .prevday-chart-box canvas{max-height:320px}
+  /* 依事業別／依通路別 を左右併排 */
+  .prevday-tables-row{display:flex;flex-wrap:wrap;gap:24px;align-items:flex-start}
+  .prevday-tables-row .prevday-table-col{flex:1 1 340px;min-width:0}
+  .prevday-tables-row .prevday-table-col h2{margin-top:0}
 
   /* ── 品項複選篩選 (Biz SKU Filter) ── */
   .biz-sku-filter{background:var(--stripe);border:0.5px solid var(--border);border-radius:8px;padding:10px 14px;margin-bottom:14px}
@@ -537,16 +541,19 @@
     </div>
 
     <div class="card">
-      <h2>依事業別</h2>
-      <div class="scroll-x">
-        <table class="grid" id="prevday-biz-table"></table>
-      </div>
-    </div>
-
-    <div class="card">
-      <h2>依通路別</h2>
-      <div class="scroll-x">
-        <table class="grid" id="prevday-ch-table"></table>
+      <div class="prevday-tables-row">
+        <div class="prevday-table-col">
+          <h2>依事業別</h2>
+          <div class="scroll-x">
+            <table class="grid" id="prevday-biz-table"></table>
+          </div>
+        </div>
+        <div class="prevday-table-col">
+          <h2>依通路別</h2>
+          <div class="scroll-x">
+            <table class="grid" id="prevday-ch-table"></table>
+          </div>
+        </div>
       </div>
     </div>
 
