@@ -693,23 +693,24 @@ const MONTHS = ["4月","5月","6月","7月","8月","9月","10月","11月","12月
 
 /* ===== 身份客製化：角色 → 預設畫面（輕度；不隱藏任何分頁） ===== */
 const ROLE_PRESETS = [
-  { id:'gm',        label:'總經理',                defaultTab:'main',        note:'全社整體 · 前日業績' },
-  { id:'sishya',    label:'王詩雅（經營戰略）',     defaultTab:'main',        note:'全社 · 資料檢視' },
-  { id:'exec',      label:'經營／管理（全社總覽）', defaultTab:'main',        note:'全社整體' },
-  { id:'finance',   label:'財務',                  defaultTab:'vstarget',    note:'對目標 · 預算達成' },
-  { id:'product',   label:'商品處',                defaultTab:'biz-學習商品', note:'學習商品 · 周邊 · 數位典藏' },
-  { id:'marketing', label:'整合行銷',              defaultTab:'ch-WEB',      note:'WEB 通路達成狀況' },
-  { id:'tmsales',   label:'電銷／CS',              defaultTab:'ch-TM',       note:'TM 電話銷售通路' },
+  { id:'gm',        label:'總經理',      defaultTab:'main',        note:'全社整體 · 前日業績' },
+  { id:'strategy',  label:'經營戰略',    defaultTab:'main',        note:'全社 · KPI · 資料檢視' },
+  { id:'finance',   label:'財務',        defaultTab:'vstarget',    note:'對目標 · 預算達成' },
+  { id:'product',   label:'商品處',      defaultTab:'biz-學習商品', note:'學習商品 · 周邊 · 數位典藏' },
+  { id:'marketing', label:'整合行銷',    defaultTab:'ch-WEB',      note:'WEB 通路達成狀況' },
+  { id:'tmsales',   label:'電銷／CS',    defaultTab:'ch-TM',       note:'TM 電話銷售通路' },
+  { id:'other',     label:'其他部門',    defaultTab:'main',        note:'資訊事業處 · 總管理處等 → 全社整體' },
 ];
 // 参考：email 収件人 → 角色（?role= リンク生成・個別確認用；プログラム上は選択式）
 const PERSON_ROLES = {
-  '小沼和幸':'gm', '王詩雅':'sishya',
-  '張育菱':'exec', '陳少琪':'exec', '阿比留華':'exec', '竹下友梨':'exec', '范巧惠':'exec',
+  '小沼和幸':'gm',
+  '王詩雅':'strategy', '張育菱':'strategy', '陳少琪':'strategy', '阿比留華':'strategy', '竹下友梨':'strategy',
   '中智玄':'finance', '傅貞甄':'finance',
   '江美齡':'product', '陳瓊芳':'product', '謝惠琪':'product',
   '劉靜芸':'marketing', '周宜柔':'marketing', '陳筱昀':'marketing', '鍾佳臻':'marketing',
   '郭怡梅':'marketing', '張菀庭':'marketing', '鍾明雯':'marketing', '陳思嘉':'marketing', '曹舒涵':'marketing',
   '鄭心怡':'tmsales', '鮑慧芬':'tmsales', '賴純美':'tmsales', '郭姿伶':'tmsales',
+  '范巧惠':'other',
 };
 
 const ROLE_STORE_KEY = 'fy26_role_v1';
