@@ -413,6 +413,25 @@
   .bc-rate-fill{height:100%;border-radius:2px}
   .bc-foot{font-size:10px;color:var(--muted);padding:4px 12px 6px;background:var(--stripe);border-top:0.5px solid var(--border)}
 
+  /* ===== 身份客製化（角色標籤 + 選擇器） ===== */
+  .role-chip{display:flex;align-items:center;gap:6px;font-size:12px;color:#fff;background:rgba(255,255,255,.14);border:1px solid rgba(255,255,255,.30);border-radius:14px;padding:4px 11px;cursor:pointer;white-space:nowrap;font-family:inherit}
+  .role-chip:hover{background:rgba(255,255,255,.26)}
+  .role-modal-mask{position:fixed;inset:0;background:rgba(12,45,107,.55);display:none;align-items:center;justify-content:center;z-index:9999}
+  .role-modal-mask.show{display:flex}
+  .role-modal{background:#fff;border-radius:14px;max-width:600px;width:calc(100% - 40px);max-height:calc(100vh - 60px);overflow:auto;box-shadow:0 20px 60px rgba(0,0,0,.3);padding:26px 28px}
+  .role-modal h3{margin:0 0 4px;font-size:18px;color:#0C2D6B}
+  .role-modal p.role-sub{margin:0 0 18px;font-size:12px;color:#64748B;line-height:1.6}
+  .role-grid{display:grid;grid-template-columns:1fr 1fr;gap:10px}
+  .role-btn{text-align:left;border:1.5px solid #E2E8F0;border-radius:10px;padding:11px 13px;background:#F8FAFC;cursor:pointer;transition:.12s;font-family:inherit}
+  .role-btn:hover{border-color:#0284C7;background:#F0F9FF}
+  .role-btn.current{border-color:#0284C7;background:#E0F2FE}
+  .role-btn .role-btn-label{font-size:14px;font-weight:700;color:#0C4A6E}
+  .role-btn .role-btn-note{font-size:11px;color:#64748B;margin-top:2px}
+  .role-modal-foot{margin-top:16px;display:flex;justify-content:flex-end;gap:10px}
+  .role-modal-foot button{font-family:inherit;font-size:12px;border-radius:8px;padding:7px 14px;cursor:pointer;border:1px solid #CBD5E1;background:#fff;color:#475569}
+  .role-modal-foot button:hover{background:#F1F5F9}
+  @media(max-width:520px){ .role-grid{grid-template-columns:1fr} }
+
 </style>
 </head>
 <body>
@@ -430,6 +449,7 @@
     <button data-mode="yoy" type="button">前年比</button>
   </div>
   <div class="header-actions">
+    <button class="role-chip" id="role-chip" type="button" title="切換身份"><span>👤</span><span id="role-chip-label">選擇身份</span></button>
     <button class="tab-btn subtle" data-tab="loader" type="button">📥 匯入</button>
     <button class="tab-btn subtle" data-tab="converter" type="button">轉換</button>
   </div>
@@ -647,6 +667,18 @@
 </main>
 </div>
 
+<!-- ===== 身份選擇器（角色客製化） ===== -->
+<div class="role-modal-mask" id="role-modal-mask">
+  <div class="role-modal">
+    <h3>請選擇你的身份</h3>
+    <p class="role-sub">選擇後，儀表板會預設開到你最常看的畫面（<strong>其他分頁仍可自由查看</strong>，方便你參考別人的角度）。此選擇會記在本瀏覽器，日後自動套用；隨時可點右上角「👤」切換或重選。</p>
+    <div class="role-grid" id="role-grid"></div>
+    <div class="role-modal-foot">
+      <button type="button" id="role-modal-close">稍後再選</button>
+    </div>
+  </div>
+</div>
+
 <script>
 /* ============================================================
    FY26 商售業績日報儀表板
@@ -658,6 +690,81 @@ const BIZ_LIST = ["學習商品","學習周邊","生活周邊","Mirafeel","數�
 const BIZ_LIST_TOTAL = ["學習商品","學習周邊","生活周邊","Mirafeel"];
 const CHANNEL_LIST = ["WEB","TM","KOL","EC","經代銷"];
 const MONTHS = ["4月","5月","6月","7月","8月","9月","10月","11月","12月","1月","2月","3月"];
+
+/* ===== 身份客製化：角色 → 預設畫面（輕度；不隱藏任何分頁） ===== */
+const ROLE_PRESETS = [
+  { id:'gm',        label:'總經理',                defaultTab:'main',        note:'全社整體 · 前日業績' },
+  { id:'sishya',    label:'王詩雅（經營戰略）',     defaultTab:'main',        note:'全社 · 資料檢視' },
+  { id:'exec',      label:'經營／管理（全社總覽）', defaultTab:'main',        note:'全社整體' },
+  { id:'finance',   label:'財務',                  defaultTab:'vstarget',    note:'對目標 · 預算達成' },
+  { id:'product',   label:'商品處',                defaultTab:'biz-學習商品', note:'學習商品 · 周邊 · 數位典藏' },
+  { id:'marketing', label:'整合行銷',              defaultTab:'cards',       note:'各通路業績卡片' },
+  { id:'tmsales',   label:'電銷／CS',              defaultTab:'ch-TM',       note:'TM 電話銷售通路' },
+];
+// 参考：email 収件人 → 角色（?role= リンク生成・個別確認用；プログラム上は選択式）
+const PERSON_ROLES = {
+  '小沼和幸':'gm', '王詩雅':'sishya',
+  '張育菱':'exec', '陳少琪':'exec', '阿比留華':'exec', '竹下友梨':'exec', '范巧惠':'exec',
+  '中智玄':'finance', '傅貞甄':'finance',
+  '江美齡':'product', '陳瓊芳':'product', '謝惠琪':'product',
+  '劉靜芸':'marketing', '周宜柔':'marketing', '陳筱昀':'marketing', '鍾佳臻':'marketing',
+  '郭怡梅':'marketing', '張菀庭':'marketing', '鍾明雯':'marketing', '陳思嘉':'marketing', '曹舒涵':'marketing',
+  '鄭心怡':'tmsales', '鮑慧芬':'tmsales', '賴純美':'tmsales', '郭姿伶':'tmsales',
+};
+
+const ROLE_STORE_KEY = 'fy26_role_v1';
+function roleById(id){ return ROLE_PRESETS.find(r => r.id === id) || null; }
+function getSavedRole(){ try{ return localStorage.getItem(ROLE_STORE_KEY); }catch(e){ return null; } }
+function saveRole(id){ try{ localStorage.setItem(ROLE_STORE_KEY, id); }catch(e){} }
+
+function updateRoleChip(){
+  const lbl = document.getElementById('role-chip-label');
+  if(!lbl) return;
+  const r = roleById(STATE.currentRole);
+  lbl.textContent = r ? r.label : '選擇身份';
+}
+function applyRole(id, {navigate=true} = {}){
+  const r = roleById(id);
+  if(!r) return;
+  STATE.currentRole = id;
+  updateRoleChip();
+  if(navigate && r.defaultTab) switchTab(r.defaultTab);
+}
+function openRolePicker(){
+  const grid = document.getElementById('role-grid');
+  const mask = document.getElementById('role-modal-mask');
+  if(!grid || !mask) return;
+  grid.innerHTML = ROLE_PRESETS.map(r =>
+    `<button class="role-btn${r.id===STATE.currentRole?' current':''}" data-role="${r.id}"><div class="role-btn-label">${r.label}</div><div class="role-btn-note">${r.note}</div></button>`
+  ).join('');
+  grid.querySelectorAll('.role-btn').forEach(b => {
+    b.onclick = () => { const id = b.dataset.role; saveRole(id); applyRole(id); mask.classList.remove('show'); };
+  });
+  mask.classList.add('show');
+}
+function initRoleSystem(){
+  const chip = document.getElementById('role-chip');
+  if(chip) chip.onclick = openRolePicker;
+  const mask = document.getElementById('role-modal-mask');
+  if(mask) mask.addEventListener('click', e => { if(e.target === mask) mask.classList.remove('show'); });
+  const closeBtn = document.getElementById('role-modal-close');
+  if(closeBtn) closeBtn.onclick = () => mask && mask.classList.remove('show');
+
+  // 優先順位：URL ?role=（email リンク用）> localStorage > 未設定なら選択を促す
+  let urlRole = null;
+  try{ urlRole = new URLSearchParams(location.search).get('role'); }catch(e){}
+  if(urlRole && roleById(urlRole)){
+    saveRole(urlRole); applyRole(urlRole);
+  } else {
+    const saved = getSavedRole();
+    if(saved && roleById(saved)){
+      applyRole(saved);
+    } else {
+      updateRoleChip();
+      openRolePicker(); // 初回訪問：身份選択を促す
+    }
+  }
+}
 
 // 月別テーマ：四半期で青の濃淡、月ごとにドット密度（なし→極小→小）
 // Q1(4-6月)=薄青 / Q2(7-9月)=中青 / Q3(10-12月)=濃青 / Q4(1-3月)=紺
@@ -4703,6 +4810,7 @@ setupConverterTab();
     updateDataStatus(`✓ 已自動載入 data.json（${monthCount} 個月）`, true);
     initMonthSelector();
     switchTab("main");
+    initRoleSystem();
   } else {
     updateDataStatus("尚未載入資料", null);
     switchTab("loader");
