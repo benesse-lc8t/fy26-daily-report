@@ -29,6 +29,18 @@ SHEET_CONFIG = {
     'TM':      {'header_row':2, 'biz':0,'code':1,'date':2,'qty':4,'amt':6, 'fixed':'TM'},
 }
 
+# 國定假日表：欄位 [年度, 日期, 假日名稱, 星期]
+HOLIDAY_SHEET = '國定假日表'
+FY26_START = '2026-04-01'
+FY26_END   = '2027-03-31'
+WEEKDAY_CH = ['一', '二', '三', '四', '五', '六', '日']  # Mon..Sun
+
+# 停班停課（颱風假等，非國定假日；手動維護，每次更新自動併入）
+EXTRA_SUSPENSIONS = [
+    {'date': '2026-07-10', 'name': '巴威颱風・台北市停班停課', 'category': '停班停課'},
+    {'date': '2026-07-11', 'name': '巴威颱風・台北市停班停課', 'category': '停班停課'},
+]
+
 def normalize_biz(name):
     t = str(name).strip()
     return BIZ_NAME_MAP.get(t, t)
@@ -46,6 +58,23 @@ def parse_date(v):
         try: return datetime.strptime(s, fmt).strftime('%Y-%m-%d')
         except: pass
     return None
+
+def build_holiday_info(wb):
+    """國定假日表（FY26 期間）＋停班停課 → [{date, weekday, name, category}] 昇順。"""
+    items = {}
+    if HOLIDAY_SHEET in wb.sheetnames:
+        for row in list(wb[HOLIDAY_SHEET].iter_rows(values_only=True))[1:]:
+            if not row or not isinstance(row[1], datetime): continue
+            iso = row[1].strftime('%Y-%m-%d')
+            if iso < FY26_START or iso > FY26_END: continue
+            name = str(row[2]).strip() if row[2] else ''
+            items[iso] = {'date': iso, 'weekday': WEEKDAY_CH[row[1].weekday()],
+                          'name': name, 'category': '國定假日'}
+    for e in EXTRA_SUSPENSIONS:
+        d = datetime.strptime(e['date'], '%Y-%m-%d')
+        items[e['date']] = {'date': e['date'], 'weekday': WEEKDAY_CH[d.weekday()],
+                            'name': e['name'], 'category': e['category']}
+    return [items[k] for k in sorted(items)]
 
 def main(excel_path):
     print(f'Loading {excel_path} …')
@@ -147,6 +176,9 @@ def main(excel_path):
         data = json.load(f)
     data['actualRows'] = actual_rows
     data['actuals'] = actuals_plain
+    holiday_info = build_holiday_info(wb)
+    data['holidayInfo'] = holiday_info
+    print(f'holidayInfo: {len(holiday_info)} 筆（含 {len(EXTRA_SUSPENSIONS)} 停班停課）')
     data['generatedAt'] = datetime.now(timezone.utc).isoformat()
     with open(DATA_JSON, 'w', encoding='utf-8') as f:
         json.dump(data, f, ensure_ascii=False, separators=(',', ':'))

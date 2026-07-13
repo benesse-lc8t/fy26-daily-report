@@ -488,6 +488,7 @@
   <div class="tab-col tab-col-3">
     <button class="tab-btn" data-tab="biz-數位典藏">數位典藏</button>
     <button class="tab-btn" data-tab="kol">KOL檔期</button>
+    <button class="tab-btn" data-tab="holiday">國定假日／停班課</button>
   </div>
   <div class="tab-divider"></div>
   <a class="sidebar-feedback-link" href="https://benessetw.atlassian.net/wiki/spaces/WS/pages/620691613/1." target="_blank" rel="noopener">💬 需求與建議</a>
@@ -598,6 +599,7 @@
   <div class="tab-panel" id="panel-sku"></div>
   <div class="tab-panel" id="panel-handpuppet"></div>
   <div class="tab-panel" id="panel-kol"></div>
+  <div class="tab-panel" id="panel-holiday"></div>
 
   <!-- ===== Tab 14: Loader ===== -->
   <div class="tab-panel" id="panel-loader">
@@ -854,6 +856,7 @@ function switchTab(tabId){
   else if(tabId === "sku") renderSkuTab();
   else if(tabId === "handpuppet") renderHandPuppetTab();
   else if(tabId === "kol") renderKolTab();
+  else if(tabId === "holiday") renderHolidayTab();
   else if(tabId === "cards") renderCardsTab();
 }
 document.getElementById("tabs").addEventListener("click", e=>{
@@ -1014,6 +1017,7 @@ function applyDataJSON(data){
   STATE.holidays = data.holidays ? new Set(data.holidays) : null;
   STATE.fy25 = data.fy25 || null;
   STATE.kolSchedule = data.kolSchedule || [];
+  STATE.holidayInfo = data.holidayInfo || [];
   STATE.generatedAt = data.generatedAt;
 
   updateHeaderTimestamp(STATE.generatedAt);
@@ -4611,6 +4615,49 @@ function renderKolTab(){
       },
     });
   }
+}
+
+/* ============================================================
+   Tab: 國定假日與停班課資訊表（FY26：2026/4/1〜2027/3/31）
+   ============================================================ */
+function renderHolidayTab(){
+  const panel = document.getElementById("panel-holiday");
+  destroyCharts();
+  const list = STATE.holidayInfo || [];
+  if(list.length === 0){
+    panel.innerHTML = `<div class="placeholder">⚠ 尚無假日資料（data.json 無 holidayInfo）。</div>`;
+    return;
+  }
+  const nHol = list.filter(e => e.category === '國定假日').length;
+  const nSus = list.filter(e => e.category === '停班停課').length;
+
+  const fmt = iso => `${iso.slice(0,4)}/${iso.slice(5,7)}/${iso.slice(8,10)}`;
+  const isSus = e => e.category === '停班停課';
+
+  let html = '<div class="card">';
+  html += `<h2>國定假日與停班課資訊表 <span class="pill">FY26 · 2026/4/1〜2027/3/31</span></h2>`;
+  html += `<div style="font-size:12px;color:var(--secondary);margin:0 0 14px 0;line-height:1.7;padding:10px 14px;background:var(--stripe);border-radius:6px;border-left:3px solid var(--accent)">
+    國定假日共 <strong>${nHol}</strong> 日、停班停課 <strong>${nSus}</strong> 日。停班停課（如颱風假）以 <span style="color:#B45309;font-weight:700">🌀 橘色</span> 標示。資料來源：Excel「國定假日表」＋人工登錄之停班停課。
+  </div>`;
+  html += '<div class="scroll-x"><table class="grid">';
+  html += '<thead><tr><th class="l1">日期</th><th class="l2">星期</th><th class="l2" style="text-align:left">名稱</th><th class="l2">類別</th></tr></thead><tbody>';
+  for(const e of list){
+    const sus = isSus(e);
+    const rowStyle = sus ? ' style="background:#FFF7ED"' : '';
+    const badge = sus
+      ? '<span style="display:inline-block;padding:1px 9px;border-radius:10px;background:#FED7AA;color:#B45309;font-size:11px;font-weight:700">停班停課</span>'
+      : '<span style="display:inline-block;padding:1px 9px;border-radius:10px;background:#DBEAFE;color:#1D4ED8;font-size:11px;font-weight:700">國定假日</span>';
+    html += `<tr${rowStyle}>`;
+    html += `<td class="dim" style="white-space:nowrap">${sus ? '🌀 ' : ''}${fmt(e.date)}</td>`;
+    html += `<td style="text-align:center">${e.weekday}</td>`;
+    html += `<td style="text-align:left">${e.name || '—'}</td>`;
+    html += `<td style="text-align:center">${badge}</td>`;
+    html += `</tr>`;
+  }
+  html += '</tbody></table></div>';
+  html += `<div class="legend" style="margin-top:8px">※ 期間為 FY26 會計年度（2026/4/1〜2027/3/31）。停班停課日為台北市政府公告之停止上班上課日。</div>`;
+  html += '</div>';
+  panel.innerHTML = html;
 }
 
 /* ============================================================
