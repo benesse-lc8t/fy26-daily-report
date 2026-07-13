@@ -36,14 +36,12 @@ FY26_END   = '2027-03-31'
 WEEKDAY_CH = ['一', '二', '三', '四', '五', '六', '日']  # Mon..Sun
 
 # 停班停課（颱風假等，非國定假日；手動維護，每次更新自動併入）
-# refs：佐證新聞連結，供事後查證停班停課正確性
-BAVI_REFS = [
-    'https://news.pts.org.tw/article/81689',
-    'https://news.pts.org.tw/article/817086',
-]
+# refs：各日期各自對應之佐證新聞連結，供事後查證停班停課正確性（一日一則）
 EXTRA_SUSPENSIONS = [
-    {'date': '2026-07-10', 'name': '巴威颱風・台北市停班停課', 'category': '停班停課', 'refs': BAVI_REFS},
-    {'date': '2026-07-11', 'name': '巴威颱風・台北市停班停課', 'category': '停班停課', 'refs': BAVI_REFS},
+    {'date': '2026-07-10', 'name': '巴威颱風・台北市停班停課', 'category': '停班停課',
+     'refs': ['https://news.pts.org.tw/article/816893']},
+    {'date': '2026-07-11', 'name': '巴威颱風・台北市停班停課', 'category': '停班停課',
+     'refs': ['https://news.pts.org.tw/article/817086']},
 ]
 
 def normalize_biz(name):
