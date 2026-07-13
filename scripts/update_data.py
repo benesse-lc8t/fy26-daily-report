@@ -36,9 +36,14 @@ FY26_END   = '2027-03-31'
 WEEKDAY_CH = ['一', '二', '三', '四', '五', '六', '日']  # Mon..Sun
 
 # 停班停課（颱風假等，非國定假日；手動維護，每次更新自動併入）
+# refs：佐證新聞連結，供事後查證停班停課正確性
+BAVI_REFS = [
+    'https://news.pts.org.tw/article/81689',
+    'https://news.pts.org.tw/article/817086',
+]
 EXTRA_SUSPENSIONS = [
-    {'date': '2026-07-10', 'name': '巴威颱風・台北市停班停課', 'category': '停班停課'},
-    {'date': '2026-07-11', 'name': '巴威颱風・台北市停班停課', 'category': '停班停課'},
+    {'date': '2026-07-10', 'name': '巴威颱風・台北市停班停課', 'category': '停班停課', 'refs': BAVI_REFS},
+    {'date': '2026-07-11', 'name': '巴威颱風・台北市停班停課', 'category': '停班停課', 'refs': BAVI_REFS},
 ]
 
 def normalize_biz(name):
@@ -73,7 +78,8 @@ def build_holiday_info(wb):
     for e in EXTRA_SUSPENSIONS:
         d = datetime.strptime(e['date'], '%Y-%m-%d')
         items[e['date']] = {'date': e['date'], 'weekday': WEEKDAY_CH[d.weekday()],
-                            'name': e['name'], 'category': e['category']}
+                            'name': e['name'], 'category': e['category'],
+                            'refs': e.get('refs', [])}
     return [items[k] for k in sorted(items)]
 
 def main(excel_path):

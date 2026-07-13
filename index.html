@@ -4648,9 +4648,15 @@ function renderHolidayTab(){
       ? '<span style="display:inline-block;padding:1px 9px;border-radius:10px;background:#FED7AA;color:#B45309;font-size:11px;font-weight:700">停班停課</span>'
       : '<span style="display:inline-block;padding:1px 9px;border-radius:10px;background:#DBEAFE;color:#1D4ED8;font-size:11px;font-weight:700">國定假日</span>';
     html += `<tr${rowStyle}>`;
+    let refsHtml = '';
+    if(sus && Array.isArray(e.refs) && e.refs.length){
+      refsHtml = ' ' + e.refs.map((u, i) =>
+        `<a href="${u}" target="_blank" rel="noopener" style="font-size:11px;color:#0284C7;text-decoration:underline;white-space:nowrap">🔗 新聞${e.refs.length > 1 ? (i+1) : ''}</a>`
+      ).join(' ');
+    }
     html += `<td class="dim" style="white-space:nowrap">${sus ? '🌀 ' : ''}${fmt(e.date)}</td>`;
     html += `<td style="text-align:center">${e.weekday}</td>`;
-    html += `<td style="text-align:left">${e.name || '—'}</td>`;
+    html += `<td style="text-align:left">${e.name || '—'}${refsHtml}</td>`;
     html += `<td style="text-align:center">${badge}</td>`;
     html += `</tr>`;
   }
