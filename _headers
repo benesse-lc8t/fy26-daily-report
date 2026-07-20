@@ -1,0 +1,11 @@
+# Netlify headers：避免 data.json / index.html 被瀏覽器或 CDN 快取住，
+# 確保每次上傳新資料後前台立即反映最新內容。
+/data.json
+  Cache-Control: public, max-age=0, must-revalidate
+  Netlify-CDN-Cache-Control: public, max-age=0, must-revalidate
+
+/index.html
+  Cache-Control: public, max-age=0, must-revalidate
+
+/
+  Cache-Control: public, max-age=0, must-revalidate
