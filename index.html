@@ -5,14 +5,14 @@
 <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="mobile-web-app-capable" content="yes">
-<title>FY26 商售業績日報儀表板</title>
-<meta property="og:title" content="FY26 商售業績日報儀表板">
+<title>日商倍樂生台北分公司FY26商售日報儀表板</title>
+<meta property="og:title" content="日商倍樂生台北分公司FY26商售日報儀表板">
 <meta property="og:description" content="倍樂生台北分公司每日業績數據分析儀表板">
 <meta property="og:url" content="https://benesse-lc8t.github.io/fy26-daily-report/">
 <meta property="og:type" content="website">
 <meta property="og:image" content="https://benesse-lc8t.github.io/fy26-daily-report/icon-192.png">
 <meta name="twitter:card" content="summary">
-<meta name="twitter:title" content="FY26 商售業績日報儀表板">
+<meta name="twitter:title" content="日商倍樂生台北分公司FY26商售日報儀表板">
 <meta name="twitter:description" content="倍樂生台北分公司每日業績數據分析儀表板">
 
 <!-- Favicon -->
@@ -55,8 +55,8 @@
   body{margin:0;font-family:"Segoe UI","Microsoft JhengHei","PingFang TC",sans-serif;background:var(--bg);color:var(--ink);font-size:16px}
 
   /* Header */
-  header{background:#0C2D6B;color:#fff;padding:15px 28px;display:flex;align-items:center;gap:24px;box-shadow:0 2px 16px rgba(0,0,0,.4);max-width:1600px;margin:0 auto}
-  header .brand{font-size:20px;font-weight:700;letter-spacing:.6px}
+  header{background:#0C2D6B;color:#fff;padding:15px 28px;display:flex;align-items:center;gap:24px;box-shadow:0 2px 16px rgba(0,0,0,.4);width:100%;margin:0}
+  header .brand{font-size:28px;font-weight:700;letter-spacing:.6px;line-height:1.15}
   header .month-bar{display:flex;align-items:center;gap:8px;background:rgba(255,255,255,.12);padding:6px 14px;border-radius:8px}
   header .month-bar label{font-size:14px;color:rgba(255,255,255,.85)}
   header .month-bar select{background:rgba(255,255,255,.95);color:#0C4A6E;border:none;padding:6px 12px;border-radius:6px;font-size:15px;font-weight:600;cursor:pointer;min-width:100px}
@@ -77,7 +77,7 @@
   header .header-actions .tab-btn.active{background:#fff;color:var(--accent-dark)}
 
   /* Body layout: left sidebar + main */
-  .layout{display:flex;align-items:flex-start;gap:0;max-width:1600px;margin:0 auto}
+  .layout{display:flex;align-items:flex-start;gap:0;width:100%;margin:0}
 
   /* Tab nav (vertical sidebar) */
   nav.tabs{background:#fff;border-right:1px solid var(--border);border-bottom:1px solid var(--border);padding:14px 10px;display:flex;flex-direction:column;gap:6px;box-shadow:0 1px 4px rgba(12,74,110,.06);width:150px;flex-shrink:0;position:sticky;top:0;align-self:flex-start;max-height:100vh;overflow-y:auto}
@@ -127,6 +127,17 @@
     .chart-table-row .chart-side, .chart-table-row .table-side{flex:none;width:100%}
   }
 
+  /* 達成率：表格 + 圖表 同一水平區塊左右並列（表格保持全字級） */
+  .ach-row{display:flex;gap:20px;align-items:stretch;margin-top:6px}
+  .ach-row .ach-table{flex:1.15;min-width:0;overflow-x:auto}
+  .ach-row .ach-chart{flex:1;min-width:0;position:relative}
+  .ach-row .ach-chart .chart-box{height:100%;min-height:320px;margin-top:0}
+  @media (max-width:1100px){
+    .ach-row{flex-direction:column}
+    .ach-row .ach-table, .ach-row .ach-chart{flex:none;width:100%}
+    .ach-row .ach-chart .chart-box{min-height:300px}
+  }
+
   main{padding:18px 24px;flex:1;min-width:0}
 
   /* Tab panels */
@@ -162,7 +173,7 @@
   .kpi-card .rate-lbl{font-size:16px;color:var(--muted);margin-bottom:2px;font-weight:500}
 
   /* Pace banner */
-  .pace-banner{background:var(--card);border:0.5px solid var(--border);border-radius:12px;margin-top:14px;padding:14px 0;box-shadow:0 4px 16px rgba(0,0,0,.3);display:grid;grid-template-columns:1.3fr 1fr 1.2fr;position:relative;overflow:hidden;align-items:center}
+  .pace-banner{background:var(--stripe);border:0.5px solid var(--border);border-radius:10px;margin-top:8px;padding:10px 0;display:grid;grid-template-columns:1.3fr 1fr 1.2fr;position:relative;overflow:hidden;align-items:center}
   .pace-banner::before{content:"";position:absolute;left:0;top:0;width:6px;height:100%}
   .pace-banner.pace-good::before{background:linear-gradient(180deg,#15803D,#22C55E)}
   .pace-banner.pace-onpace::before{background:linear-gradient(180deg,var(--accent-dark),var(--accent))}
@@ -226,8 +237,18 @@
   .rank-badge.bronze{background:linear-gradient(135deg,#FED7AA,#C2410C);color:#fff;box-shadow:0 1px 3px rgba(194,65,12,.45);border:1px solid #9A3412}
   .rank-num{display:inline-block;min-width:32px;text-align:center;color:var(--muted);font-weight:600}
 
-  .sku-stats{margin-top:8px;padding:10px 14px;background:var(--subheader);border-left:3px solid var(--accent);border-radius:6px;font-size:12px;color:var(--accent-dark)}
+  .sku-stats{margin-top:8px;padding:12px 16px;background:var(--subheader);border-left:3px solid var(--accent);border-radius:6px;font-size:12px;color:var(--accent-dark)}
   .sku-stats strong{color:var(--accent-dark)}
+
+  /* 使用者指定：AOV / TOP20 / 手偶 分頁字級放大易讀 */
+  #panel-sku .sku-stats{font-size:19px;line-height:1.75}
+  #panel-sku table.grid,#panel-handpuppet table.grid{font-size:18px}
+  #panel-sku table.grid th,#panel-handpuppet table.grid th{font-size:18px}
+  #panel-sku table.grid td.sku-code{font-size:17px;color:var(--ink)}
+  #panel-sku table.grid td.sku-name{font-size:18px}
+  #panel-sku .filter-row label,#panel-sku .filter-row select{font-size:17px}
+  #panel-aov .card h2,#panel-sku .card h2,#panel-handpuppet .card h2{font-size:23px}
+  #panel-aov .card h2 .pill,#panel-sku .card h2 .pill,#panel-handpuppet .card h2 .pill{font-size:16px}
   table.grid td.sku-name{text-align:left;white-space:normal;max-width:420px;line-height:1.35;color:var(--ink)}
   table.grid td.sku-code{font-family:"Consolas","Monaco",monospace;font-size:11px;color:var(--secondary)}
   table.grid td.sku-rank{text-align:center;width:70px}
@@ -303,7 +324,7 @@
   .status.error{color:var(--bad);background:var(--bad-bg);border-color:#FCA5A5}
   .status.success{color:var(--good);background:var(--good-bg);border-color:#86EFAC}
 
-  .legend{font-size:11px;color:var(--muted);margin-top:6px}
+  .legend{font-size:14px;color:var(--muted);margin-top:6px}
 
   .prevday-month-group{margin-bottom:14px}
   .prevday-month-group.collapsed{margin-bottom:6px}
@@ -437,7 +458,7 @@
 <body>
 
 <header>
-  <div class="brand">FY26商售業績日報</div>
+  <div class="brand">日商倍樂生台北分公司FY26商售日報儀表板</div>
   <div class="month-bar">
     <label>本月份</label>
     <select id="month-select" disabled>
@@ -478,16 +499,16 @@
     <button class="tab-btn" data-tab="biz-學習周邊">學習周邊</button>
     <button class="tab-btn" data-tab="biz-生活周邊">生活周邊</button>
     <button class="tab-btn" data-tab="biz-Mirafeel">Mirafeel</button>
+    <button class="tab-btn" data-tab="biz-數位典藏">數位典藏</button>
     <button class="tab-btn" data-tab="ch-WEB">WEB</button>
     <button class="tab-btn" data-tab="ch-TM">TM</button>
     <button class="tab-btn" data-tab="ch-KOL">KOL</button>
+    <button class="tab-btn" data-tab="kol">KOL檔期</button>
     <button class="tab-btn" data-tab="ch-EC">EC</button>
     <button class="tab-btn" data-tab="ch-經代銷">經代銷</button>
   </div>
   <div class="tab-divider"></div>
   <div class="tab-col tab-col-3">
-    <button class="tab-btn" data-tab="biz-數位典藏">數位典藏</button>
-    <button class="tab-btn" data-tab="kol">KOL檔期</button>
     <button class="tab-btn" data-tab="holiday">國定假日／停班課</button>
   </div>
   <div class="tab-divider"></div>
@@ -511,19 +532,19 @@
 
     <div class="card">
       <h2>事業別達成率</h2>
-      <div class="scroll-x">
-        <table class="grid" id="biz-table"></table>
+      <div class="ach-row">
+        <div class="ach-table"><table class="grid" id="biz-table"></table></div>
+        <div class="ach-chart"><div class="chart-box"><canvas id="chart-biz"></canvas></div></div>
       </div>
-      <div class="chart-box"><canvas id="chart-biz"></canvas></div>
       <div class="legend">※ 棒：累計預算 vs 累計實績（萬元，左軸）／折線：累計達成率（%，右軸）。</div>
     </div>
 
     <div class="card">
       <h2>管道別達成率</h2>
-      <div class="scroll-x">
-        <table class="grid" id="ch-table"></table>
+      <div class="ach-row">
+        <div class="ach-table"><table class="grid" id="ch-table"></table></div>
+        <div class="ach-chart"><div class="chart-box"><canvas id="chart-ch"></canvas></div></div>
       </div>
-      <div class="chart-box"><canvas id="chart-ch"></canvas></div>
       <div class="legend">※ 棒：累計預算 vs 累計實績（萬元，左軸）／折線：累計達成率（%，右軸）。</div>
     </div>
 
@@ -683,7 +704,7 @@
 
 <script>
 /* ============================================================
-   FY26 商售業績日報儀表板
+   日商倍樂生台北分公司FY26商售日報儀表板
    ============================================================ */
 
 const BIZ_LIST = ["學習商品","學習周邊","生活周邊","Mirafeel","數位典藏"];
@@ -1228,7 +1249,7 @@ async function runImport(){
         try{
           const buf = await pfActual.file.arrayBuffer();
           const wb = XLSX.read(buf, {type:"array"});
-          // 工作日・祝日のメタデータを抽出（時間進捗計算用）
+          // 工作日・祝日のメタデータを抽出（時間進度計算用）
           extractCalendarData(wb);
           const result = await convertOriginalActuals(wb, (msg, pct)=>{
             setStatus(`🔄 轉換中… ${msg}（${(pct*100).toFixed(0)}%）`, "");
@@ -1790,7 +1811,7 @@ function getTimeProgress(monthLabel){
   };
 }
 
-// 累計期間（4月〜当月）の時間進捗：各月の経過工作日合計 ÷ 総工作日合計。
+// 累計期間（4月〜当月）の時間進度：各月の経過工作日合計 ÷ 総工作日合計。
 // 累計達成率と分母の期間を揃えるため、業績卡片の「進度達成」はこちらを使う。
 function getCumTimeProgress(cumMonths){
   if(!STATE.workingDays) return null;
@@ -1812,9 +1833,9 @@ function renderPaceBanner(monthLabel, monthBudget, monthActual){
   const tp = getTimeProgress(monthLabel);
   if(!tp || monthBudget <= 0){
     if(!STATE.workingDays){
-      container.innerHTML = '<div class="pace-empty">⚠ 時間進捗：工作日資料未載入。請使用「📥 匯入」分頁載入原始實績檔（含「年度工作天」工作表）。</div>';
+      container.innerHTML = '<div class="pace-empty">⚠ 時間進度：工作日資料未載入。請使用「📥 匯入」分頁載入原始實績檔（含「年度工作天」工作表）。</div>';
     } else {
-      container.innerHTML = `<div class="pace-empty">⚠ 時間進捗：${monthLabel} 尚無實績資料。</div>`;
+      container.innerHTML = `<div class="pace-empty">⚠ 時間進度：${monthLabel} 尚無實績資料。</div>`;
     }
     return;
   }
@@ -1832,14 +1853,14 @@ function renderPaceBanner(monthLabel, monthBudget, monthActual){
   container.innerHTML = `
     <div class="pace-banner ${cls}">
       <div class="pace-cell">
-        <div class="pace-lbl">時間進捗</div>
+        <div class="pace-lbl">時間進度</div>
         <div class="pace-val">${tp.pct.toFixed(1)}<span class="pace-unit">%</span></div>
         <div class="pace-sub">經過 ${tp.elapsed} / ${tp.total} 工作日</div>
       </div>
       <div class="pace-cell">
-        <div class="pace-lbl">達成進捗率</div>
+        <div class="pace-lbl">達成進度率</div>
         <div class="pace-val progress-rate">${progRate == null ? "—" : progRate + '<span class="pace-unit">%</span>'}</div>
-        <div class="pace-sub">當月達成率 ÷ 時間進捗率</div>
+        <div class="pace-sub">當月達成率 ÷ 時間進度率</div>
       </div>
       <div class="pace-cell">
         <div class="pace-lbl">資料最終日</div>
@@ -2006,7 +2027,7 @@ function renderOverallKPIs(){
   document.getElementById("kpi-month").innerHTML = kpiCardHTML("當月", m, monthBudget, monthActual);
   document.getElementById("kpi-cum").innerHTML   = kpiCardHTML("累計", `4月〜${m}（${cumMonths.length}個月）`, cumBudget, cumActual);
 
-  // 全社當月の時間進捗バナー（KPI 3枚の下、全幅）
+  // 全社當月の時間進度バナー（KPI 3枚の下、全幅）
   renderPaceBanner(m, monthBudget, monthActual);
 }
 
@@ -2626,8 +2647,8 @@ function renderCardsTab(){
     const bizCards = [
       { name:'全社合計', color: CARDS_BIZ_COLORS['全社'],     sub:null,               biz:'all', ch:'all'  },
       { name:'學習商品', color: CARDS_BIZ_COLORS['學習商品'], sub:null,               biz:'學習商品', ch:'all' },
-      { name:'學習周邊', color: CARDS_BIZ_COLORS['學習周邊'], sub:'周邊商品 內訳',    biz:'學習周邊', ch:'all' },
-      { name:'生活周邊', color: CARDS_BIZ_COLORS['生活周邊'], sub:'周邊商品 內訳',    biz:'生活周邊', ch:'all' },
+      { name:'學習周邊', color: CARDS_BIZ_COLORS['學習周邊'], sub:'周邊商品 明細',    biz:'學習周邊', ch:'all' },
+      { name:'生活周邊', color: CARDS_BIZ_COLORS['生活周邊'], sub:'周邊商品 明細',    biz:'生活周邊', ch:'all' },
       { name:'Mirafeel', color: CARDS_BIZ_COLORS['Mirafeel'], sub:null,               biz:'Mirafeel', ch:'all' },
     ];
     bizCards.forEach(card => {
@@ -3361,7 +3382,7 @@ function renderDetailTab(filterType, filterValue){
   // Section 3: 内訳（上：グラフ、下：テーブル）
   const bdTableId = `table-${idPrefix}-bd`;
   const bdChartId = `chart-${idPrefix}-bd`;
-  html += `<div class="card"><h2>${filterValue} — ${breakdownLabel}別內訳</h2>`;
+  html += `<div class="card"><h2>${filterValue} — ${breakdownLabel}別明細</h2>`;
   html += `<div class="chart-box"><canvas id="${bdChartId}"></canvas></div>`;
   html += `<div class="scroll-x" style="margin-top:12px"><table class="grid" id="${bdTableId}"></table></div>`;
   html += `<div class="legend">※ 累計（4月〜${m}）為基準。棒：${targetLabel()} vs 實績（萬元，左軸）／折線：${rateLabel()}（%，右軸）。</div>`;
@@ -3968,7 +3989,7 @@ function renderAovTab(){
   // KPI Card
   html += '<div class="card">';
   html += `<h2>AOV 分析 — 學習商品 <span class="pill">本月：${m}</span></h2>`;
-  html += `<div style="font-size:11px;color:var(--secondary);margin:0 0 14px 0;line-height:1.6;padding:10px 14px;background:var(--stripe);border-radius:6px;border-left:3px solid var(--accent)">
+  html += `<div style="font-size:18px;color:var(--secondary);margin:0 0 14px 0;line-height:1.6;padding:12px 16px;background:var(--stripe);border-radius:6px;border-left:3px solid var(--accent)">
     <strong>AOV (Average Order Value)</strong> = 未稅金額 ÷ 套數，每套商品的平均單價（單位：元）。<br>
     <strong>AOV ${rateLabel()}</strong> = 實績AOV ÷ ${targetLabel()}AOV × 100。對象：學習商品（套數有意義的事業）。
   </div>`;
@@ -4147,20 +4168,17 @@ function renderAovChart(biz, ch){
 
   const ctx = canvas.getContext('2d');
   STATE.charts['chart-aov'] = new Chart(ctx, {
-    type: 'line',
+    type: 'bar',
     data: {
       labels: MONTHS,
       datasets: [
-        { label:`${targetLabel()}AOV`, data: budgetAov,
-          borderColor:'#BAE6FD', backgroundColor:'rgba(186,230,253,.15)',
-          borderWidth:2, borderDash:[6, 4],
-          pointRadius:4, pointBackgroundColor:'#BAE6FD', pointBorderColor:'#fff', pointBorderWidth:2,
+        { type:'bar', label:'實績AOV', data: actualAov, order:2,
+          backgroundColor:'#0284C7', borderColor:'#0284C7', borderWidth:1, borderRadius:3 },
+        { type:'line', label:`${targetLabel()}AOV`, data: budgetAov, order:1,
+          borderColor:'#0C4A6E', backgroundColor:'rgba(12,74,110,.10)',
+          borderWidth:3, borderDash:[7, 4],
+          pointRadius:4, pointBackgroundColor:'#0C4A6E', pointBorderColor:'#fff', pointBorderWidth:2,
           tension:0.25, spanGaps:true },
-        { label:'實績AOV', data: actualAov,
-          borderColor:'#0284C7', backgroundColor:'rgba(2,132,199,.10)',
-          borderWidth:2,
-          pointRadius:4, pointBackgroundColor:'#0284C7', pointBorderColor:'#fff', pointBorderWidth:2,
-          tension:0.25, spanGaps:false },
       ],
     },
     options: {
@@ -4169,10 +4187,11 @@ function renderAovChart(biz, ch){
       interaction: { mode:'index', intersect:false },
       layout: { padding: { top: 24 } },
       plugins: {
-        legend: { position:'top', labels:{ font:{ size:11, weight:'600' }, color:'#0C4A6E', boxWidth:14, padding:14 } },
+        legend: { position:'top', labels:{ font:{ size:20, weight:'600' }, color:'#0C4A6E', boxWidth:20, padding:18 } },
         tooltip: {
           backgroundColor:'#0C4A6E', titleColor:'#fff', bodyColor:'#fff',
           borderColor:'#0284C7', borderWidth:1,
+          titleFont:{ size:17 }, bodyFont:{ size:16 },
           callbacks: {
             label: function(ctx){
               const v = ctx.parsed.y;
@@ -4184,10 +4203,10 @@ function renderAovChart(biz, ch){
       },
       scales: {
         y: { type:'linear', position:'left', beginAtZero:true,
-             title:{ display:true, text:'AOV（元）', font:{size:11, weight:'600'}, color:'#0369A1' },
-             ticks:{ font:{size:11}, color:'#0369A1', callback: v=>(+v).toLocaleString() },
+             title:{ display:true, text:'AOV（元）', font:{size:18, weight:'600'}, color:'#0369A1' },
+             ticks:{ font:{size:16}, color:'#0369A1', callback: v=>(+v).toLocaleString() },
              grid:{ color:'#F0F9FF' } },
-        x: { ticks:{ font:{size:11, weight:'600'}, color:'#0C4A6E' }, grid:{ display:false } },
+        x: { ticks:{ font:{size:17, weight:'600'}, color:'#0C4A6E' }, grid:{ display:false } },
       },
     },
   });
@@ -4281,7 +4300,7 @@ function renderHandPuppetTab(){
   // KPI
   html += '<div class="card">';
   html += `<h2>巧虎手偶 — 達成狀況 <span class="pill">${codes.size} 商品 / 本月：${m}</span></h2>`;
-  html += `<div style="font-size:11px;color:var(--secondary);margin:0 0 14px 0;line-height:1.6;padding:10px 14px;background:var(--stripe);border-radius:6px;border-left:3px solid var(--accent)">
+  html += `<div style="font-size:18px;color:var(--secondary);margin:0 0 14px 0;line-height:1.6;padding:12px 16px;background:var(--stripe);border-radius:6px;border-left:3px solid var(--accent)">
     對象商品：商品主檔中名稱包含「<strong>手偶</strong>」的 ${codes.size} 件商品。預算為產品級非允許項目（biz×channel 級別），故僅顯示實績。
   </div>`;
   html += '<div class="kpi-grid">';
@@ -4320,10 +4339,11 @@ function renderHandPuppetTab(){
   html += '</div>'; // chart-table-row
   html += '</div>'; // card
 
-  // 管道別內訳（上：グラフ、下：テーブル）
-  html += '<div class="card"><h2>巧虎手偶 — 管道別內訳（FY26 累計）</h2>';
-  html += '<div class="chart-box"><canvas id="chart-hp-channel"></canvas></div>';
-  html += '<div class="scroll-x" style="margin-top:12px"><table class="grid">';
+  // 管道別明細（上：グラフ、下：テーブル）
+  html += '<div class="card"><h2>巧虎手偶 — 管道別明細（FY26 累計）</h2>';
+  html += '<div class="chart-table-row">';
+  html += '<div class="chart-side"><div class="chart-box"><canvas id="chart-hp-channel"></canvas></div></div>';
+  html += '<div class="table-side"><div class="scroll-x"><table class="grid">';
   html += '<thead><tr><th class="l1">管道</th><th class="l2">套數</th><th class="l2">金額(萬)</th><th class="l2">AOV(元)</th></tr></thead><tbody>';
   let chTotQ = 0, chTotA = 0;
   for(const ch of CHANNEL_LIST){
@@ -4343,8 +4363,9 @@ function renderHandPuppetTab(){
   html += `<td>${Math.floor(chTotQ).toLocaleString()}</td>`;
   html += `<td>${Math.floor(chTotA/10000).toLocaleString()}</td>`;
   html += chTotAov != null ? `<td>${Math.floor(chTotAov).toLocaleString()}</td>` : '<td class="na">—</td>';
-  html += '</tr></tbody></table></div>';
-  html += '</div>';
+  html += '</tr></tbody></table></div></div>'; // close scroll-x, table-side
+  html += '</div>'; // chart-table-row
+  html += '</div>'; // card
 
   panel.innerHTML = html;
 
@@ -4486,7 +4507,7 @@ function renderKolTab(){
   // ===== KPI =====
   html += '<div class="card">';
   html += `<h2>KOL 檔期 × 業績關聯 <span class="pill">${camps.length} 檔期</span></h2>`;
-  html += `<div style="font-size:11px;color:var(--secondary);margin:0 0 14px 0;line-height:1.6;padding:10px 14px;background:var(--stripe);border-radius:6px;border-left:3px solid var(--accent)">
+  html += `<div style="font-size:18px;color:var(--secondary);margin:0 0 14px 0;line-height:1.6;padding:12px 16px;background:var(--stripe);border-radius:6px;border-left:3px solid var(--accent)">
     業績歸屬口徑：以「<strong>事業別＋檔期起訖日（含迄日）</strong>」回推 KOL 通路業績。同事業同時段不重疊檔期，故歸屬乾淨；跨事業可並行不互相干擾。KOL 通路原始資料未標記個別 KOL，故不同事業別的並行檔期各自獨立計算。
   </div>`;
   html += '<div class="kpi-grid">';
