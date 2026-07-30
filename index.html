@@ -138,6 +138,18 @@
     .ach-row .ach-chart .chart-box{min-height:300px}
   }
 
+  /* AOV：當月 + 累計 KPI + 月次推移圖 同一水平區塊 */
+  .aov-row{display:flex;gap:16px;align-items:stretch;margin-top:4px}
+  .aov-row .kpi-card{flex:1;min-width:0}
+  .aov-row .aov-chart{flex:1.6;min-width:0;position:relative;background:var(--card);border:0.5px solid var(--border);border-radius:12px;padding:14px 16px;box-shadow:0 4px 16px rgba(0,0,0,.3);display:flex;flex-direction:column}
+  .aov-row .aov-chart-title{font-size:16px;font-weight:700;color:var(--accent-dark);margin-bottom:8px}
+  .aov-row .aov-chart .chart-box{flex:1;min-height:280px;margin-top:0}
+  @media (max-width:1100px){
+    .aov-row{flex-direction:column}
+    .aov-row .kpi-card, .aov-row .aov-chart{flex:none;width:100%}
+    .aov-row .aov-chart .chart-box{min-height:300px}
+  }
+
   main{padding:18px 24px;flex:1;min-width:0}
 
   /* Tab panels */
@@ -252,6 +264,10 @@
   table.grid td.sku-name{text-align:left;white-space:normal;max-width:420px;line-height:1.35;color:var(--ink)}
   table.grid td.sku-code{font-family:"Consolas","Monaco",monospace;font-size:11px;color:var(--secondary)}
   table.grid td.sku-rank{text-align:center;width:70px}
+  /* 表格內嵌橫條小圖（TOP20 數量/金額/構成比） */
+  td .cellbar{position:relative;display:block;min-width:120px}
+  td .cellbar .cb-fill{position:absolute;left:0;top:3px;bottom:3px;border-radius:3px;opacity:.32}
+  td .cellbar .cb-num{position:relative;z-index:1}
 
   /* Subtle card (gray theme) for import/converter */
   .card.subtle{background:#F8FAFC;border-color:#CBD5E1}
@@ -3383,8 +3399,10 @@ function renderDetailTab(filterType, filterValue){
   const bdTableId = `table-${idPrefix}-bd`;
   const bdChartId = `chart-${idPrefix}-bd`;
   html += `<div class="card"><h2>${filterValue} — ${breakdownLabel}別明細</h2>`;
-  html += `<div class="chart-box"><canvas id="${bdChartId}"></canvas></div>`;
-  html += `<div class="scroll-x" style="margin-top:12px"><table class="grid" id="${bdTableId}"></table></div>`;
+  html += `<div class="ach-row">`;
+  html += `<div class="ach-table"><table class="grid" id="${bdTableId}"></table></div>`;
+  html += `<div class="ach-chart"><div class="chart-box"><canvas id="${bdChartId}"></canvas></div></div>`;
+  html += `</div>`;
   html += `<div class="legend">※ 累計（4月〜${m}）為基準。棒：${targetLabel()} vs 實績（萬元，左軸）／折線：${rateLabel()}（%，右軸）。</div>`;
   html += `</div>`;
 
@@ -3993,16 +4011,12 @@ function renderAovTab(){
     <strong>AOV (Average Order Value)</strong> = 未稅金額 ÷ 套數，每套商品的平均單價（單位：元）。<br>
     <strong>AOV ${rateLabel()}</strong> = 實績AOV ÷ ${targetLabel()}AOV × 100。對象：學習商品（套數有意義的事業）。
   </div>`;
-  html += '<div class="kpi-grid" style="grid-template-columns:repeat(2,1fr)">';
+  // 當月 + 累計 KPI + 月次推移圖 → 同一水平區塊
+  html += '<div class="aov-row">';
   html += aovKpiCard('當月', m, 'month', mBgtAov, mActAov);
   html += aovKpiCard('累計', `4月〜${m}（${cumMonths.length}個月）`, 'cum', cBgtAov, cActAov);
+  html += '<div class="aov-chart"><div class="aov-chart-title">AOV 月次推移 — 學習商品（全體）</div><div class="chart-box"><canvas id="chart-aov"></canvas></div></div>';
   html += '</div>';
-  html += '</div>';
-
-  // Chart
-  html += '<div class="card">';
-  html += '<h2>AOV 月次推移 — 學習商品（全體）</h2>';
-  html += '<div class="chart-box tall"><canvas id="chart-aov"></canvas></div>';
   html += `<div class="legend">※ ${targetLabel()} AOV 與 實績 AOV 之 12 個月推移。Y 軸：元（小數點切捨）。資料缺失月份的實績 AOV 線會中斷。</div>`;
   html += '</div>';
 
@@ -4787,6 +4801,11 @@ function renderSkuContent(){
   if(top20.length === 0){
     html += '<tr><td colspan="6" style="text-align:center;color:var(--muted);padding:24px">無符合條件的資料</td></tr>';
   } else {
+    const maxQty   = Math.max(...top20.map(s=>s.qty), 1);
+    const maxAmt   = Math.max(...top20.map(s=>s.amt), 1);
+    const maxRatio = totalAmt > 0 ? (top20[0].amt / totalAmt * 100) : 1;
+    const cellBar = (pct, color, num) =>
+      `<div class="cellbar"><div class="cb-fill" style="width:${Math.max(2, Math.min(100, pct))}%;background:${color}"></div><span class="cb-num">${num}</span></div>`;
     top20.forEach((sku, i)=>{
       const rank = i + 1;
       const ratio = totalAmt > 0 ? (sku.amt / totalAmt * 100) : 0;
@@ -4800,9 +4819,9 @@ function renderSkuContent(){
       html += `<td class="sku-rank">${rankCell}</td>`;
       html += `<td class="sku-code">${sku.code}</td>`;
       html += `<td class="sku-name">${sku.name || '<span style="color:#9ca3af">(無名稱)</span>'}</td>`;
-      html += `<td>${Math.floor(sku.qty).toLocaleString()}</td>`;
-      html += `<td>${Math.floor(sku.amt/10000).toLocaleString()}</td>`;
-      html += `<td>${ratio.toFixed(1)}%</td>`;
+      html += `<td>${cellBar(sku.qty/maxQty*100, '#0284C7', Math.floor(sku.qty).toLocaleString())}</td>`;
+      html += `<td>${cellBar(sku.amt/maxAmt*100, '#16A34A', Math.floor(sku.amt/10000).toLocaleString())}</td>`;
+      html += `<td>${cellBar(ratio/maxRatio*100, '#F59E0B', ratio.toFixed(1)+'%')}</td>`;
       html += `</tr>`;
     });
   }
