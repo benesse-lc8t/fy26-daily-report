@@ -95,8 +95,11 @@ def main(excel_path):
             month_label = f'{int(mm)}月'
             ws = wb[sheet_name]
             all_rows = list(ws.iter_rows(values_only=True))
+            # 佔位（假）資料判定：整張分頁無任何有效日期 → 略過
+            if not any(parse_date(r[1]) for r in all_rows[1:] if r and len(r) > 1):
+                print(f'  {sheet_name}: 略過（無有效日期，判定為佔位假資料）')
+                continue
             kept = skip_zero = 0
-            # header row 0; data from row 1
             # cols: 0=seq, 1=date, 2=起訂年月, 3=管道代碼, 4=方案, 5=單價, 6=qty, 7=訂購金額, 8=銷售額(amt), 9=稅
             for row in all_rows[1:]:
                 if not row: continue
@@ -121,6 +124,11 @@ def main(excel_path):
         cfg = SHEET_CONFIG[suffix]
         ws = wb[sheet_name]
         all_rows = list(ws.iter_rows(values_only=True))
+        # 佔位（假）資料判定：整張分頁無任何有效日期 → 略過
+        dcol = cfg['date']
+        if not any(parse_date(r[dcol]) for r in all_rows[cfg['header_row']+1:] if r and len(r) > dcol):
+            print(f'  {sheet_name}: 略過（無有效日期，判定為佔位假資料）')
+            continue
         kept = skip_zero = 0
 
         for row in all_rows[cfg['header_row']+1:]:
