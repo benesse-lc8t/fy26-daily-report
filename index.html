@@ -2440,6 +2440,7 @@ const CARDS_BIZ_COLORS = {
   '學習周邊': '#D97706',
   '生活周邊': '#16A34A',
   'Mirafeel': '#9333EA',
+  '數位典藏': '#DB2777',
 };
 const CARDS_CH_COLORS = {
   'WEB':   '#0C4A6E',
@@ -2666,6 +2667,7 @@ function renderCardsTab(){
       { name:'學習周邊', color: CARDS_BIZ_COLORS['學習周邊'], sub:'周邊商品 明細',    biz:'學習周邊', ch:'all' },
       { name:'生活周邊', color: CARDS_BIZ_COLORS['生活周邊'], sub:'周邊商品 明細',    biz:'生活周邊', ch:'all' },
       { name:'Mirafeel', color: CARDS_BIZ_COLORS['Mirafeel'], sub:null,               biz:'Mirafeel', ch:'all' },
+      { name:'數位典藏', color: CARDS_BIZ_COLORS['數位典藏'], sub:null,               biz:'數位典藏', ch:'all' },
     ];
     bizCards.forEach(card => {
       html += renderOneCard(card.name, card.color, card.sub, card.biz, card.ch, CHANNEL_LIST, 'ch', month, cumMonths, timePace);
