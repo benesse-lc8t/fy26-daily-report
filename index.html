@@ -2568,7 +2568,7 @@ function renderOneCard(name, color, subLabel, bizArg, chArg, colDims, colLabel, 
 
   const fmtV  = v => v === 0 ? '<span style="color:#94A3B8">0</span>' : fmtAmt(v);
   const fmtD  = v => { const r = Math.round(v/10000); return r >= 0 ? `<span class="bc-rate-num good">+${r.toLocaleString()}</span>` : `<span class="bc-rate-num bad">${r.toLocaleString()}</span>`; };
-  const fmtG  = v => `<span style="color:var(--muted);font-size:10px">${fmtAmt(v)}</span>`;
+  const fmtG  = v => `<span style="color:var(--muted);font-size:14px">${fmtAmt(v)}</span>`;
 
   let html = `<div class="bc" style="--bc-color:${color}">`;
 
@@ -2635,13 +2635,13 @@ function renderOneCard(name, color, subLabel, bizArg, chArg, colDims, colLabel, 
   html += `<td>${fmtD(cumDiff)}</td></tr>`;
 
   // 達成率
-  html += `<tr><td style="font-size:9px;color:var(--secondary);padding:2px 6px">達成率</td>`;
+  html += `<tr><td style="font-size:15px;color:var(--secondary);padding:3px 8px">達成率</td>`;
   cols.forEach(c => { html += bcRateCell(c.cumA, c.cumB); });
   html += bcRateCell(cumAct, cumBgt);
   html += `</tr>`;
 
   // 時間進度達成
-  html += `<tr><td style="font-size:9px;color:var(--secondary);padding:2px 6px">進度達成</td>`;
+  html += `<tr><td style="font-size:15px;color:var(--secondary);padding:3px 8px">進度達成</td>`;
   cols.forEach(c => { html += bcPaceCell(c.cumA, c.cumB, tpPct); });
   html += bcPaceCell(cumAct, cumBgt, tpPct);
   html += `</tr>`;
@@ -2789,7 +2789,7 @@ function renderRateChart(canvasId, dims, dimType, fixedFilter){
       datasets: [
         { type:'bar', label:`累計${targetLabel()}`, data:budgetArr, backgroundColor:'#BAE6FD', borderColor:'#7DD3FC', borderWidth:1, borderRadius:3, yAxisID:'y' },
         { type:'bar', label:'累計實績', data:actualArr, backgroundColor:'#0284C7', borderColor:'#0284C7', borderWidth:1, borderRadius:3, yAxisID:'y' },
-        { type:'line', label:`${rateLabel()}(%)`, data:rateArr, borderColor:'#E11D48', backgroundColor:'rgba(225,29,72,.1)', borderWidth:2, pointRadius:4, pointBackgroundColor:rateArr.map(v=>(v!=null&&v>=100)?'#16A34A':'#E11D48'), pointBorderColor:'#fff', pointBorderWidth:2, segment:{borderColor:c=>(c.p1.parsed.y!=null&&c.p1.parsed.y>=100)?'#16A34A':'#E11D48'}, tension:0.25, yAxisID:'y1' },
+        { type:'line', label:`${rateLabel()}(%)`, data:rateArr, borderColor:'#E11D48', backgroundColor:'rgba(225,29,72,.1)', borderWidth:2, pointRadius:4, pointBackgroundColor:'#E11D48', pointBorderColor:'#fff', pointBorderWidth:2, tension:0.25, yAxisID:'y1' },
       ],
     },
     options: commonChartOptions(),
@@ -2812,7 +2812,7 @@ const fy26ChartLabelsPlugin = {
         ctx.textAlign = 'center';
         const lbl = ds.label || '';
         if(lbl.includes('達成率') || lbl.includes('前年比')){
-          ctx.fillStyle = '#E11D48';
+          ctx.fillStyle = (v >= 100) ? '#16A34A' : '#E11D48';
           ctx.fillText(Math.floor(v) + '%', point.x, point.y - 12);
         } else if(lbl === '預算' || lbl === '累計預算' || lbl === '昨年實績' || lbl === '累計昨年實績'){
           ctx.fillStyle = '#0369A1';
@@ -4900,8 +4900,7 @@ function renderTrendChart(s){
         { type:'bar',  label:'實績',           data:actualArr, backgroundColor:'#0284C7', borderColor:'#0284C7', borderWidth:1, borderRadius:3, yAxisID:'y' },
         { type:'line', label:`${rateLabel()}(%)`, data:rateArr,
           borderColor:'#E11D48', backgroundColor:'rgba(225,29,72,.1)',
-          borderWidth:2, pointRadius:4, pointBackgroundColor:rateArr.map(v=>(v!=null&&v>=100)?'#16A34A':'#E11D48'), pointBorderColor:'#fff', pointBorderWidth:2,
-          segment:{borderColor:c=>(c.p1.parsed.y!=null&&c.p1.parsed.y>=100)?'#16A34A':'#E11D48'},
+          borderWidth:2, pointRadius:4, pointBackgroundColor:'#E11D48', pointBorderColor:'#fff', pointBorderWidth:2,
           tension:0.25, yAxisID:'y1', spanGaps:false },
       ],
     },
