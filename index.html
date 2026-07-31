@@ -80,30 +80,30 @@
   .layout{display:flex;align-items:flex-start;gap:0;width:100%;margin:0}
 
   /* Tab nav (vertical sidebar) */
-  nav.tabs{background:#fff;border-right:1px solid var(--border);border-bottom:1px solid var(--border);padding:14px 10px;display:flex;flex-direction:column;gap:6px;box-shadow:0 1px 4px rgba(12,74,110,.06);width:150px;flex-shrink:0;position:sticky;top:0;align-self:flex-start;max-height:100vh;overflow-y:auto}
+  nav.tabs{background:#fff;border-right:1px solid var(--border);border-bottom:1px solid var(--border);padding:14px 10px;display:flex;flex-direction:column;gap:6px;box-shadow:0 1px 4px rgba(12,74,110,.06);width:210px;flex-shrink:0;position:sticky;top:0;align-self:flex-start;max-height:100vh;overflow-y:auto}
   nav.tabs .tab-divider{height:0;border-top:0.5px solid #BAE6FD;margin:6px 4px;flex-shrink:0}
 
   /* Column 1: blue pill (main tabs) */
   nav.tabs .tab-col-1{display:flex;flex-direction:column;gap:6px}
-  nav.tabs .tab-col-1 .tab-btn{background:#E0F2FE;color:#0369A1;border:none;border-radius:6px;padding:9px 10px;font-size:15px;font-weight:500;cursor:pointer;transition:all .15s;font-family:inherit;text-align:left;width:100%}
+  nav.tabs .tab-col-1 .tab-btn{background:#E0F2FE;color:#0369A1;border:none;border-radius:6px;padding:10px 12px;font-size:22px;font-weight:500;cursor:pointer;transition:all .15s;font-family:inherit;text-align:left;width:100%}
   nav.tabs .tab-col-1 .tab-btn:hover{background:#BAE6FD}
   nav.tabs .tab-col-1 .tab-btn.active{background:#0284C7;color:#fff;font-weight:600}
   nav.tabs .tab-col-1 .tab-btn.active:hover{background:#0284C7;color:#fff}
 
   /* Column 2: rose pill (business / channel tabs) */
   nav.tabs .tab-col-2{display:flex;flex-direction:column;gap:6px}
-  nav.tabs .tab-col-2 .tab-btn{background:#FFF1F2;color:#BE123C;border:none;border-radius:6px;padding:8px 10px;font-size:14px;font-weight:500;cursor:pointer;transition:all .15s;font-family:inherit;text-align:left;width:100%}
+  nav.tabs .tab-col-2 .tab-btn{background:#FFF1F2;color:#BE123C;border:none;border-radius:6px;padding:9px 12px;font-size:21px;font-weight:500;cursor:pointer;transition:all .15s;font-family:inherit;text-align:left;width:100%}
   nav.tabs .tab-col-2 .tab-btn:hover{background:#FFE4E6}
   nav.tabs .tab-col-2 .tab-btn.active{background:#E11D48;color:#fff;font-weight:600}
   nav.tabs .tab-col-2 .tab-btn.active:hover{background:#E11D48;color:#fff}
 
   /* Column 3: gray */
   nav.tabs .tab-col-3{display:flex;flex-direction:column;gap:6px}
-  nav.tabs .tab-col-3 .tab-btn{background:#F1F5F9;color:#64748B;border:none;border-radius:6px;padding:8px 10px;font-size:14px;font-weight:500;cursor:pointer;transition:all .15s;font-family:inherit;text-align:left;width:100%}
+  nav.tabs .tab-col-3 .tab-btn{background:#F1F5F9;color:#64748B;border:none;border-radius:6px;padding:9px 12px;font-size:21px;font-weight:500;cursor:pointer;transition:all .15s;font-family:inherit;text-align:left;width:100%}
   nav.tabs .tab-col-3 .tab-btn:hover{background:#E2E8F0;color:#475569}
   nav.tabs .tab-col-3 .tab-btn.active{background:#64748B;color:#fff;font-weight:500}
   nav.tabs .tab-col-3 .tab-btn.active:hover{background:#64748B;color:#fff}
-  nav.tabs .sidebar-feedback-link{display:block;background:#EFF6FF;color:#1D4ED8;border:1px solid #BFDBFE;border-radius:6px;padding:9px 10px;font-size:13px;font-weight:600;text-align:center;text-decoration:none;transition:all .15s;letter-spacing:.3px}
+  nav.tabs .sidebar-feedback-link{display:block;background:#EFF6FF;color:#1D4ED8;border:1px solid #BFDBFE;border-radius:6px;padding:10px 12px;font-size:18px;font-weight:600;text-align:center;text-decoration:none;transition:all .15s;letter-spacing:.3px}
   nav.tabs .sidebar-feedback-link:hover{background:#DBEAFE;border-color:#93C5FD}
 
   @media (max-width: 900px){
@@ -148,6 +148,25 @@
     .aov-row{flex-direction:column}
     .aov-row .kpi-card, .aov-row .aov-chart{flex:none;width:100%}
     .aov-row .aov-chart .chart-box{min-height:300px}
+  }
+
+  /* 全社業績：3 KPI 卡 + 進度資訊 同一水平列，進度移到最右方 */
+  .overview-row{display:flex;gap:14px;align-items:stretch}
+  .overview-row .kpi-card{flex:1;min-width:0}
+  .overview-row #pace-banner-container{flex:0.95;min-width:0;display:flex}
+  .overview-row #pace-banner-container .pace-banner{margin-top:0;width:100%;grid-template-columns:1fr;align-content:center;gap:0}
+  .overview-row #pace-banner-container .pace-cell{border-right:none;border-bottom:1px solid var(--border);padding:9px 20px}
+  .overview-row #pace-banner-container .pace-cell:last-child{border-bottom:none}
+  .overview-row #pace-banner-container .pace-val{font-size:30px}
+  .overview-row #pace-banner-container .pace-lbl{font-size:14px}
+  .overview-row #pace-banner-container .pace-sub{font-size:13px}
+  @media(max-width:1200px){
+    .overview-row{flex-wrap:wrap}
+    .overview-row .kpi-card{flex:1 1 30%}
+    .overview-row #pace-banner-container{flex:1 1 100%}
+    .overview-row #pace-banner-container .pace-banner{grid-template-columns:1.3fr 1fr 1.2fr}
+    .overview-row #pace-banner-container .pace-cell{border-bottom:none;border-right:1px solid var(--stripe)}
+    .overview-row #pace-banner-container .pace-cell:last-child{border-right:none}
   }
 
   main{padding:18px 24px;flex:1;min-width:0}
@@ -429,19 +448,19 @@
   .bc-bar-track{height:7px;background:rgba(0,0,0,.1);border-radius:3px;overflow:hidden}
   .bc-bar-fill{height:100%;border-radius:3px;transition:width .3s}
 
-  .bc-table{width:100%;border-collapse:collapse;table-layout:fixed;font-size:15px}
+  .bc-table{width:100%;border-collapse:collapse;table-layout:fixed;font-size:17px}
   .bc-table thead tr{background:var(--stripe)}
-  .bc-table th{font-size:13px;font-weight:500;color:var(--muted);padding:6px 8px;text-align:right;border-bottom:0.5px solid var(--border);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+  .bc-table th{font-size:14px;font-weight:500;color:var(--muted);padding:5px 8px;text-align:right;border-bottom:0.5px solid var(--border);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
   .bc-table th:first-child{text-align:left;width:84px}
-  .bc-table td{padding:5px 8px;text-align:right;border-bottom:0.5px solid var(--border-light,#F0F4F8);color:var(--ink);font-variant-numeric:tabular-nums}
-  .bc-table td:first-child{text-align:left;color:var(--secondary);font-size:14px}
-  .bc-table .row-pri td{font-size:16px;font-weight:600}
-  .bc-table .row-pri td:first-child{font-size:14px}
-  .bc-table .row-dim td{font-size:14px;color:var(--muted)}
+  .bc-table td{padding:4px 8px;text-align:right;border-bottom:0.5px solid var(--border-light,#F0F4F8);color:var(--ink);font-variant-numeric:tabular-nums}
+  .bc-table td:first-child{text-align:left;color:var(--secondary);font-size:15px}
+  .bc-table .row-pri td{font-size:18px;font-weight:600}
+  .bc-table .row-pri td:first-child{font-size:15px}
+  .bc-table .row-dim td{font-size:15px;color:var(--muted)}
   .bc-table .row-total{background:var(--stripe)}
-  .bc-table .row-total td{font-weight:700;font-size:16px}
+  .bc-table .row-total td{font-weight:700;font-size:18px}
   .bc-rate-cell{display:flex;flex-direction:column;align-items:flex-end;gap:2px;padding:2px 8px 3px}
-  .bc-rate-num{font-size:14px;font-weight:600;line-height:1}
+  .bc-rate-num{font-size:15px;font-weight:700;line-height:1}
   .bc-rate-num.good{color:var(--good)}
   .bc-rate-num.warn{color:var(--warn)}
   .bc-rate-num.bad{color:var(--bad)}
@@ -538,12 +557,12 @@
 
     <div class="card">
       <h2>全社業績 <span class="pill" id="overall-pill">未載入</span></h2>
-      <div class="kpi-grid">
+      <div class="overview-row">
         <div class="kpi-card year"   id="kpi-year"></div>
         <div class="kpi-card month"  id="kpi-month"></div>
         <div class="kpi-card cum"    id="kpi-cum"></div>
+        <div id="pace-banner-container"></div>
       </div>
-      <div id="pace-banner-container"></div>
     </div>
 
     <div class="card">
@@ -1549,7 +1568,7 @@ function renderConverterResult(result){
   let html = '<div class="stats-grid">';
   html += `<div class="stat"><div class="lbl">總筆數</div><div class="val">${result.rows.length.toLocaleString()}</div></div>`;
   html += `<div class="stat"><div class="lbl">月份數</div><div class="val">${result.months.length}</div><div class="sub">${result.months.join(", ")}</div></div>`;
-  html += `<div class="stat"><div class="lbl">未稅金額合計</div><div class="val">${Math.floor(totalAmt/10000).toLocaleString()} <span style="font-size:11px;color:#9ca3af;font-weight:500">萬</span></div></div>`;
+  html += `<div class="stat"><div class="lbl">未稅金額合計</div><div class="val">${Math.floor(totalAmt/10000).toLocaleString()} <span style="font-size:22px;color:#9ca3af;font-weight:500">萬</span></div></div>`;
   html += `<div class="stat"><div class="lbl">事業別 / 管道</div><div class="val" style="font-size:13px">${bizSet.size} / ${chSet.size} 種</div><div class="sub">${[...bizSet].join("、")}</div></div>`;
   html += '</div>';
 
@@ -1861,9 +1880,7 @@ function renderPaceBanner(monthLabel, monthBudget, monthActual){
 
   let cls;
   if(progRate == null){          cls = 'pace-na';     }
-  else if(progRate >= 110){      cls = 'pace-good';   }
-  else if(progRate >= 100){      cls = 'pace-onpace'; }
-  else if(progRate >= 80){       cls = 'pace-warn';   }
+  else if(progRate >= 100){      cls = 'pace-good';   }
   else {                         cls = 'pace-bad';    }
 
   container.innerHTML = `
@@ -1973,7 +1990,6 @@ function rateClass(b, a){
   if(b<=0) return "na";
   const r = a/b*100;
   if(r >= 100) return "good";
-  if(r >= 80)  return "warn";
   return "bad";
 }
 
@@ -1981,7 +1997,7 @@ function rateClass(b, a){
 function rateCellHTML(b, a){
   if(b <= 0) return '<td class="rate na">—</td>';
   const r = a/b*100;
-  const cls = r >= 100 ? 'good' : r >= 80 ? 'warn' : 'bad';
+  const cls = r >= 100 ? 'good' : 'bad';
   return `<td class="rate"><span class="rate-badge ${cls}">${r.toFixed(1)}%</span></td>`;
 }
 
@@ -2051,8 +2067,8 @@ function kpiCardHTML(label, sub, budget, actual){
   const cls = rateClass(budget, actual);
   return `
     <div class="lbl">${label} <span class="small">${sub}</span></div>
-    <div class="row"><span class="k">${targetLabel()}</span><span class="v">${fmtAmt(budget)} <span style="font-size:11px;color:#9ca3af;font-weight:500">萬</span></span></div>
-    <div class="row"><span class="k">實績</span><span class="v">${fmtAmt(actual)} <span style="font-size:11px;color:#9ca3af;font-weight:500">萬</span></span></div>
+    <div class="row"><span class="k">${targetLabel()}</span><span class="v">${fmtAmt(budget)} <span style="font-size:22px;color:#9ca3af;font-weight:500">萬</span></span></div>
+    <div class="row"><span class="k">實績</span><span class="v">${fmtAmt(actual)} <span style="font-size:22px;color:#9ca3af;font-weight:500">萬</span></span></div>
     <div class="rate-row">
       <div class="rate-lbl">${rateLabel()}</div>
       <div class="rate ${cls}">${fmtRate(budget, actual)}</div>
@@ -2343,8 +2359,8 @@ function renderPrevDaySummary(){
 
   kpiEl.innerHTML = `
     <div class="lbl">選定期間績效 <span class="small">${selected[0]} ～ ${selected[selected.length-1]}（共 ${selected.length} 天，含 ${wdCount} 個工作天）</span></div>
-    <div class="row"><span class="k">預估目標</span><span class="v">${fmtAmt(totalTarget)} <span style="font-size:11px;color:#9ca3af;font-weight:500">萬</span></span></div>
-    <div class="row"><span class="k">實績</span><span class="v">${fmtAmt(totalAmt)} <span style="font-size:11px;color:#9ca3af;font-weight:500">萬</span></span></div>
+    <div class="row"><span class="k">預估目標</span><span class="v">${fmtAmt(totalTarget)} <span style="font-size:22px;color:#9ca3af;font-weight:500">萬</span></span></div>
+    <div class="row"><span class="k">實績</span><span class="v">${fmtAmt(totalAmt)} <span style="font-size:22px;color:#9ca3af;font-weight:500">萬</span></span></div>
     <div class="rate-row">
       <div class="rate-lbl">達成率</div>
       <div class="rate ${rateClass(totalTarget, totalAmt)}">${fmtRate(totalTarget, totalAmt)}</div>
@@ -2483,8 +2499,7 @@ function getLastDayISO(){
 function cardRateClass(actual, budget){
   if(!budget) return 'na';
   const r = actual / budget * 100;
-  if(r >= 70) return 'good';
-  if(r >= 40) return 'warn';
+  if(r >= 100) return 'good';
   return 'bad';
 }
 function cardRateColorHex(cls){
@@ -2507,7 +2522,7 @@ function bcPaceCell(actual, budget, timePacePct){
   if(!budget || !timePacePct) return '<td><div class="bc-rate-cell"><span class="bc-rate-num na">-</span></div></td>';
   const rateR = actual / budget * 100;
   const pace  = Math.round(rateR / timePacePct * 100);
-  const cls   = pace >= 100 ? 'good' : pace >= 70 ? 'warn' : 'bad';
+  const cls   = pace >= 100 ? 'good' : 'bad';
   const hex   = cardRateColorHex(cls);
   const w     = Math.min(100, Math.round(pace / 200 * 100));
   return `<td style="padding:0"><div class="bc-rate-cell">
@@ -2531,7 +2546,7 @@ function renderOneCard(name, color, subLabel, bizArg, chArg, colDims, colLabel, 
   const tpPct      = cumTP ? cumTP.pct : 0;
   const pacePct    = tpPct > 0 ? Math.round((cumAct / cumBgt * 100) / tpPct * 100) : 0;
   const rateClass_ = cumBgt > 0 ? cardRateClass(cumAct, cumBgt) : 'na';
-  const paceClass_ = tpPct > 0 && cumBgt > 0 ? (pacePct >= 100 ? 'good' : pacePct >= 70 ? 'warn' : 'bad') : 'na';
+  const paceClass_ = tpPct > 0 && cumBgt > 0 ? (pacePct >= 100 ? 'good' : 'bad') : 'na';
   const rateHex    = cardRateColorHex(rateClass_);
   const paceHex    = cardRateColorHex(paceClass_);
   const rateW      = Math.min(100, ratePct);
@@ -2774,7 +2789,7 @@ function renderRateChart(canvasId, dims, dimType, fixedFilter){
       datasets: [
         { type:'bar', label:`累計${targetLabel()}`, data:budgetArr, backgroundColor:'#BAE6FD', borderColor:'#7DD3FC', borderWidth:1, borderRadius:3, yAxisID:'y' },
         { type:'bar', label:'累計實績', data:actualArr, backgroundColor:'#0284C7', borderColor:'#0284C7', borderWidth:1, borderRadius:3, yAxisID:'y' },
-        { type:'line', label:`${rateLabel()}(%)`, data:rateArr, borderColor:'#E11D48', backgroundColor:'rgba(225,29,72,.1)', borderWidth:2, pointRadius:4, pointBackgroundColor:'#E11D48', pointBorderColor:'#fff', pointBorderWidth:2, tension:0.25, yAxisID:'y1' },
+        { type:'line', label:`${rateLabel()}(%)`, data:rateArr, borderColor:'#E11D48', backgroundColor:'rgba(225,29,72,.1)', borderWidth:2, pointRadius:4, pointBackgroundColor:rateArr.map(v=>(v!=null&&v>=100)?'#16A34A':'#E11D48'), pointBorderColor:'#fff', pointBorderWidth:2, segment:{borderColor:c=>(c.p1.parsed.y!=null&&c.p1.parsed.y>=100)?'#16A34A':'#E11D48'}, tension:0.25, yAxisID:'y1' },
       ],
     },
     options: commonChartOptions(),
@@ -3689,7 +3704,7 @@ function renderWeeklyContent(){
       const prev = dataPrev[i].total;
       if(prev > 0){
         const r = cur / prev * 100;
-        const cls = r >= 100 ? 'good' : r >= 80 ? 'warn' : 'bad';
+        const cls = r >= 100 ? 'good' : 'bad';
         html += `<td class="${cls}">${r.toFixed(1)}%</td>`;
       } else {
         html += '<td class="na">—</td>';
@@ -4045,7 +4060,7 @@ function aovKpiCard(label, sub, classKey, bgtAov, actAov){
   if(actAov != null && bgtAov != null && bgtAov > 0){
     const r = actAov / bgtAov * 100;
     rateStr = r.toFixed(1) + '%';
-    cls = r >= 100 ? 'good' : r >= 80 ? 'warn' : 'bad';
+    cls = r >= 100 ? 'good' : 'bad';
     const diff = actAov - bgtAov;
     if(diff >= 0){
       diffStr = '+' + Math.floor(diff).toLocaleString() + ' 元';
@@ -4119,7 +4134,7 @@ function renderAovTableSection(biz, ch, label){
     // AOV 達成率
     if(aAov != null && bAov != null && bAov > 0){
       const r = aAov / bAov * 100;
-      const c = r >= 100 ? 'good' : r >= 80 ? 'warn' : 'bad';
+      const c = r >= 100 ? 'good' : 'bad';
       html += `<td class="${c}">${r.toFixed(1)}%</td>`;
     } else {
       html += '<td class="na">—</td>';
@@ -4149,7 +4164,7 @@ function renderAovTableSection(biz, ch, label){
   }
   if(totActAov != null && totBgtAov != null && totBgtAov > 0){
     const r = totActAov / totBgtAov * 100;
-    const c = r >= 100 ? 'good' : r >= 80 ? 'warn' : 'bad';
+    const c = r >= 100 ? 'good' : 'bad';
     html += `<td class="${c}">${r.toFixed(1)}%</td>`;
   } else {
     html += '<td class="na">—</td>';
@@ -4885,7 +4900,8 @@ function renderTrendChart(s){
         { type:'bar',  label:'實績',           data:actualArr, backgroundColor:'#0284C7', borderColor:'#0284C7', borderWidth:1, borderRadius:3, yAxisID:'y' },
         { type:'line', label:`${rateLabel()}(%)`, data:rateArr,
           borderColor:'#E11D48', backgroundColor:'rgba(225,29,72,.1)',
-          borderWidth:2, pointRadius:4, pointBackgroundColor:'#E11D48', pointBorderColor:'#fff', pointBorderWidth:2,
+          borderWidth:2, pointRadius:4, pointBackgroundColor:rateArr.map(v=>(v!=null&&v>=100)?'#16A34A':'#E11D48'), pointBorderColor:'#fff', pointBorderWidth:2,
+          segment:{borderColor:c=>(c.p1.parsed.y!=null&&c.p1.parsed.y>=100)?'#16A34A':'#E11D48'},
           tension:0.25, yAxisID:'y1', spanGaps:false },
       ],
     },

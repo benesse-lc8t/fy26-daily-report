@@ -11,6 +11,11 @@ import json, sys, openpyxl
 DATA_JSON = '/home/user/fy26-daily-report/data.json'
 SHEET_NAME = '銷貨單品號主檔'
 
+# 主檔缺漏／需修正的品名（人工維護，每次更新自動補回）
+NAME_OVERRIDES = {
+    '20203C601': {'name': '動物百科探索組', 'bizMajor': '周邊商品', 'bizMinor': '學習周邊', 'category': ''},
+}
+
 def main(excel_path):
     print(f'Loading {excel_path} …')
     wb = openpyxl.load_workbook(excel_path, data_only=True, read_only=True)
@@ -35,7 +40,9 @@ def main(excel_path):
             'bizMinor': biz_minor, 'category': category,
         }
 
-    print(f'Parsed {len(products)} products')
+    for code, info in NAME_OVERRIDES.items():
+        products[code] = info
+    print(f'Parsed {len(products)} products (含 {len(NAME_OVERRIDES)} 筆人工補品名)')
 
     with open(DATA_JSON) as f:
         data = json.load(f)
