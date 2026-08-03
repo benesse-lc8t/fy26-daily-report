@@ -1082,7 +1082,7 @@ function applyDataJSON(data){
 
 async function tryLoadDataJSON(){
   try{
-    const res = await fetch("./data.json", { cache: "no-cache" });
+    const res = await fetch("./data.json?_=" + Date.now(), { cache: "no-cache" });
     if(!res.ok){
       console.log("[FY26] data.json fetch:", res.status);
       return false;
