@@ -19,7 +19,7 @@ BIZ_NAME_MAP = {'學習': '學習商品', '數位經典': '數位典藏'}
 SKIP_BIZ = {'', '0', '事業', '事業別', '總計', '(空白)', '(全部)'}
 MONTHS = ['4月','5月','6月','7月','8月','9月','10月','11月','12月','1月','2月','3月']
 
-SHEET_RE      = re.compile(r'^(\d{2})(\d{2})\s*(WEB&KOL|EC|TM)$')
+SHEET_RE      = re.compile(r'^(\d{2})(\d{2})\s*(WEB&KOL|EC|TM|經代銷)$')
 SHEET_RE_DIGI = re.compile(r'^(\d{2})(\d{2})WEB數位典藏$')
 
 SHEET_CONFIG = {
@@ -27,6 +27,7 @@ SHEET_CONFIG = {
                 'channel_map':{'網站':'WEB','團購':'KOL'}},
     'EC':      {'header_row':2, 'biz':0,'code':1,'date':2,'qty':3,'amt':4, 'fixed':'EC'},
     'TM':      {'header_row':2, 'biz':0,'code':1,'date':2,'qty':4,'amt':6, 'fixed':'TM'},
+    '經代銷':   {'header_row':2, 'biz':0,'code':1,'date':2,'qty':4,'amt':5, 'fixed':'經代銷'},
 }
 
 # 國定假日表：欄位 [年度, 日期, 假日名稱, 星期]
