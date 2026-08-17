@@ -34,6 +34,7 @@ COL_CAT   = ['商品中類', '類別']
 # 主檔缺漏／需修正的品名（人工維護，每次更新自動補回）
 NAME_OVERRIDES = {
     '20203C601': {'name': '動物百科探索組', 'bizMajor': '周邊商品', 'bizMinor': '學習周邊', 'category': ''},
+    '20240FJ00': {'name': '互動遊戲組',     'bizMajor': '周邊商品', 'bizMinor': '學習周邊', 'category': ''},
 }
 
 def find_col(header, keywords):

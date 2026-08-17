@@ -4246,15 +4246,15 @@ function renderAovChart(biz, ch){
 /* ============================================================
    Tab: 巧虎手偶（商品名包含「手偶」的商品集合）
    ============================================================ */
+// 巧虎手偶＝在庫儀表板指定的 3 個製編（不用模糊名稱比對，避免把「套組+手偶」組合包算進來）
+const HANDPUPPET_CODES = ['2018AC812', '20240FJ00', '20250FXAM'];
+const HANDPUPPET_NAMES = {
+  '2018AC812': '巧虎手偶',
+  '20240FJ00': '互動遊戲組',
+  '20250FXAM': '巧虎手偶+說明信',
+};
 function getHandPuppetCodes(){
-  const codes = new Set();
-  if(!STATE.master || !STATE.master.products) return codes;
-  for(const [code, info] of Object.entries(STATE.master.products)){
-    if(info.name && info.name.includes('手偶')){
-      codes.add(code);
-    }
-  }
-  return codes;
+  return new Set(HANDPUPPET_CODES);
 }
 
 const PUPPET_BUNDLE_PRICE = 190; // 套組中手偶部分的固定未稅單價
@@ -4332,7 +4332,7 @@ function renderHandPuppetTab(){
   html += '<div class="card">';
   html += `<h2>巧虎手偶 — 達成狀況 <span class="pill">${codes.size} 商品 / 本月：${m}</span></h2>`;
   html += `<div style="font-size:18px;color:var(--secondary);margin:0 0 14px 0;line-height:1.6;padding:12px 16px;background:var(--stripe);border-radius:6px;border-left:3px solid var(--accent)">
-    對象商品：商品主檔中名稱包含「<strong>手偶</strong>」的 ${codes.size} 件商品。預算為產品級非允許項目（biz×channel 級別），故僅顯示實績。
+    對象商品：巧虎手偶 <strong>${codes.size}</strong> 個製編（與在庫儀表板一致）——${HANDPUPPET_CODES.map(c=>`${c} ${HANDPUPPET_NAMES[c]}`).join('、')}。預算為產品級非允許項目（biz×channel 級別），故僅顯示實績。
   </div>`;
   html += '<div class="kpi-grid">';
   html += handPuppetKpiCard('FY26 年間', '全年（4月〜3月）', 'year', yearQty, yearAmt);
