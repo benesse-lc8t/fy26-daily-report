@@ -98,15 +98,30 @@ def main(excel_path):
 
     # 只保留「有實績」的製編（＋人工補品名），避免 data.json 肥大
     sold_codes = {r['code'] for r in data.get('actualRows', []) if r.get('code')}
+    prev = data['master']['products']
     products = {c: full[c] for c in sold_codes if c in full}
+
+    # 舊品名保留：主檔改版會移除已停售的舊品，但這些製編仍有 FY26 實績。
+    # actualRows 的 name 一律為空，主檔是品名的唯一來源，查無即顯示空白品名，
+    # 故沿用 data.json 既有品名 —— 品名只會被主檔補齊／更新，不會憑空消失。
+    carried = {c: prev[c] for c in sold_codes if c not in full and c in prev}
+    products.update(carried)
+
     for code, info in NAME_OVERRIDES.items():
         products[code] = info
 
-    old_count = len(data['master']['products'])
+    old_count = len(prev)
     data['master']['products'] = products
     with open(DATA_JSON, 'w', encoding='utf-8') as f:
         json.dump(data, f, ensure_ascii=False, separators=(',', ':'))
-    print(f'master.products：{old_count} -> {len(products)} 筆（有實績 {len(sold_codes)} 個製編中命中 {len(products)-len(NAME_OVERRIDES)}）')
+    print(f'master.products：{old_count} -> {len(products)} 筆（有實績 {len(sold_codes)} 個製編中命中 {len(products)-len(NAME_OVERRIDES)-len(carried)}）')
+    if carried:
+        print(f'  舊品名保留 {len(carried)} 筆（新主檔已無此製編，沿用既有品名）：'
+              + '、'.join(f"{c}={carried[c]['name']}" for c in sorted(carried)[:5])
+              + ('…' if len(carried) > 5 else ''))
+    missing = sorted(c for c in sold_codes if c not in products)
+    if missing:
+        print(f'  ⚠ 仍無品名 {len(missing)} 筆：{missing}')
 
 if __name__ == '__main__':
     if len(sys.argv) < 2:
