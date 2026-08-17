@@ -20,7 +20,8 @@ Notes:
 import json, re, sys, openpyxl
 from datetime import datetime, timezone
 
-DATA_JSON   = '/home/user/fy26-daily-report/data.json'
+import os
+DATA_JSON = os.path.join(os.path.dirname(os.path.dirname(os.path.abspath(__file__))), 'data.json')
 KOL_SHEET   = 'KOL檔期規劃表'
 MASTER_SHEET = '銷貨單品號主檔'
 

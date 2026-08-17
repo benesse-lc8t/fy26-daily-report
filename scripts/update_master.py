@@ -19,7 +19,8 @@ Usage:
 
 import json, sys, openpyxl
 
-DATA_JSON = '/home/user/fy26-daily-report/data.json'
+import os
+DATA_JSON = os.path.join(os.path.dirname(os.path.dirname(os.path.abspath(__file__))), 'data.json')
 
 SHEET_CANDIDATES = ['銷貨單品號主檔', '銷貨單-商品主檔', '商品主檔']
 

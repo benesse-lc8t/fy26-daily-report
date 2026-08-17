@@ -14,3 +14,8 @@ desktop.ini
 # Local logs and temp
 *.log
 *.tmp
+
+# 每日自動化本機設定（含密碼，勿上傳）
+scripts/daily_run.local.json
+_蝦皮_解密.xlsx
+*_解密.xlsx

@@ -13,7 +13,8 @@ import json, re, sys, openpyxl
 from datetime import datetime, timezone
 from collections import defaultdict
 
-DATA_JSON = '/home/user/fy26-daily-report/data.json'
+import os
+DATA_JSON = os.path.join(os.path.dirname(os.path.dirname(os.path.abspath(__file__))), 'data.json')
 
 BIZ_NAME_MAP = {'學習': '學習商品', '數位經典': '數位典藏'}
 SKIP_BIZ = {'', '0', '事業', '事業別', '總計', '(空白)', '(全部)'}

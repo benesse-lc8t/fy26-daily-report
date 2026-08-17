@@ -1,0 +1,10 @@
+{
+  "_說明": "把此檔複製成 daily_run.local.json（去掉 .example），填入你筆電的實際值。此檔含密碼，已被 .gitignore 擋掉，不會上傳 GitHub。",
+
+  "repo_dir": "D:\\dashboard\\fy26-daily-report",
+  "master_xlsx": "D:\\dashboard\\FY26商售實績明細(claude).xlsx",
+
+  "shopee_encrypted_glob": "D:\\dashboard\\inbox\\蝦皮訂單*.xlsx",
+  "shopee_password": "把蝦皮檔的開啟密碼填這裡",
+  "shopee_decrypted_path": "D:\\dashboard\\inbox\\_蝦皮_解密.xlsx"
+}
