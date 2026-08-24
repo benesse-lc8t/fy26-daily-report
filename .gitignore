@@ -19,3 +19,7 @@ desktop.ini
 scripts/daily_run.local.json
 _蝦皮_解密.xlsx
 *_解密.xlsx
+
+# Python bytecode（update_kol.py import update_master 後產生）
+__pycache__/
+*.py[cod]
