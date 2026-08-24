@@ -61,6 +61,35 @@ def cell(row, idx):
         return ''
     return str(row[idx]).strip()
 
+def build_products(full, data):
+    """由主檔全品目錄 full 建出 data.json 用的 master.products。
+
+    三道規則（update_master.py / update_kol.py 共用，避免兩邊行為不一致）：
+      1. 只保留「有實績」的製編 —— 避免 data.json 肥大
+      2. 舊品名保留 —— 主檔改版會移除停售舊品，但這些製編仍有 FY26 實績；
+         actualRows 的 name 一律為空、主檔是品名唯一來源，查無即顯示空白品名，
+         故沿用既有品名：品名只會被補齊／更新，不會憑空消失
+      3. NAME_OVERRIDES —— 主檔尚未收錄或需修正的品名，每次更新自動補回
+    """
+    sold_codes = {r['code'] for r in data.get('actualRows', []) if r.get('code')}
+    prev = data['master']['products']
+    products = {c: full[c] for c in sold_codes if c in full}
+    carried = {c: prev[c] for c in sold_codes if c not in full and c in prev}
+    products.update(carried)
+    for code, info in NAME_OVERRIDES.items():
+        products[code] = info
+
+    print(f'master.products：{len(prev)} -> {len(products)} 筆'
+          f'（有實績 {len(sold_codes)} 個製編中命中 {len(products)-len(NAME_OVERRIDES)-len(carried)}）')
+    if carried:
+        print(f'  舊品名保留 {len(carried)} 筆（新主檔已無此製編，沿用既有品名）：'
+              + '、'.join(f"{c}={carried[c]['name']}" for c in sorted(carried)[:5])
+              + ('…' if len(carried) > 5 else ''))
+    missing = sorted(c for c in sold_codes if c not in products)
+    if missing:
+        print(f'  ⚠ 仍無品名 {len(missing)} 筆：{missing}')
+    return products
+
 def main(excel_path):
     print(f'Loading {excel_path} …')
     wb = openpyxl.load_workbook(excel_path, data_only=True, read_only=True)
@@ -97,32 +126,10 @@ def main(excel_path):
     with open(DATA_JSON) as f:
         data = json.load(f)
 
-    # 只保留「有實績」的製編（＋人工補品名），避免 data.json 肥大
-    sold_codes = {r['code'] for r in data.get('actualRows', []) if r.get('code')}
-    prev = data['master']['products']
-    products = {c: full[c] for c in sold_codes if c in full}
-
-    # 舊品名保留：主檔改版會移除已停售的舊品，但這些製編仍有 FY26 實績。
-    # actualRows 的 name 一律為空，主檔是品名的唯一來源，查無即顯示空白品名，
-    # 故沿用 data.json 既有品名 —— 品名只會被主檔補齊／更新，不會憑空消失。
-    carried = {c: prev[c] for c in sold_codes if c not in full and c in prev}
-    products.update(carried)
-
-    for code, info in NAME_OVERRIDES.items():
-        products[code] = info
-
-    old_count = len(prev)
+    products = build_products(full, data)
     data['master']['products'] = products
     with open(DATA_JSON, 'w', encoding='utf-8') as f:
         json.dump(data, f, ensure_ascii=False, separators=(',', ':'))
-    print(f'master.products：{old_count} -> {len(products)} 筆（有實績 {len(sold_codes)} 個製編中命中 {len(products)-len(NAME_OVERRIDES)-len(carried)}）')
-    if carried:
-        print(f'  舊品名保留 {len(carried)} 筆（新主檔已無此製編，沿用既有品名）：'
-              + '、'.join(f"{c}={carried[c]['name']}" for c in sorted(carried)[:5])
-              + ('…' if len(carried) > 5 else ''))
-    missing = sorted(c for c in sold_codes if c not in products)
-    if missing:
-        print(f'  ⚠ 仍無品名 {len(missing)} 筆：{missing}')
 
 if __name__ == '__main__':
     if len(sys.argv) < 2:
