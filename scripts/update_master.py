@@ -31,7 +31,15 @@ COL_MAJOR = ['商品大類', '事業大類']
 COL_MINOR = ['事業別', '事業中類']
 COL_CAT   = ['商品中類', '類別']
 
+# 暫定品名（人工維護）：僅在「主檔查無此製編」時才補，主檔一旦收錄即以主檔為準。
+# 用於尚未建檔、名稱待確認的新製編 —— 放這裡才不會永久蓋掉日後的正式品名。
+NAME_FALLBACKS = {
+    # 8/24 首次出現，名稱與事業歸屬待業務確認；暫掛學習周邊
+    '20250FF01': {'name': '20250FF01（品名待補）', 'bizMajor': '周邊商品', 'bizMinor': '學習周邊', 'category': ''},
+}
+
 # 主檔缺漏／需修正的品名（人工維護，每次更新自動補回）
+# 注意：這裡的值會蓋過主檔。名稱未確定者請放 NAME_FALLBACKS。
 NAME_OVERRIDES = {
     '20203C601': {'name': '動物百科探索組', 'bizMajor': '周邊商品', 'bizMinor': '學習周邊', 'category': ''},
     '20240FJ00': {'name': '互動遊戲組',     'bizMajor': '周邊商品', 'bizMinor': '學習周邊', 'category': ''},
@@ -69,18 +77,26 @@ def build_products(full, data):
       2. 舊品名保留 —— 主檔改版會移除停售舊品，但這些製編仍有 FY26 實績；
          actualRows 的 name 一律為空、主檔是品名唯一來源，查無即顯示空白品名，
          故沿用既有品名：品名只會被補齊／更新，不會憑空消失
-      3. NAME_OVERRIDES —— 主檔尚未收錄或需修正的品名，每次更新自動補回
+      3. NAME_FALLBACKS —— 暫定品名，僅在主檔查無時補上（不蓋過主檔）
+      4. NAME_OVERRIDES —— 需修正的品名，一律蓋過主檔
     """
     sold_codes = {r['code'] for r in data.get('actualRows', []) if r.get('code')}
     prev = data['master']['products']
     products = {c: full[c] for c in sold_codes if c in full}
     carried = {c: prev[c] for c in sold_codes if c not in full and c in prev}
     products.update(carried)
+    # 暫定品名：主檔查無才補（不蓋過主檔）
+    fallback_used = {c: i for c, i in NAME_FALLBACKS.items() if c not in full}
+    products.update(fallback_used)
+    # 修正品名：一律蓋過主檔
     for code, info in NAME_OVERRIDES.items():
         products[code] = info
 
     print(f'master.products：{len(prev)} -> {len(products)} 筆'
-          f'（有實績 {len(sold_codes)} 個製編中命中 {len(products)-len(NAME_OVERRIDES)-len(carried)}）')
+          f'（有實績 {len(sold_codes)} 個製編中命中 {len(products)-len(NAME_OVERRIDES)-len(carried)-len(fallback_used)}）')
+    if fallback_used:
+        print(f'  暫定品名 {len(fallback_used)} 筆（主檔尚未收錄，待正式品名覆蓋）：'
+              + '、'.join(f'{c}={i["name"]}' for c, i in sorted(fallback_used.items())))
     if carried:
         print(f'  舊品名保留 {len(carried)} 筆（新主檔已無此製編，沿用既有品名）：'
               + '、'.join(f"{c}={carried[c]['name']}" for c in sorted(carried)[:5])
