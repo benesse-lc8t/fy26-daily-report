@@ -29,6 +29,15 @@ MASTER_SHEET = '銷貨單品號主檔'
 # 事業別が空欄の KOL を補完（業務指示）
 BIZ_OVERRIDE = {'賊賊': 'Mirafeel'}
 
+# 檔期修正（人工維護，須經業務確認後才可新增）
+#   用於兩種情況：① 來源表打字錯誤導致無法解析　② 實際執行與公告檔期不同
+#   key: (年月, KOL) -> (起日, 迄日)，皆為 ISO 格式
+SCHEDULE_FIXES = {
+    # 來源表 C23 為「2026/8/4~206/8/12」，迄日年份缺一位數而解析失敗。
+    # 業連公告為 8/4~8/10，實際延長 2 天至 8/12（業務確認），以實際執行為準。
+    ('202608', '熟菲'): ('2026-08-04', '2026-08-12'),
+}
+
 DATE_SPLIT_RE = re.compile(r'\s*[~～]\s*')
 
 def parse_date(s):
@@ -43,6 +52,7 @@ def parse_schedule(ws):
     seen = set()
     out = []
     skipped = []
+    fixed = []
     for row in rows[1:]:  # skip header
         if not row or row[0] is None: continue
         ym  = str(row[0]).strip()
@@ -52,21 +62,26 @@ def parse_schedule(ws):
         if not kol or not rng: continue
         if not biz:
             biz = BIZ_OVERRIDE.get(kol, '')
-        parts = DATE_SPLIT_RE.split(rng)
-        if len(parts) != 2:
-            skipped.append((ym, kol, rng, '檔期格式非「起~迄」'))
-            continue
-        start, end = parse_date(parts[0]), parse_date(parts[1])
-        if not start or not end:
-            bad = parts[0] if not start else parts[1]
-            skipped.append((ym, kol, rng, f'日期無法解析：{bad!r}'))
-            continue
+        fix = SCHEDULE_FIXES.get((ym, kol))
+        if fix:
+            start, end = fix
+            fixed.append((ym, kol, rng, start, end))
+        else:
+            parts = DATE_SPLIT_RE.split(rng)
+            if len(parts) != 2:
+                skipped.append((ym, kol, rng, '檔期格式非「起~迄」'))
+                continue
+            start, end = parse_date(parts[0]), parse_date(parts[1])
+            if not start or not end:
+                bad = parts[0] if not start else parts[1]
+                skipped.append((ym, kol, rng, f'日期無法解析：{bad!r}'))
+                continue
         key = (kol, start, end, biz)
         if key in seen: continue   # 跨月重複去重
         seen.add(key)
         out.append({'ym': ym, 'kol': kol, 'biz': biz, 'start': start, 'end': end})
     out.sort(key=lambda e: (e['start'], e['biz']))
-    return out, skipped
+    return out, skipped, fixed
 
 def parse_master(ws):
     rows = list(ws.iter_rows(values_only=True))
@@ -91,10 +106,14 @@ def main(excel_path):
         print(f'ERROR: sheet "{KOL_SHEET}" not found. Sheets: {wb.sheetnames}')
         sys.exit(1)
 
-    schedule, skipped = parse_schedule(wb[KOL_SHEET])
+    schedule, skipped, fixed = parse_schedule(wb[KOL_SHEET])
     print(f'Parsed {len(schedule)} KOL campaigns:')
     for e in schedule:
         print(f"  {e['start']}~{e['end']}  {e['biz']:<10} {e['kol']}")
+    if fixed:
+        print(f'  ✎ 套用檔期修正 {len(fixed)} 筆（來源值 -> 修正值）：')
+        for ym, kol, rng, st, en in fixed:
+            print(f'      {ym} {kol}「{rng}」-> {st}~{en}')
     if skipped:
         # 靜默丟棄會讓來源表的打字錯誤變成「檔期憑空消失」，故一律顯示
         print(f'  ⚠ 已略過 {len(skipped)} 列（來源資料有誤，請修正後重跑）：')
