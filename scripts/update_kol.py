@@ -39,6 +39,50 @@ SCHEDULE_FIXES = {
 }
 
 DATE_SPLIT_RE = re.compile(r'\s*[~～]\s*')
+DASH_SPLIT_RE = re.compile(r'\s*[-–—]\s*')
+YMD_RE = re.compile(r'^(\d{4})[/-](\d{1,2})[/-](\d{1,2})$')
+MD_RE  = re.compile(r'^(\d{1,2})/(\d{1,2})$')
+
+def parse_range(rng, ym):
+    """解析檔期字串 -> (start_iso, end_iso) 或 (None, 失敗原因)。
+
+    支援兩種來源寫法：
+      2026/8/6~2026/8/13   完整年份、以 ~ 或 ～ 分隔
+      9/7-9/14             省略年份、以 - 分隔；年份由「年月」欄（如 202609）推得
+    迄日早於起日時視為跨年（例：202612 的 12/28-1/5 -> 2026-12-28 ~ 2027-01-05）。
+    """
+    parts = DATE_SPLIT_RE.split(rng)
+    if len(parts) != 2 and '/' in rng:
+        # 日期以 / 分隔，故 - 必為區間分隔符（不會誤切 ISO 格式的 2026-09-07）
+        parts = DASH_SPLIT_RE.split(rng)
+    if len(parts) != 2:
+        return None, '檔期格式非「起~迄」'
+
+    year = int(ym[:4]) if len(ym) >= 6 and ym[:4].isdigit() else None
+    out = []
+    for part in (p.strip() for p in parts):
+        m = YMD_RE.match(part)
+        if m:
+            y, mo, dd = int(m.group(1)), int(m.group(2)), int(m.group(3))
+        else:
+            m = MD_RE.match(part)
+            if not m or year is None:
+                return None, f'日期無法解析：{part!r}'
+            y, mo, dd = year, int(m.group(1)), int(m.group(2))
+        try:
+            out.append(datetime(y, mo, dd))
+        except ValueError:
+            return None, f'日期不存在：{part!r}'
+
+    start, end = out
+    if end < start:                      # 省略年份且跨年（如 12/28-1/5）
+        try:
+            end = end.replace(year=end.year + 1)
+        except ValueError:
+            return None, f'跨年推算失敗：{rng!r}'
+        if end < start:
+            return None, f'迄日早於起日：{rng!r}'
+    return (start.strftime('%Y-%m-%d'), end.strftime('%Y-%m-%d')), None
 
 def parse_date(s):
     s = str(s).strip()
@@ -67,15 +111,11 @@ def parse_schedule(ws):
             start, end = fix
             fixed.append((ym, kol, rng, start, end))
         else:
-            parts = DATE_SPLIT_RE.split(rng)
-            if len(parts) != 2:
-                skipped.append((ym, kol, rng, '檔期格式非「起~迄」'))
+            rangeres, why = parse_range(rng, ym)
+            if not rangeres:
+                skipped.append((ym, kol, rng, why))
                 continue
-            start, end = parse_date(parts[0]), parse_date(parts[1])
-            if not start or not end:
-                bad = parts[0] if not start else parts[1]
-                skipped.append((ym, kol, rng, f'日期無法解析：{bad!r}'))
-                continue
+            start, end = rangeres
         key = (kol, start, end, biz)
         if key in seen: continue   # 跨月重複去重
         seen.add(key)
