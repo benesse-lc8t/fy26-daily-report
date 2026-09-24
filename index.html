@@ -23,14 +23,19 @@
 
 <!-- SheetJS：本機優先、CDN フォールバック -->
 <script src="xlsx.full.min.js"></script>
-<script>if(typeof XLSX==="undefined"){document.write('<scr'+'ipt src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js"></scr'+'ipt>');}</script>
+<script>if(typeof XLSX==="undefined"){document.write('<scr'+'ipt src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></scr'+'ipt>');}</script>
 
 <!-- Chart.js：CDN 優先、本機フォールバック -->
-<script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.7/dist/chart.umd.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.7/chart.umd.min.js"></script>
 <script>if(typeof Chart==="undefined"){document.write('<scr'+'ipt src="chart.umd.js"></scr'+'ipt>');}</script>
 
 <style>
   :root{
+    /* 字型：報表用無襯線體。0 為標準橢圓（非斜線零），避免與 Q/8 混淆 */
+    --font-ui:"Segoe UI","Microsoft JhengHei","PingFang TC","Noto Sans TC",system-ui,-apple-system,"Helvetica Neue",Arial,sans-serif;
+    --font-num:var(--font-ui);
+    /* tnum=等寬數字（欄位對齊）、zero 0=關閉斜線零、ss01/ss02 0=關閉替代字形 */
+    --font-num-feat:"tnum" 1,"zero" 0,"ss01" 0,"ss02" 0;
     --bg:#F0F9FF;
     --card:#FFFFFF;
     --ink:#0C4A6E;
@@ -52,7 +57,12 @@
     --rose-text:#BE123C;
   }
   *{box-sizing:border-box}
-  body{margin:0;font-family:"Segoe UI","Microsoft JhengHei","PingFang TC",sans-serif;background:var(--bg);color:var(--ink);font-size:16px}
+  body{margin:0;font-family:var(--font-ui);background:var(--bg);color:var(--ink);font-size:16px;
+       font-variant-numeric:tabular-nums;font-feature-settings:var(--font-num-feat)}
+  /* 全站數字一律沿用同一字型與字形設定，杜絕局部等寬字型造成的斜線零 */
+  table,input,select,textarea,button,canvas{font-family:var(--font-ui)}
+  table.grid,.kpi-card,.pace-banner,.rate-badge,.stats-grid,.bc-table{
+       font-variant-numeric:tabular-nums;font-feature-settings:var(--font-num-feat)}
 
   /* Header */
   header{background:#0C2D6B;color:#fff;padding:15px 28px;display:flex;align-items:center;gap:24px;box-shadow:0 2px 16px rgba(0,0,0,.4);width:100%;margin:0}
@@ -107,10 +117,27 @@
   nav.tabs .sidebar-feedback-link:hover{background:#DBEAFE;border-color:#93C5FD}
 
   @media (max-width: 900px){
-    .layout{flex-direction:column}
-    nav.tabs{width:100%;position:static;max-height:none;border-right:none;flex-direction:row;flex-wrap:wrap}
+    /* column 排列時 align-items:flex-start 會讓 main 依內容撐寬而非填滿螢幕，
+       造成平板／手機整頁水平溢出。改為 stretch 並鎖住 main 寬度。 */
+    .layout{flex-direction:column;align-items:stretch}
+    .layout > main{width:100%;min-width:0;max-width:100%;padding:14px 16px;box-sizing:border-box}
+    .card{padding:16px 14px}
+    nav.tabs{width:100%;position:static;max-height:none;border-right:none;flex-direction:row;flex-wrap:wrap;box-sizing:border-box}
     nav.tabs .tab-col-1, nav.tabs .tab-col-2, nav.tabs .tab-col-3{flex-direction:row;flex-wrap:wrap}
     nav.tabs .tab-divider{width:100%;margin:4px 0}
+    /* header 原本不換行，在平板／手機會把整頁撐寬 */
+    header{flex-wrap:wrap;gap:10px 14px;padding:12px 16px;box-sizing:border-box}
+    header .brand{font-size:22px;flex:1 1 100%}
+    header .header-meta{margin-left:0;align-items:flex-start;flex:1 1 100%}
+    header .header-actions{flex-wrap:wrap}
+  }
+  @media (max-width: 480px){
+    .layout > main{padding:12px 10px}
+    .card{padding:14px 12px}
+    header{padding:10px 12px}
+    header .brand{font-size:19px}
+    header .month-bar{padding:5px 10px}
+    header .compare-toggle button{padding:5px 11px;font-size:13px}
   }
 
   /* Chart + Table side-by-side layout (70%/30%) */
@@ -255,6 +282,62 @@
   .rate-badge.bad{background:var(--bad-bg);color:var(--bad);border:1px solid rgba(248,113,113,.3)}
   .rate-badge.na{background:transparent;color:#94A3B8}
 
+
+  /* ===== 月累積預估趨勢（前日業績分頁下方） ===== */
+  .fcst-filter-row{display:flex;flex-wrap:wrap;gap:10px 14px;align-items:center;margin-bottom:14px}
+  .fcst-filter-row label{font-size:14px;color:var(--secondary);font-weight:600}
+  .fcst-filter-row select{min-width:120px}
+  .fcst-kpi-row{display:grid;grid-template-columns:repeat(4,1fr);gap:12px;margin-bottom:14px}
+  .fcst-kpi{background:var(--stripe);border:0.5px solid var(--border);border-radius:10px;padding:12px 16px;position:relative;overflow:hidden}
+  .fcst-kpi::before{content:"";position:absolute;left:0;top:0;width:4px;height:100%;background:var(--accent)}
+  .fcst-kpi.est::before{background:#A855F7}
+  .fcst-kpi.rate::before{background:#FBBF24}
+  .fcst-kpi.gap::before{background:var(--line)}
+  .fcst-kpi .k{font-size:14px;color:var(--secondary);font-weight:600;letter-spacing:.3px}
+  .fcst-kpi .v{font-size:34px;font-weight:700;color:var(--ink);line-height:1.15;margin-top:4px;
+       font-variant-numeric:tabular-nums;font-feature-settings:var(--font-num-feat)}
+  .fcst-kpi .v .u{font-size:16px;color:var(--muted);font-weight:500;margin-left:3px}
+  .fcst-kpi .v.good{color:var(--good)} .fcst-kpi .v.bad{color:var(--bad)}
+  .fcst-kpi .s{font-size:13px;color:var(--secondary);margin-top:3px;font-weight:500}
+  .fcst-main-row{display:flex;gap:14px;align-items:stretch}
+  .fcst-chart-box{flex:1.05;min-width:0;min-height:330px;position:relative}
+  .fcst-scenario-col{flex:1;min-width:0}
+  .fcst-scenario-col h3{margin:0 0 8px 0;font-size:15px;font-weight:700;color:var(--accent-dark)}
+  /* 6 欄情境表：縮排版以在桌機一次看完，不必橫向捲動 */
+  .fcst-scenario-col table.grid{font-size:13px}
+  .fcst-scenario-col table.grid th{padding:6px 7px;font-size:12.5px;line-height:1.25}
+  .fcst-scenario-col table.grid td{padding:7px 7px}
+  .fcst-scenario-col .rate-badge{padding:3px 9px;font-size:12.5px;min-width:56px}
+  table.grid td.scn{text-align:left;font-weight:700;background:var(--stripe);color:var(--accent-dark)}
+  table.grid tr.scn-base td{background:#F5F3FF!important;color:#6D28D9!important;font-weight:700}
+  table.grid tr.scn-live td{background:#FFF7ED!important;color:#9A3412!important;font-weight:700}
+  .fcst-daily{margin-top:14px}
+  .fcst-daily summary{cursor:pointer;font-size:14px;font-weight:700;color:var(--accent-dark);
+       background:var(--subheader);border-radius:8px;padding:8px 14px;user-select:none;list-style:none}
+  .fcst-daily summary::-webkit-details-marker{display:none}
+  .fcst-daily summary::before{content:"▸ ";font-size:12px}
+  .fcst-daily[open] summary::before{content:"▾ "}
+  .fcst-daily .scroll-x{margin-top:10px;max-height:420px;overflow-y:auto}
+  .fcst-daily table.grid{font-size:13px}
+  .fcst-daily table.grid th{position:sticky;top:0;z-index:2}
+  table.grid td.dow-we{color:#BE123C}
+  .fcst-empty{background:var(--stripe);border:1px dashed var(--border);border-radius:10px;
+       padding:26px;text-align:center;color:var(--muted);font-size:14px}
+  @media(max-width:1100px){
+    .fcst-kpi-row{grid-template-columns:repeat(2,1fr)}
+    .fcst-main-row{flex-wrap:wrap}
+    .fcst-chart-box{flex:1 1 100%;min-height:280px}
+    .fcst-scenario-col{flex:1 1 100%}
+  }
+  @media(max-width:640px){
+    .fcst-kpi-row{grid-template-columns:1fr}
+    .fcst-kpi .v{font-size:28px}
+    .fcst-filter-row{gap:8px}
+    .fcst-filter-row select{flex:1 1 auto;min-width:0}
+    .fcst-chart-box{min-height:250px}
+    .fcst-daily table.grid{font-size:12px}
+  }
+
   /* Filter row (SKU tab etc.) */
   .filter-row{display:flex;flex-wrap:wrap;gap:8px;align-items:center;margin-bottom:10px;padding:12px 16px;background:var(--stripe);border:0.5px solid var(--border);border-radius:8px}
   .filter-row label{font-size:14px;color:var(--secondary);font-weight:500}
@@ -281,7 +364,8 @@
   #panel-aov .card h2,#panel-sku .card h2,#panel-handpuppet .card h2{font-size:23px}
   #panel-aov .card h2 .pill,#panel-sku .card h2 .pill,#panel-handpuppet .card h2 .pill{font-size:16px}
   table.grid td.sku-name{text-align:left;white-space:normal;max-width:420px;line-height:1.35;color:var(--ink)}
-  table.grid td.sku-code{font-family:"Consolas","Monaco",monospace;font-size:11px;color:var(--secondary)}
+  table.grid td.sku-code{font-family:var(--font-num);font-size:12px;color:var(--secondary);
+       letter-spacing:.055em;font-variant-numeric:tabular-nums;font-feature-settings:var(--font-num-feat)}
   table.grid td.sku-rank{text-align:center;width:70px}
   /* 表格內嵌橫條小圖（TOP20 數量/金額/構成比） */
   td .cellbar{position:relative;display:block;min-width:120px}
@@ -632,6 +716,19 @@
           </div>
         </div>
       </div>
+    </div>
+
+    <div class="card" id="fcst-card">
+      <h2>月累積預估趨勢 <span class="pill" id="fcst-pill">—</span></h2>
+      <div class="filter-row fcst-filter-row">
+        <label for="fcst-month">月份</label>
+        <select id="fcst-month"></select>
+        <label for="fcst-ch">管道別</label>
+        <select id="fcst-ch"></select>
+        <label for="fcst-biz">事業別</label>
+        <select id="fcst-biz"></select>
+      </div>
+      <div id="fcst-body"></div>
     </div>
 
   </div>
@@ -2016,6 +2113,7 @@ function initMonthSelector(){
     applyMonthTheme(STATE.selectedMonth);
     const t = STATE.activeTab;
     if(t === "main") renderMainTab();
+    else if(t === "prevday") renderPrevDayTab();
     else if(t === "trend") renderTrendTab();
     else if(t.startsWith("biz-")) renderBizTab(t.substring(4));
     else if(t.startsWith("ch-"))  renderChannelTab(t.substring(3));
@@ -2150,6 +2248,7 @@ function renderPrevDayTab(){
   renderPrevDayDatePicker();
   renderPrevDayFilters();
   renderPrevDaySummary();
+  renderForecastSection();
 
   const clearBtn = document.getElementById("prevday-clear-all");
   if(clearBtn){
@@ -2465,6 +2564,351 @@ const CARDS_CH_COLORS = {
   'TM':    '#D97706',
   '經代銷': '#64748B',
 };
+
+/* ============================================================
+   月累積預估趨勢（前日業績分頁下方）
+
+   推估方法：月末倍率法
+     月末倍率 ＝（22日～月末的日均）÷（1～21日的日均）
+     以已完結月份算出各月倍率，取 最小／中位／最大 為三情境，
+     另計「本月實測倍率」（本月已過 22 日以後才有）。
+     預估全月 ＝ 目前累積 ＋ (1～21日日均 × 倍率) × 剩餘天數
+     —— 已實現的日子採實際值，只對未發生的天數套用情境，較單純外推準確。
+   ============================================================ */
+const FCST_ALL = '__all__';
+STATE.fcstMonth = null;   // null = 跟隨上方月份選單
+STATE.fcstCh    = FCST_ALL;
+STATE.fcstBiz   = FCST_ALL;
+
+function fyYearOf(monthLabel){
+  const m = parseInt(monthLabel, 10);
+  return m >= 4 ? 2026 : 2027;
+}
+function daysInFyMonth(monthLabel){
+  const m = parseInt(monthLabel, 10);
+  if(!m) return 30;
+  return new Date(Date.UTC(fyYearOf(monthLabel), m, 0)).getUTCDate();
+}
+function fcstBizArg(){ return STATE.fcstBiz === FCST_ALL ? 'all' : STATE.fcstBiz; }
+function fcstChArg(){  return STATE.fcstCh  === FCST_ALL ? 'all' : STATE.fcstCh; }
+
+// 指定月・指定フィルタの日次実績 → { 日(1-31): 金額 }
+function fcstDailyMap(monthLabel, biz, ch){
+  const bizes = new Set(biz === 'all' ? BIZ_LIST_TOTAL : [biz]);
+  const chs   = new Set(ch  === 'all' ? CHANNEL_LIST   : [ch]);
+  const map = {};
+  let dated = 0, undated = 0;
+  for(const r of (STATE.actualRows || [])){
+    if(r.month !== monthLabel) continue;
+    if(!bizes.has(r.biz) || !chs.has(r.ch)) continue;
+    const amt = r.amt || 0;
+    const iso = dateToISO(r.date);
+    if(!iso){ undated += amt; continue; }
+    const dd = parseInt(iso.slice(8,10), 10);
+    map[dd] = (map[dd] || 0) + amt;
+    dated += amt;
+  }
+  return { map, dated, undated };
+}
+
+// 月末倍率：head=1〜21日、tail=22日〜最終日
+function fcstMultiplier(monthLabel, biz, ch){
+  const dim = daysInFyMonth(monthLabel);
+  const { map } = fcstDailyMap(monthLabel, biz, ch);
+  let head = 0, tail = 0, lastDay = 0;
+  for(const k of Object.keys(map)){
+    const dd = +k;
+    if(dd <= 21) head += map[k]; else tail += map[k];
+    if(dd > lastDay) lastDay = dd;
+  }
+  if(lastDay === 0) return null;
+  const tailDays = lastDay > 21 ? (lastDay - 21) : 0;
+  const mult = (head > 0 && tailDays > 0) ? (tail / tailDays) / (head / 21) : null;
+  return { mult, head, tail, tailDays, lastDay, dim, complete: lastDay >= dim };
+}
+
+// 当月より前の「完結した月」の倍率一覧（同じフィルタ条件で算出）
+function fcstHistory(monthLabel, biz, ch){
+  const out = [];
+  for(const m of MONTHS){
+    if(m === monthLabel) break;
+    const r = fcstMultiplier(m, biz, ch);
+    if(r && r.complete && r.mult != null && isFinite(r.mult)) out.push({ month:m, mult:r.mult });
+  }
+  return out;
+}
+function fcstMedian(arr){
+  if(!arr.length) return null;
+  const a = arr.slice().sort((x,y)=>x-y);
+  const h = Math.floor(a.length/2);
+  return a.length % 2 ? a[h] : (a[h-1] + a[h]) / 2;
+}
+
+// 予測本体：既知の日は実績、未到来の日だけ情境レートを適用
+function fcstProject(cum, lastDay, dim, head21, mult){
+  if(mult == null || !isFinite(mult) || lastDay >= dim) return cum;
+  if(lastDay >= 21){
+    const headRate = head21 / 21;
+    return cum + headRate * mult * (dim - lastDay);
+  }
+  const headRate = lastDay > 0 ? cum / lastDay : 0;
+  return cum + headRate * (21 - lastDay) + headRate * mult * (dim - 21);
+}
+
+const FCST_SCN_COLORS = { low:'#B91C1C', base:'#7C3AED', high:'#15803D', live:'#C2410C' };
+
+function fcstBuild(){
+  const month = STATE.fcstMonth || STATE.selectedMonth;
+  const biz = fcstBizArg(), ch = fcstChArg();
+  const dim = daysInFyMonth(month);
+  const { map, dated, undated } = fcstDailyMap(month, biz, ch);
+  const days = Object.keys(map).map(Number);
+  if(days.length === 0) return { month, dim, empty:true };
+
+  const lastDay = Math.max(...days);
+  const cum = dated + undated;                       // 無日期列も月合計に含める
+  let head21 = 0;
+  for(const k of Object.keys(map)) if(+k <= 21) head21 += map[k];
+  if(lastDay < 21 && lastDay > 0) head21 = (cum / lastDay) * 21;   // 推定値
+
+  const budget = bgt(biz, ch, month);
+  const hist = fcstHistory(month, biz, ch);
+  const hm = hist.map(h=>h.mult);
+  const live = fcstMultiplier(month, biz, ch);
+
+  const scenarios = [];
+  if(hm.length){
+    const lo = Math.min(...hm), md = fcstMedian(hm), hi = Math.max(...hm);
+    const loM = hist.find(h=>h.mult === lo).month, hiM = hist.find(h=>h.mult === hi).month;
+    scenarios.push({ key:'low',  name:`保守（${loM}型）`, mult:lo, color:FCST_SCN_COLORS.low });
+    scenarios.push({ key:'base', name:`基準（歷史中位）`, mult:md, color:FCST_SCN_COLORS.base });
+    scenarios.push({ key:'high', name:`樂觀（${hiM}型）`, mult:hi, color:FCST_SCN_COLORS.high });
+  }
+  if(live && live.mult != null && isFinite(live.mult)){
+    scenarios.push({ key:'live', name:'本月實測', mult:live.mult, color:FCST_SCN_COLORS.live });
+  }
+  for(const sc of scenarios){
+    sc.est      = fcstProject(cum, lastDay, dim, head21, sc.mult);
+    sc.dayRate  = (lastDay >= 21) ? (head21/21)*sc.mult : (cum/Math.max(lastDay,1))*sc.mult;
+    sc.rate     = budget > 0 ? sc.est / budget * 100 : null;
+    sc.gap      = sc.est - budget;
+  }
+  // 基準情境：本月實測があればそちら、無ければ歷史中位
+  const main = scenarios.find(s=>s.key==='live') || scenarios.find(s=>s.key==='base') || null;
+
+  // 逐日累積
+  const rows = [];
+  let run = undated;
+  for(let dd = 1; dd <= dim; dd++){
+    const amt = map[dd] || 0;
+    const has = dd <= lastDay;
+    if(has) run += amt;
+    const y = fyYearOf(month), mo = parseInt(month,10);
+    const dObj = new Date(Date.UTC(y, mo-1, dd));
+    const iso  = dateToISO(dObj);
+    rows.push({ dd, iso, dow:dObj.getUTCDay(), amt, cum: has ? run : null,
+                has, wd: isWorkingDay(iso) });
+  }
+  // 累積預算進度（工作天比例）
+  const ym = monthLabelToYM(month);
+  const totalWD = (STATE.workingDays && ym) ? STATE.workingDays[ym] : null;
+  let wdRun = 0;
+  for(const r of rows){
+    if(r.wd) wdRun++;
+    r.bgtCum = (budget > 0 && totalWD) ? budget * (wdRun / totalWD) : null;
+  }
+
+  return { month, dim, lastDay, cum, head21, budget, undated, rows,
+           scenarios, main, hist, live, totalWD, empty:false };
+}
+
+function fcstKpiHTML(d){
+  const rate = d.budget > 0 ? d.cum / d.budget * 100 : null;
+  const est  = d.main ? d.main.est : null;
+  const eRate= (d.main && d.budget > 0) ? d.main.rate : null;
+  const gap  = d.main ? d.main.gap : null;
+  const cls  = v => v == null ? '' : (v >= 100 ? 'good' : 'bad');
+  return `
+    <div class="fcst-kpi">
+      <div class="k">目前累積</div>
+      <div class="v">${fmtAmt(d.cum)}<span class="u">萬</span></div>
+      <div class="s">至 ${d.month}${d.lastDay}日（${d.dim} 天中第 ${d.lastDay} 天）${rate!=null?`· 達成 ${rate.toFixed(1)}%`:''}</div>
+    </div>
+    <div class="fcst-kpi est">
+      <div class="k">月末預估${d.main ? `（${d.main.name}）` : ''}</div>
+      <div class="v">${est!=null?fmtAmt(est):'—'}<span class="u">萬</span></div>
+      <div class="s">${d.main?`月末倍率 ${d.main.mult.toFixed(2)}x · 剩餘 ${Math.max(d.dim-d.lastDay,0)} 天 × 日均 ${fmtAmt(d.main.dayRate)} 萬`:'資料不足，無法推估'}</div>
+    </div>
+    <div class="fcst-kpi rate">
+      <div class="k">預估達成率</div>
+      <div class="v ${cls(eRate)}">${eRate!=null?eRate.toFixed(1):'—'}<span class="u">%</span></div>
+      <div class="s">月預算 ${fmtAmt(d.budget)} 萬</div>
+    </div>
+    <div class="fcst-kpi gap">
+      <div class="k">預估對預算差</div>
+      <div class="v ${gap!=null&&gap>=0?'good':'bad'}">${gap!=null?(gap>=0?'+':'−')+fmtAmt(Math.abs(gap)):'—'}<span class="u">萬</span></div>
+      <div class="s">${gap!=null?(gap>=0?'預估超標':'預估缺口'):'—'}</div>
+    </div>`;
+}
+
+function fcstScenarioTableHTML(d){
+  if(!d.scenarios.length){
+    return '<div class="fcst-empty">尚無已完結月份可供推算月末倍率（需至少一個完整月份的實績）。</div>';
+  }
+  let h = '<thead><tr><th class="l1">情境</th><th class="l1">月末倍率</th><th class="l1">剩餘日均<br>（萬）</th>'
+        + '<th class="l1">預估全月<br>（萬）</th><th class="l1">預估達成率</th><th class="l1">對預算差<br>（萬）</th></tr></thead><tbody>';
+  for(const sc of d.scenarios){
+    const trCls = sc.key === 'base' ? ' class="scn-base"' : (sc.key === 'live' ? ' class="scn-live"' : '');
+    const rCls  = sc.rate == null ? 'na' : (sc.rate >= 100 ? 'good' : 'bad');
+    h += `<tr${trCls}><td class="scn">${sc.name}</td>`
+       + `<td>${sc.mult.toFixed(2)}x</td>`
+       + `<td>${fmtAmt(sc.dayRate)}</td>`
+       + `<td>${fmtAmt(sc.est)}</td>`
+       + `<td class="rate">${sc.rate!=null?`<span class="rate-badge ${rCls}">${sc.rate.toFixed(1)}%</span>`:'—'}</td>`
+       + `<td style="color:${sc.gap>=0?'var(--good)':'var(--bad)'}">${(sc.gap>=0?'+':'−')+fmtAmt(Math.abs(sc.gap))}</td></tr>`;
+  }
+  h += `<tr class="total"><td class="scn">月預算</td><td>—</td><td>—</td><td>${fmtAmt(d.budget)}</td><td>—</td><td>—</td></tr>`;
+  h += '</tbody>';
+  return `<table class="grid" id="fcst-scenario-table">${h}</table>`;
+}
+
+function fcstDailyTableHTML(d){
+  const WD = ['日','一','二','三','四','五','六'];
+  let h = '<thead><tr><th class="l1">日期</th><th class="l1">星期</th><th class="l1">當日<br>（萬）</th>'
+        + '<th class="l1">累積<br>（萬）</th><th class="l1">累積預算進度<br>（萬）</th>'
+        + '<th class="l1">進度差<br>（萬）</th><th class="l1">累積達成率</th></tr></thead><tbody>';
+  for(const r of d.rows){
+    if(!r.has) continue;
+    const we = (r.dow === 0 || r.dow === 6 || !r.wd);
+    const diff = (r.bgtCum != null) ? r.cum - r.bgtCum : null;
+    const rate = (r.bgtCum && r.bgtCum > 0) ? r.cum / r.bgtCum * 100 : null;
+    const rCls = rate == null ? 'na' : (rate >= 100 ? 'good' : 'bad');
+    h += `<tr><td class="dim">${r.iso.slice(5).replace('-','/')}</td>`
+       + `<td class="${we?'dow-we':''}" style="text-align:center">${WD[r.dow]}</td>`
+       + `<td>${fmtAmt(r.amt)}</td><td>${fmtAmt(r.cum)}</td>`
+       + `<td>${r.bgtCum!=null?fmtAmt(r.bgtCum):'—'}</td>`
+       + `<td style="color:${diff!=null&&diff>=0?'var(--good)':'var(--bad)'}">${diff!=null?(diff>=0?'+':'−')+fmtAmt(Math.abs(diff)):'—'}</td>`
+       + `<td class="rate">${rate!=null?`<span class="rate-badge ${rCls}">${rate.toFixed(1)}%</span>`:'—'}</td></tr>`;
+  }
+  h += '</tbody>';
+  return `<table class="grid" id="fcst-daily-table">${h}</table>`;
+}
+
+function fcstNoteHTML(d){
+  const histTxt = d.hist.length
+    ? d.hist.map(x=>`${x.month} ${x.mult.toFixed(2)}x`).join('、')
+    : '無';
+  let n = `※ <b>月末倍率</b> ＝（22日～月末的日均）÷（1～21日的日均）。已完結月份倍率：${histTxt}。`
+        + `<b>預估全月</b> ＝ 目前累積 ＋（1～21日日均 × 倍率）× 剩餘天數；已發生的日子採實際值，只對未到來的天數套用情境，`
+        + `比「近 N 日速率 × 剩餘天數」的單純外推更貼近月底衝刺型態。`;
+  if(d.lastDay <= 21){
+    n += ` <b style="color:var(--bad)">本月尚未過 21 日，1～21日日均為推估值，誤差較大。</b>`;
+  }
+  if(d.undated > 0){
+    n += ` 另含無日期實績 ${fmtAmt(d.undated)} 萬（已計入累積，但不出現在逐日表）。`;
+  }
+  n += ` 「累積預算進度」依當月工作天比例分攤月預算${d.totalWD?`（共 ${d.totalWD} 個工作天）`:''}。`
+     + `管道別／事業別選「全部」時，合計不含數位典藏（與全站其他分頁一致）。`;
+  return n;
+}
+
+function fcstRenderChart(d){
+  destroyChart('fcst-chart');
+  const canvas = document.getElementById('fcst-chart');
+  if(!canvas || typeof Chart === 'undefined') return;
+  const labels = d.rows.map(r=>r.dd);
+  const actual = d.rows.map(r=>r.cum != null ? +(r.cum/10000).toFixed(1) : null);
+  const bgtLine= d.rows.map(r=>r.bgtCum != null ? +(r.bgtCum/10000).toFixed(1) : null);
+
+  const datasets = [
+    { label:'累積實績', data:actual, borderColor:'#0284C7', backgroundColor:'rgba(2,132,199,.10)',
+      borderWidth:3, tension:.2, pointRadius:0, fill:true, spanGaps:false, order:1 },
+    { label:'累積預算進度', data:bgtLine, borderColor:'#94A3B8', borderWidth:2,
+      borderDash:[2,3], tension:.1, pointRadius:0, fill:false, order:5 },
+  ];
+  // 各情境の予測カーブ（最終実績日から月末まで）
+  for(const sc of d.scenarios){
+    const arr = d.rows.map(r=>{
+      if(r.dd < d.lastDay) return null;
+      if(r.dd === d.lastDay) return +(d.cum/10000).toFixed(1);
+      return +((d.cum + sc.dayRate * (r.dd - d.lastDay))/10000).toFixed(1);
+    });
+    datasets.push({ label:`預估 · ${sc.name}`, data:arr, borderColor:sc.color,
+      borderWidth: sc.key === 'live' ? 3 : 2, borderDash:[6,4], tension:.1,
+      pointRadius:0, fill:false, spanGaps:false, order: sc.key === 'live' ? 2 : 4 });
+  }
+
+  STATE.charts['fcst-chart'] = new Chart(canvas.getContext('2d'), {
+    type:'line',
+    data:{ labels, datasets },
+    options:{
+      responsive:true, maintainAspectRatio:false,
+      interaction:{ mode:'index', intersect:false },
+      plugins:{
+        legend:{ position:'bottom', labels:{ boxWidth:14, font:{size:11, weight:'600'}, color:'#0C4A6E', padding:10 } },
+        tooltip:{ backgroundColor:'#0C4A6E', titleColor:'#fff', bodyColor:'#fff',
+          callbacks:{
+            title: items => `${d.month}${items[0].label}日`,
+            label: c => c.parsed.y == null ? null : `${c.dataset.label}：${Number(c.parsed.y).toLocaleString()} 萬`,
+          } },
+      },
+      scales:{
+        y:{ beginAtZero:true, title:{ display:true, text:'累積金額（萬元）', font:{size:11,weight:'600'}, color:'#0369A1' },
+            ticks:{ font:{size:11}, color:'#0369A1', callback:v=>(+v).toLocaleString() }, grid:{ color:'#F0F9FF' } },
+        x:{ title:{ display:true, text:'日', font:{size:11,weight:'600'}, color:'#0369A1' },
+            ticks:{ font:{size:10}, color:'#0C4A6E', maxRotation:0, autoSkip:true, maxTicksLimit:16 }, grid:{ display:false } },
+      },
+    },
+  });
+}
+
+function fcstRenderFilters(){
+  const mSel = document.getElementById('fcst-month');
+  const cSel = document.getElementById('fcst-ch');
+  const bSel = document.getElementById('fcst-biz');
+  if(!mSel || !cSel || !bSel) return;
+  const cur = STATE.fcstMonth || STATE.selectedMonth;
+  const avail = MONTHS.filter(m=>hasActualData(m));
+  const monthOpts = avail.length ? avail : MONTHS;
+  mSel.innerHTML = monthOpts.map(m=>`<option value="${m}"${m===cur?' selected':''}>${m}</option>`).join('');
+  cSel.innerHTML = [`<option value="${FCST_ALL}"${STATE.fcstCh===FCST_ALL?' selected':''}>全部</option>`]
+    .concat(CHANNEL_LIST.map(c=>`<option value="${c}"${STATE.fcstCh===c?' selected':''}>${c}</option>`)).join('');
+  bSel.innerHTML = [`<option value="${FCST_ALL}"${STATE.fcstBiz===FCST_ALL?' selected':''}>全部</option>`]
+    .concat(BIZ_LIST.map(b=>`<option value="${b}"${STATE.fcstBiz===b?' selected':''}>${b}</option>`)).join('');
+
+  mSel.onchange = e=>{ STATE.fcstMonth = e.target.value; renderForecastSection(); };
+  cSel.onchange = e=>{ STATE.fcstCh    = e.target.value; renderForecastSection(); };
+  bSel.onchange = e=>{ STATE.fcstBiz   = e.target.value; renderForecastSection(); };
+}
+
+function renderForecastSection(){
+  const body = document.getElementById('fcst-body');
+  const pill = document.getElementById('fcst-pill');
+  if(!body) return;
+  fcstRenderFilters();
+  if(!STATE.budget){ body.innerHTML = '<div class="fcst-empty">尚未載入資料。</div>'; return; }
+
+  const d = fcstBuild();
+  const chLbl  = STATE.fcstCh  === FCST_ALL ? '全通路' : STATE.fcstCh;
+  const bizLbl = STATE.fcstBiz === FCST_ALL ? '全事業' : STATE.fcstBiz;
+  if(pill) pill.textContent = `${d.month} · ${chLbl} · ${bizLbl}`;
+
+  if(d.empty){
+    destroyChart('fcst-chart');
+    body.innerHTML = `<div class="fcst-empty">${d.month} 在此條件下尚無實績資料。</div>`;
+    return;
+  }
+  body.innerHTML =
+      `<div class="fcst-kpi-row">${fcstKpiHTML(d)}</div>`
+    + `<div class="fcst-main-row">`
+    +   `<div class="fcst-chart-box"><canvas id="fcst-chart"></canvas></div>`
+    +   `<div class="fcst-scenario-col"><h3>月末情境推估</h3><div class="scroll-x">${fcstScenarioTableHTML(d)}</div></div>`
+    + `</div>`
+    + `<div class="legend">${fcstNoteHTML(d)}</div>`
+    + `<details class="fcst-daily"><summary>逐日累積明細（${d.lastDay} 天）</summary>`
+    +   `<div class="scroll-x">${fcstDailyTableHTML(d)}</div></details>`;
+  fcstRenderChart(d);
+}
 
 function getLastDayAmt(biz, ch){
   if(!STATE.actualRows) return 0;
