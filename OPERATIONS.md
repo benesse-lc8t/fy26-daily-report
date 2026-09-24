@@ -38,6 +38,23 @@ git push origin <目前分支>:main      # 一定要推到 main 才會部署
 5. **缺品名製編** —— 有新製編時請使用者提供商品主檔，再跑 `update_master.py`
 6. **kolSchedule** —— 檔數與內容是否如預期（無 KOL 檔期表更新時應完全一致）
 
+## 修改 HTML／JS／CSS 後必跑
+```bash
+python3 scripts/validate_html.py       # 11 項靜態檢查，全過才可 commit
+```
+檢查項目：script 標籤對齊、`node --check` 語法、關鍵變數宣告順序、CDN 來源
+（只允許 cdnjs.cloudflare.com）、重複 let/const、render 函式是否有呼叫點、
+DOM 引用殘留、新功能格式（斜線零須關閉）、本機 fallback 檔案、data.json 結構。
+
+需要實機驗證時（Playwright + 本機 http-server）：
+```bash
+npx http-server -p 8899 -s -c-1 .      # 另開背景執行
+PLAYWRIGHT_BROWSERS_PATH=/opt/pw-browsers node <e2e腳本>
+```
+> 本執行環境的網路政策會擋掉 `cdnjs.cloudflare.com` 與 `github.io`，
+> 測試時 console 會出現 `ERR_TUNNEL_CONNECTION_FAILED`（Chart.js 會自動退回
+> 本機 `chart.umd.js`）。**這是沙箱限制，不是網站問題**，實機不會發生。
+
 ## 其他更新腳本
 - **商品主檔**：`python3 scripts/update_master.py <商品主檔.xlsx>`
   自動偵測分頁與欄位標題（相容新舊格式）；只保留「有實績」的製編品名以維持 data.json 精簡。
@@ -56,6 +73,11 @@ git push origin <目前分支>:main      # 一定要推到 main 才會部署
 - 分頁：主儀表板、前日業績、業績卡片、月別推移、週別趨勢、對目標、AOV、TOP20、手偶、
   事業別(學習商品/學習周邊/生活周邊/Mirafeel/數位典藏)、通路別、KOL檔期、國定假日／停班課。
 - 達成率配色規則：**≥100% 綠、<100% 紅**（無黃色）；圖表達成率折線維持紅色、只有數字標籤依此變色。
+- **月累積預估趨勢**（前日業績分頁下方）：月份／管道別／事業別三個下拉選單，
+  以「月末倍率法」推估全月（保守／基準／樂觀／本月實測四情境）。
+  倍率由已完結月份動態計算，資料更新後自動重算，無須手動維護。
+- 數字字型：全站統一 `--font-ui`，`font-feature-settings` 已關閉斜線零
+  （`"zero" 0`）避免 0 被誤讀為 Q；勿再引入 monospace 字型。
 
 ## 已知事項
 - commit 在 GitHub 顯示「Unverified」＝執行環境無簽章金鑰，**不影響部署與資料**，可忽略。
