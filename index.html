@@ -195,6 +195,14 @@
     .overview-row #pace-banner-container .pace-cell{border-bottom:none;border-right:1px solid var(--stripe)}
     .overview-row #pace-banner-container .pace-cell:last-child{border-right:none}
   }
+  /* 手機：3 張 KPI 卡擠在同一行只剩約 97px 寬，數字會被裁掉 —— 改為各佔整行 */
+  @media(max-width:760px){
+    .overview-row .kpi-card{flex:1 1 100%}
+    .kpi-grid{grid-template-columns:1fr}
+    .overview-row #pace-banner-container .pace-banner{grid-template-columns:1fr}
+    .overview-row #pace-banner-container .pace-cell{border-right:none;border-bottom:1px solid var(--border)}
+    .overview-row #pace-banner-container .pace-cell:last-child{border-bottom:none}
+  }
 
   main{padding:18px 24px;flex:1;min-width:0}
 
@@ -229,6 +237,14 @@
   .kpi-card .rate.bad{color:var(--bad)}
   .kpi-card .rate.na{color:#94A3B8}
   .kpi-card .rate-lbl{font-size:16px;color:var(--muted);margin-bottom:2px;font-weight:500}
+  /* 達成率 ＋ 進度達成：上下兩列（卡片內容寬僅約 280px，並排會裁掉百分號） */
+  .kpi-card .rate-row.dual{display:block}
+  .kpi-card .rate-row.dual .rate-cell{display:flex;align-items:baseline;justify-content:space-between;gap:10px}
+  .kpi-card .rate-row.dual .rate-cell + .rate-cell{margin-top:7px;padding-top:7px;border-top:1px dashed var(--border)}
+  .kpi-card .rate-row.dual .rate-lbl{font-size:15px;margin-bottom:0;white-space:nowrap}
+  .kpi-card .rate-row.dual .rate{font-size:38px;line-height:1.1;white-space:nowrap}
+  .kpi-card .kpi-note{margin-top:9px;font-size:12.5px;line-height:1.45;color:var(--secondary)}
+  @media(max-width:640px){ .kpi-card .rate-row.dual .rate{font-size:32px} }
 
   /* Pace banner */
   .pace-banner{background:var(--stripe);border:0.5px solid var(--border);border-radius:10px;margin-top:8px;padding:10px 0;display:grid;grid-template-columns:1.3fr 1fr 1.2fr;position:relative;overflow:hidden;align-items:center}
@@ -1958,6 +1974,27 @@ function getCumTimeProgress(cumMonths){
   return (any && total > 0) ? { total, elapsed, pct: elapsed / total * 100 } : null;
 }
 
+// 「已過期間預算」：各月預算 × (該月已過工作天 ÷ 該月總工作天)。
+// 尚未開始的月份計 0，已完結的月份即全額。
+// 用途：讓累計／當月的分母隨時間推進而成長，達成率才能反映「目前這個速度是超前還是落後」。
+// 現行「累計達成率」的分母是完整期間預算（含當月尚未發生的天數），
+// 分子每天變大、分母不動 → 月中必然逐日上升，結構上無法顯示惡化。
+function bgtElapsed(biz, ch, months){
+  if(!STATE.workingDays) return null;
+  let s = 0, any = false;
+  for(const m of months){
+    const mb = bgt(biz, ch, m);
+    if(mb <= 0) continue;
+    const ymk = monthLabelToYM(m);
+    const total = ymk ? STATE.workingDays[ymk] : null;
+    if(!total) continue;
+    const tp = getTimeProgress(m);            // 無實績資料的月份 → null → 計 0
+    s += mb * ((tp ? tp.elapsed : 0) / total);
+    any = true;
+  }
+  return any ? s : null;
+}
+
 function renderPaceBanner(monthLabel, monthBudget, monthActual){
   const container = document.getElementById("pace-banner-container");
   if(!container) return;
@@ -2153,24 +2190,63 @@ function renderOverallKPIs(){
 
   document.getElementById("overall-pill").textContent = "本月：" + m;
 
+  // 進度達成：分母改為「已過期間預算」，達成率才會隨表現惡化而下降。
+  // YoY 比較模式下沒有預算概念，不顯示。
+  const mkPace = (months, actual, label) => {
+    if(isYoY()) return null;
+    const be = bgtElapsed('all','all', months);
+    if(!be || be <= 0) return null;
+    const tp = getTimeProgress(m);
+    const partial = tp ? `${m}僅計入 ${tp.elapsed}/${tp.total} 工作天` : '';
+    return {
+      pct: actual / be * 100,
+      note: `※ 達成率的分母是${label}完整預算（含尚未發生的天數），月中會逐日上升；`
+          + `<b>進度達成</b>的分母是已過期間預算 ${fmtAmt(be)} 萬`
+          + (partial ? `（${partial}）` : '')
+          + `，才能看出目前的速度是超前還是落後。`,
+    };
+  };
+
   document.getElementById("kpi-year").innerHTML  = kpiCardHTML("FY26 年間", "全年（4月〜3月）", yearBudget, yearActual);
-  document.getElementById("kpi-month").innerHTML = kpiCardHTML("當月", m, monthBudget, monthActual);
-  document.getElementById("kpi-cum").innerHTML   = kpiCardHTML("累計", `4月〜${m}（${cumMonths.length}個月）`, cumBudget, cumActual);
+  document.getElementById("kpi-month").innerHTML = kpiCardHTML("當月", m, monthBudget, monthActual,
+      mkPace([m], monthActual, '當月'));
+  document.getElementById("kpi-cum").innerHTML   = kpiCardHTML("累計", `4月〜${m}（${cumMonths.length}個月）`, cumBudget, cumActual,
+      mkPace(cumMonths, cumActual, '6個月'.replace('6', String(cumMonths.length))));
 
   // 全社當月の時間進度バナー（KPI 3枚の下、全幅）
   renderPaceBanner(m, monthBudget, monthActual);
 }
 
-function kpiCardHTML(label, sub, budget, actual){
+function kpiCardHTML(label, sub, budget, actual, pace){
   const cls = rateClass(budget, actual);
-  return `
-    <div class="lbl">${label} <span class="small">${sub}</span></div>
-    <div class="row"><span class="k">${targetLabel()}</span><span class="v">${fmtAmt(budget)} <span style="font-size:22px;color:#9ca3af;font-weight:500">萬</span></span></div>
-    <div class="row"><span class="k">實績</span><span class="v">${fmtAmt(actual)} <span style="font-size:22px;color:#9ca3af;font-weight:500">萬</span></span></div>
+  const unit = '<span style="font-size:22px;color:#9ca3af;font-weight:500">萬</span>';
+  let rateBlock = `
     <div class="rate-row">
       <div class="rate-lbl">${rateLabel()}</div>
       <div class="rate ${cls}">${fmtRate(budget, actual)}</div>
-    </div>
+    </div>`;
+  let note = '';
+  // pace = { pct, elapsedBudget, note }：進度達成（分母為已過期間預算）
+  if(pace && pace.pct != null && isFinite(pace.pct)){
+    const pcls = pace.pct >= 100 ? 'good' : 'bad';
+    rateBlock = `
+    <div class="rate-row dual">
+      <div class="rate-cell">
+        <div class="rate-lbl">${rateLabel()}</div>
+        <div class="rate ${cls}">${fmtRate(budget, actual)}</div>
+      </div>
+      <div class="rate-cell">
+        <div class="rate-lbl">進度達成</div>
+        <div class="rate ${pcls}">${pace.pct.toFixed(1)}%</div>
+      </div>
+    </div>`;
+    note = `<div class="kpi-note">${pace.note}</div>`;
+  }
+  return `
+    <div class="lbl">${label} <span class="small">${sub}</span></div>
+    <div class="row"><span class="k">${targetLabel()}</span><span class="v">${fmtAmt(budget)} ${unit}</span></div>
+    <div class="row"><span class="k">實績</span><span class="v">${fmtAmt(actual)} ${unit}</span></div>
+    ${rateBlock}${note}
   `;
 }
 
