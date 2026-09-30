@@ -503,8 +503,11 @@
   .prevday-stack-toggle button{font-size:12px;font-weight:600;color:var(--secondary);background:var(--card);border:0.5px solid var(--border);border-radius:8px;padding:6px 14px;cursor:pointer}
   .prevday-stack-toggle button.active{background:var(--accent);border-color:var(--accent);color:#fff}
   .prevday-overview-row{display:flex;flex-wrap:wrap;gap:18px;align-items:stretch}
-  .prevday-overview-row .kpi-card{flex:1 1 360px}
-  .prevday-chart-box{flex:1 1 420px;min-height:280px;position:relative}
+  /* min-width:0 不可省：flex 項目預設 min-width:auto，會被 canvas 的固有寬度撐住，
+     視窗由大縮小時圖表縮不回去，整頁產生水平溢出。 */
+  .prevday-overview-row .kpi-card{flex:1 1 360px;min-width:0}
+  .prevday-chart-box{flex:1 1 420px;min-width:0;min-height:280px;position:relative}
+  .prevday-chart-box canvas{max-width:100%}
   .prevday-chart-box canvas{max-height:320px}
   /* 依事業別／依通路別 を左右併排 */
   .prevday-tables-row{display:flex;flex-wrap:wrap;gap:24px;align-items:flex-start}
@@ -2347,12 +2350,15 @@ function groupDatesByMonth(dates){
 }
 
 // 区間の見込み目標：月ごとに「選択した工作天数 ÷ 当月総工作天数 × 当月予算」を加算
-function estimateTargetForDates(biz, ch, selectedDates){
+// src 省略時＝目前選中的比較基準；傳入 STATE.budget / STATE.midTarget 可指定基準，
+// 供「同時對多個目標比較」使用。
+function estimateTargetForDates(biz, ch, selectedDates, src){
   if(!STATE.workingDays) return 0;
   const groups = groupDatesByMonth(selectedDates);
   let total = 0;
   for(const monthLabel of Object.keys(groups)){
-    const monthBudget = bgt(biz, ch, monthLabel);
+    const monthBudget = src ? (sumFrom(src, 'amount', biz, ch, [monthLabel]) || 0)
+                            : bgt(biz, ch, monthLabel);
     if(monthBudget <= 0) continue;
     const ym = monthLabelToYM(monthLabel);
     const totalWD = ym ? STATE.workingDays[ym] : null;
@@ -2580,15 +2586,33 @@ function renderPrevDaySummary(){
   }
 
   const totalTarget = estimateTargetForDates(effBiz, effCh, selected);
+  // 期初／期中兩個基準同時比較（切換鈕決定上方「預估○○目標」顯示哪一個）
+  const active = cmpMode();
+  const pdBases = [
+    { key:'budget', label:'期初目標', src:STATE.budget },
+    { key:'mid',    label:'期中目標', src:STATE.midTarget },
+    { key:'yoy',    label:'前年同期', src:STATE.fy25 },
+  ].filter(b => b.src).map(b => ({
+    ...b,
+    value: estimateTargetForDates(effBiz, effCh, selected, b.src),
+    active: b.key === active,
+  }));
+  const pdRow = b => {
+    const pct = b.value > 0 ? totalAmt / b.value * 100 : null;
+    const cls = pct == null ? 'na' : (pct >= 100 ? 'good' : 'bad');
+    const txt = pct == null ? '—' : pct.toFixed(1) + '%';
+    return `<div class="rate-cell${b.active ? ' rate-active' : ''}">`
+         + `<div class="rate-lbl">對${b.label}</div><div class="rate ${cls}">${txt}</div></div>`;
+  };
+  const unit = '<span style="font-size:22px;color:#9ca3af;font-weight:500">萬</span>';
 
   kpiEl.innerHTML = `
     <div class="lbl">選定期間績效 <span class="small">${selected[0]} ～ ${selected[selected.length-1]}（共 ${selected.length} 天，含 ${wdCount} 個工作天）</span></div>
-    <div class="row"><span class="k">預估目標</span><span class="v">${fmtAmt(totalTarget)} <span style="font-size:22px;color:#9ca3af;font-weight:500">萬</span></span></div>
-    <div class="row"><span class="k">實績</span><span class="v">${fmtAmt(totalAmt)} <span style="font-size:22px;color:#9ca3af;font-weight:500">萬</span></span></div>
-    <div class="rate-row">
-      <div class="rate-lbl">達成率</div>
-      <div class="rate ${rateClass(totalTarget, totalAmt)}">${fmtRate(totalTarget, totalAmt)}</div>
-    </div>
+    <div class="row"><span class="k">預估${targetLabel()}</span><span class="v">${fmtAmt(totalTarget)} ${unit}</span></div>
+    <div class="row"><span class="k">實績</span><span class="v">${fmtAmt(totalAmt)} ${unit}</span></div>
+    <div class="rate-row dual">${pdBases.map(pdRow).join('')}</div>
+    <div class="kpi-note">※ 「預估${targetLabel()}」＝所選日期中的工作天數 ÷ 當月總工作天數 × 當月${targetLabel()}。
+       下方拆解表與直條圖依目前選中的基準（${targetLabel()}）計算。</div>
   `;
 
   renderPrevDayBreakdownTable(bizTableEl, "事業", effBiz, 'biz', byBiz, selected, effCh);
@@ -2603,7 +2627,7 @@ function renderPrevDayBreakdownTable(el, dimLabel, dims, dimType, aggMap, select
     return;
   }
   let html = `<thead><tr>`;
-  html += `<th class="l1">${dimLabel}</th><th class="l1">預估目標</th><th class="l1">實績</th><th class="l1">達成率</th>`;
+  html += `<th class="l1">${dimLabel}</th><th class="l1">預估${targetLabel()}</th><th class="l1">實績</th><th class="l1">${rateLabel()}</th>`;
   html += `</tr></thead><tbody>`;
 
   let tT = 0, tA = 0;
@@ -4404,6 +4428,7 @@ function buildVsTargetData(monthLabel, biz, ch){
 
   return {
     month: monthLabel, year, monthIdx: month, daysInMonth,
+    biz, ch,                                  // 另一基準對照用
     daily,
     totalBudget, totalWorkingDays, perDayTarget,
     latestDate, latestDayIdx,
@@ -4447,6 +4472,27 @@ function renderVsTargetTab(){
     }
   }
 
+  // 另一個目標基準的差額（期初 ↔ 期中），讓兩個目標可以同畫面對照
+  let altDiffSub = "";
+  {
+    const cur = cmpMode();
+    const alt = cur === 'mid'
+      ? { key:'budget', label:'期初目標', src:STATE.budget }
+      : (cur === 'budget' ? { key:'mid', label:'期中目標', src:STATE.midTarget } : null);
+    if(alt && alt.src && data.latestActualCum != null && data.elapsedWorkDaysAtLatest > 0){
+      const ymk = monthLabelToYM(data.month);
+      const twd = (STATE.workingDays && ymk) ? STATE.workingDays[ymk] : null;
+      const altTotal = sumFrom(alt.src, 'amount', data.biz || 'all', data.ch || 'all', [data.month]);
+      if(twd && altTotal != null && altTotal > 0){
+        const altCum = altTotal / twd * data.elapsedWorkDaysAtLatest;
+        const d2 = data.latestActualCum - altCum;
+        const sign = d2 >= 0 ? '+' : '−';
+        const col = d2 >= 0 ? 'var(--good)' : 'var(--bad)';
+        altDiffSub = `<br><span style="color:${col}">對${alt.label} ${sign}${Math.floor(Math.abs(d2)/10000).toLocaleString()} 萬</span>`;
+      }
+    }
+  }
+
   let predStr = "—", predSub = "尚無資料";
   if(data.latestActualCum != null && data.latestActualCum >= data.totalBudget){
     predStr = `${data.latestDate.getUTCDate()}日`;
@@ -4484,8 +4530,8 @@ function renderVsTargetTab(){
 
   html += '<div class="stats-grid">';
   html += `<div class="stat"><div class="lbl">目前累計實績</div><div class="val">${data.latestActualCum != null ? Math.floor(data.latestActualCum/10000).toLocaleString() : "—"} <span style="font-size:11px;color:#94A3B8">萬</span></div><div class="sub">${data.latestDate ? `截至 ${formatYMD(data.latestDate)}` : "尚無資料"}</div></div>`;
-  html += `<div class="stat"><div class="lbl">目前目標累計</div><div class="val">${data.latestTargetCum != null ? Math.floor(data.latestTargetCum/10000).toLocaleString() : "—"} <span style="font-size:11px;color:#94A3B8">萬</span></div><div class="sub">每日目標 ${Math.floor(data.perDayTarget/10000).toLocaleString()} 萬 × ${data.elapsedWorkDaysAtLatest} 工作日</div></div>`;
-  html += `<div class="stat"><div class="lbl">差額（實績 − 目標）</div><div class="val" style="color:${diffColor}">${diffStr} <span style="font-size:11px;color:#94A3B8">萬</span></div><div class="sub">${diffSub}</div></div>`;
+  html += `<div class="stat"><div class="lbl">目前${targetLabel()}累計</div><div class="val">${data.latestTargetCum != null ? Math.floor(data.latestTargetCum/10000).toLocaleString() : "—"} <span style="font-size:11px;color:#94A3B8">萬</span></div><div class="sub">每日${targetLabel()} ${Math.floor(data.perDayTarget/10000).toLocaleString()} 萬 × ${data.elapsedWorkDaysAtLatest} 工作日</div></div>`;
+  html += `<div class="stat"><div class="lbl">差額（實績 − ${targetLabel()}）</div><div class="val" style="color:${diffColor}">${diffStr} <span style="font-size:11px;color:#94A3B8">萬</span></div><div class="sub">${diffSub}${altDiffSub}</div></div>`;
   html += `<div class="stat"><div class="lbl">100% 預測達成日</div><div class="val">${predStr}</div><div class="sub">${predSub}</div></div>`;
   html += '</div>';
 
