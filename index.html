@@ -363,6 +363,8 @@
   }
 
   /* ===== 停售／預購（商品狀態）===== */
+  .basis-free-note{margin-bottom:12px;background:var(--stripe);border:0.5px dashed var(--border-strong);
+       border-radius:8px;padding:8px 14px}
   .po-banner{display:flex;align-items:center;gap:12px;background:#FFF7ED;border:1px solid #FDBA74;
        border-left:5px solid #EA580C;border-radius:10px;padding:11px 16px;margin-bottom:14px;
        cursor:pointer;transition:.12s}
@@ -1071,11 +1073,15 @@ const STATE = {
 };
 
 // YoY 對象タブ（前年比モードで表示するもの）
-const YOY_TABS = new Set([
-  "trend","weekly","aov",
-  "biz-學習商品","biz-學習周邊","biz-生活周邊","biz-Mirafeel",
-  "ch-WEB","ch-TM","ch-KOL","ch-EC",
-]);
+// 前年比模式下「不適用」的分頁。
+// 原本是白名單（只放行 11 個），但實測 22 個分頁在 yoy 模式下全部可正常渲染，
+// 真正有資料問題的只有數位典藏 —— FY25 沒有這個事業，昨年實績恆為 0、
+// 前年比顯示「—」，留著只會誤導。其餘一律放行，避免切換基準時分頁消失。
+const YOY_HIDDEN_TABS = new Set(["biz-數位典藏"]);
+
+// 只呈現實績／資訊、不受比較基準影響的分頁 —— 統一在頂部加一行註記，
+// 避免使用者以為切換基準沒作用。
+const BASIS_FREE_TABS = new Set(["sku","handpuppet","preorder","kol","holiday"]);
 
 /* ---------- Compare-mode helpers ----------
    三個比較基準：
@@ -1138,6 +1144,20 @@ function switchTab(tabId){
   else if(tabId === "holiday") renderHolidayTab();
   else if(tabId === "preorder") renderPreorderTab();
   else if(tabId === "cards") renderCardsTab();
+  applyBasisFreeNote(tabId);
+}
+
+// 在「不受比較基準影響」的分頁頂部插入一行說明（重複呼叫不會累積）
+function applyBasisFreeNote(tabId){
+  const panel = document.getElementById("panel-" + tabId);
+  if(!panel) return;
+  const old = panel.querySelector(':scope > .basis-free-note');
+  if(old) old.remove();
+  if(!BASIS_FREE_TABS.has(tabId)) return;
+  const div = document.createElement('div');
+  div.className = 'legend basis-free-note';
+  div.innerHTML = '※ 本分頁僅呈現<b>實績／資訊</b>，不隨上方「期初目標／期中目標／前年比」切換而變動。';
+  panel.insertBefore(div, panel.firstChild);
 }
 document.getElementById("tabs").addEventListener("click", e=>{
   const btn = e.target.closest(".tab-btn");
@@ -1154,18 +1174,18 @@ function applyCompareMode(){
   document.querySelectorAll("#compare-toggle button").forEach(b=>{
     b.classList.toggle("active", b.dataset.mode === STATE.compareMode);
   });
-  // YoY モードでは対象外タブ（subtleでない通常タブのみ）を非表示。loader/converter は常に表示。
+  // YoY モードでは「FY25 にデータが存在しない」タブのみ非表示。loader/converter は常に表示。
   const yoy = STATE.compareMode === 'yoy';
   document.querySelectorAll(".tab-btn").forEach(b=>{
     if(b.classList.contains("subtle")) return;            // 匯入 / 轉換 は常時表示
     const tabId = b.dataset.tab;
-    const show  = !yoy || YOY_TABS.has(tabId);
+    const show  = !yoy || !YOY_HIDDEN_TABS.has(tabId);
     b.style.display = show ? '' : 'none';
   });
   // 期中目標：資料結構與期初目標相同（事業×通路×月），全分頁皆適用，不做限制
-  // YoYモードでアクティブタブが非表示になったら trend に切替
-  if(yoy && !YOY_TABS.has(STATE.activeTab) && STATE.activeTab !== 'loader' && STATE.activeTab !== 'converter'){
-    switchTab('trend');
+  // YoYモードで現在のタブが非表示になった場合のみ main に切替
+  if(yoy && YOY_HIDDEN_TABS.has(STATE.activeTab)){
+    switchTab('main');
   } else {
     // 現タブを再描画してラベル更新を反映
     if(STATE.budget) switchTab(STATE.activeTab);
