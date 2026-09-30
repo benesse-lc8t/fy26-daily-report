@@ -46,6 +46,48 @@ EXTRA_SUSPENSIONS = [
      'refs': ['https://news.pts.org.tw/article/817086']},
 ]
 
+# ══════════════════════════════════════════════════════════════════
+# 預購（尚未出貨）→ 不計入實績
+# ------------------------------------------------------------------
+# 商品停售後開放預購，但要等入庫才出貨。來源 Excel 會把預購單掛在
+# 「訂單日」，若直接計入實績等於把尚未發生的收入提前認列。
+# 這裡在解析階段就把符合規則的列分流到 preorderRows，
+# 不進 actualRows / actuals，但完整保留供「預購狀況」分頁追蹤。
+#
+# ⚠ 出貨後的認列：來源 Excel **不會**以出貨日重新開列（已向業務端確認），
+#   訂單列會一直掛在訂單日。因此出貨完成後必須手動把
+#   `recognizeMonth` 設為認列月份（例：'11月' 或 '12月'），
+#   屆時這些列會改以該月計入實績。在那之前維持 None＝不認列。
+PREORDER_RULES = [
+    {
+        'id': 'dianduo-tujian',
+        'title': '巧虎雙語點讀圖鑑',
+        'codes': ['20250FE00', '20250FXBH'],
+        'start': '2026-09-29',
+        'end':   '2026-11-26',
+        'recognizeMonth': None,          # ← 出貨認列後改為 '11月' 或 '12月'
+        'timeline': [
+            {'date': '2026-09-21', 'label': '陸續於各管道停售'},
+            {'date': '2026-09-29', 'label': '開始預購'},
+            {'date': '2026-11-26', 'label': '預購結束'},
+            {'date': '2026-12-01', 'label': '重新上架'},
+        ],
+        'note': '「巧虎雙語點讀圖鑑」9/21 陸續於各管道停售，9/29(二)–11/26(四) 進行預購，'
+                '12/1(二) 重新上架。預購須待 11 月底入庫後才出貨，故預購金額不計入實績。',
+    },
+]
+
+
+def preorder_match(code, date_str):
+    """回傳符合的預購規則；不符則 None。"""
+    if not code or not date_str:
+        return None
+    for rule in PREORDER_RULES:
+        if code in rule['codes'] and rule['start'] <= date_str <= rule['end']:
+            return rule
+    return None
+
+
 def normalize_biz(name):
     t = str(name).strip()
     return BIZ_NAME_MAP.get(t, t)
@@ -86,6 +128,7 @@ def main(excel_path):
     print(f'Loading {excel_path} …')
     wb = openpyxl.load_workbook(excel_path, data_only=True, read_only=True)
     actual_rows = []
+    preorder_rows = []      # 預購（未出貨）→ 不計入實績
 
     for sheet_name in wb.sheetnames:
         sname = sheet_name.strip()
@@ -153,17 +196,33 @@ def main(excel_path):
                 channel = cfg['fixed']
 
             code = '' if row[cfg['code']] is None else str(row[cfg['code']]).strip()
-            actual_rows.append({
+            dstr = parse_date(row[cfg['date']])
+            rec = {
                 'month': month_label, 'biz': biz, 'ch': channel,
                 'code': code, 'name': '',
                 'qty': qty, 'amt': round(amt, 2),
-                'date': parse_date(row[cfg['date']]),
-            })
+                'date': dstr,
+            }
+            rule = preorder_match(code, dstr)
+            if rule and not rule.get('recognizeMonth'):
+                rec['preorderId'] = rule['id']
+                preorder_rows.append(rec)          # 預購未出貨 → 不進實績
+                continue
+            if rule and rule.get('recognizeMonth'):
+                rec['preorderId'] = rule['id']     # 已出貨 → 改以認列月計入實績
+                rec['orderMonth'] = rec['month']
+                rec['month'] = rule['recognizeMonth']
+            actual_rows.append(rec)
             kept += 1
 
         print(f'  {sheet_name}: {kept} rows kept, {skip_zero} zero-amt skipped')
 
     print(f'Total: {len(actual_rows)} actualRows')
+    if preorder_rows:
+        pq = sum(r['qty'] for r in preorder_rows)
+        pa = sum(r['amt'] for r in preorder_rows)
+        print(f'預購（不計入實績）: {len(preorder_rows)} 列 / {pq:.0f} 件 / {pa:,.0f} 元'
+              f'  最後日期 {max(r["date"] for r in preorder_rows)}')
 
     # Build actuals aggregate
     actuals = {m: {'amount': defaultdict(lambda: defaultdict(float)),
@@ -190,6 +249,11 @@ def main(excel_path):
         data = json.load(f)
     data['actualRows'] = actual_rows
     data['actuals'] = actuals_plain
+    data['preorderRows'] = preorder_rows
+    data['preorderRules'] = [
+        {k: v for k, v in rule.items() if k != 'codes'} | {'codes': rule['codes']}
+        for rule in PREORDER_RULES
+    ]
     holiday_info = build_holiday_info(wb)
     data['holidayInfo'] = holiday_info
     print(f'holidayInfo: {len(holiday_info)} 筆（含 {len(EXTRA_SUSPENSIONS)} 停班停課）')

@@ -362,6 +362,70 @@
     .fcst-daily table.grid{font-size:12px}
   }
 
+  /* ===== 停售／預購（商品狀態）===== */
+  .po-banner{display:flex;align-items:center;gap:12px;background:#FFF7ED;border:1px solid #FDBA74;
+       border-left:5px solid #EA580C;border-radius:10px;padding:11px 16px;margin-bottom:14px;
+       cursor:pointer;transition:.12s}
+  .po-banner:hover{background:#FFEDD5}
+  .po-banner .po-ico{font-size:20px;line-height:1}
+  .po-banner .po-txt{flex:1;min-width:0;font-size:14px;color:#7C2D12;line-height:1.5}
+  .po-banner .po-txt b{color:#9A3412}
+  .po-banner .po-go{font-size:13px;font-weight:700;color:#9A3412;white-space:nowrap}
+  .po-state{display:inline-block;padding:3px 12px;border-radius:14px;font-size:13px;font-weight:700}
+  .po-state.stop{background:#FEE2E2;color:#B91C1C}
+  .po-state.pre{background:#FFEDD5;color:#9A3412}
+  .po-state.live{background:#DCFCE7;color:#15803D}
+  /* 時間軸 */
+  .po-timeline{display:flex;gap:0;margin:6px 0 4px;position:relative}
+  .po-tl-step{flex:1;min-width:0;text-align:center;position:relative;padding-top:26px}
+  .po-tl-step::before{content:"";position:absolute;top:9px;left:0;right:0;height:3px;background:var(--border)}
+  .po-tl-step:first-child::before{left:50%}
+  .po-tl-step:last-child::before{right:50%}
+  .po-tl-step.done::before{background:#FDBA74}
+  .po-tl-dot{position:absolute;top:3px;left:50%;transform:translateX(-50%);width:15px;height:15px;
+       border-radius:50%;background:#fff;border:3px solid var(--border);z-index:1}
+  .po-tl-step.done .po-tl-dot{border-color:#EA580C;background:#EA580C}
+  .po-tl-step.now .po-tl-dot{border-color:#EA580C;background:#fff;box-shadow:0 0 0 4px rgba(234,88,12,.22)}
+  .po-tl-date{font-size:13px;font-weight:700;color:var(--ink);font-variant-numeric:tabular-nums}
+  .po-tl-lbl{font-size:12px;color:var(--secondary);margin-top:2px;line-height:1.35}
+  .po-tl-step.now .po-tl-date,.po-tl-step.now .po-tl-lbl{color:#9A3412}
+  /* KPI */
+  .po-kpi-row{display:grid;grid-template-columns:repeat(4,1fr);gap:12px;margin-bottom:14px}
+  .po-kpi{background:var(--stripe);border:0.5px solid var(--border);border-radius:10px;
+       padding:12px 16px;position:relative;overflow:hidden}
+  .po-kpi::before{content:"";position:absolute;left:0;top:0;width:4px;height:100%;background:var(--accent)}
+  .po-kpi.warn::before{background:#EA580C}
+  .po-kpi.bad::before{background:var(--line)}
+  .po-kpi .k{font-size:14px;color:var(--secondary);font-weight:600}
+  .po-kpi .v{font-size:32px;font-weight:700;color:var(--ink);line-height:1.15;margin-top:4px;
+       font-variant-numeric:tabular-nums;font-feature-settings:var(--font-num-feat)}
+  .po-kpi .v .u{font-size:15px;color:var(--muted);font-weight:500;margin-left:3px}
+  .po-kpi .s{font-size:12.5px;color:var(--secondary);margin-top:3px;line-height:1.4}
+  .po-main-row{display:flex;gap:14px;align-items:stretch}
+  .po-chart-box{flex:1.1;min-width:0;min-height:300px;position:relative}
+  .po-chart-box canvas{max-width:100%}
+  .po-side{flex:1;min-width:0}
+  .po-side h3{margin:0 0 8px 0;font-size:15px;font-weight:700;color:var(--accent-dark)}
+  .po-side table.grid{font-size:13px}
+  .po-side table.grid th{padding:6px 8px;font-size:12.5px}
+  .po-side table.grid td{padding:7px 8px}
+  @media(max-width:1100px){
+    .po-kpi-row{grid-template-columns:repeat(2,1fr)}
+    .po-main-row{flex-wrap:wrap}
+    .po-chart-box,.po-side{flex:1 1 100%}
+  }
+  @media(max-width:640px){
+    .po-kpi-row{grid-template-columns:1fr}
+    .po-kpi .v{font-size:27px}
+    .po-timeline{flex-direction:column;gap:12px}
+    .po-tl-step{padding-top:0;padding-left:26px;text-align:left}
+    .po-tl-step::before{top:0;bottom:0;left:7px;right:auto;width:3px;height:auto}
+    .po-tl-step:first-child::before{left:7px;top:50%}
+    .po-tl-step:last-child::before{left:7px;bottom:50%;top:0}
+    .po-tl-dot{top:2px;left:0;transform:none}
+    .po-banner{flex-wrap:wrap}
+  }
+
   /* Filter row (SKU tab etc.) */
   .filter-row{display:flex;flex-wrap:wrap;gap:8px;align-items:center;margin-bottom:10px;padding:12px 16px;background:var(--stripe);border:0.5px solid var(--border);border-radius:8px}
   .filter-row label{font-size:14px;color:var(--secondary);font-weight:500}
@@ -639,6 +703,7 @@
     <button class="tab-btn" data-tab="aov">AOV</button>
     <button class="tab-btn" data-tab="sku">TOP20</button>
     <button class="tab-btn" data-tab="handpuppet">手偶</button>
+    <button class="tab-btn" data-tab="preorder">停售／預購</button>
   </div>
   <div class="tab-divider"></div>
   <div class="tab-col tab-col-2">
@@ -666,6 +731,8 @@
 
   <!-- ===== Tab 1: Main Dashboard ===== -->
   <div class="tab-panel" id="panel-main">
+
+    <div id="po-banner-slot"></div>
 
     <div class="card">
       <h2>全社業績 <span class="pill" id="overall-pill">未載入</span></h2>
@@ -781,6 +848,7 @@
   <div class="tab-panel" id="panel-handpuppet"></div>
   <div class="tab-panel" id="panel-kol"></div>
   <div class="tab-panel" id="panel-holiday"></div>
+  <div class="tab-panel" id="panel-preorder"></div>
 
   <!-- ===== Tab 14: Loader ===== -->
   <div class="tab-panel" id="panel-loader">
@@ -1068,6 +1136,7 @@ function switchTab(tabId){
   else if(tabId === "handpuppet") renderHandPuppetTab();
   else if(tabId === "kol") renderKolTab();
   else if(tabId === "holiday") renderHolidayTab();
+  else if(tabId === "preorder") renderPreorderTab();
   else if(tabId === "cards") renderCardsTab();
 }
 document.getElementById("tabs").addEventListener("click", e=>{
@@ -1233,6 +1302,8 @@ function applyDataJSON(data){
   STATE.holidays = data.holidays ? new Set(data.holidays) : null;
   STATE.fy25 = data.fy25 || null;
   STATE.midTarget = data.midTarget || null;
+  STATE.preorderRows  = data.preorderRows  || [];
+  STATE.preorderRules = data.preorderRules || [];
   STATE.kolSchedule = data.kolSchedule || [];
   STATE.holidayInfo = data.holidayInfo || [];
   STATE.generatedAt = data.generatedAt;
@@ -2217,6 +2288,7 @@ function initMonthSelector(){
 function renderMainTab(){
   if(!STATE.budget){ return; }
   destroyCharts();
+  poRenderBanner();
   renderOverallKPIs();
   renderBizSection();
   renderChannelSection();
@@ -5287,6 +5359,278 @@ function renderKolTab(){
 /* ============================================================
    Tab: 國定假日與停班課資訊表（FY26：2026/4/1〜2027/3/31）
    ============================================================ */
+/* ============================================================
+   停售／預購（商品狀態）
+
+   來源：data.json 的 preorderRules（規則＋時間軸）與 preorderRows（預購明細）。
+   預購列在 update_data.py 解析階段就已從 actualRows 分流出來，
+   故全站實績一律不含預購；本分頁單獨追蹤。
+
+   ⚠ 出貨後的認列：來源 Excel 不會以出貨日重新開列，訂單會一直掛在訂單日。
+     出貨完成後須在 update_data.py 把該規則的 recognizeMonth 設為認列月份。
+   ============================================================ */
+// 小額用元、大額用萬。預購初期金額很小，直接套 fmtAmt() 會把 13,709 元顯示成「1 萬」。
+function poMoney(v){
+  if(v == null || !isFinite(v)) return '—';
+  return Math.abs(v) < 100000 ? `${Math.round(v).toLocaleString()} 元` : `${fmtAmt(v)} 萬`;
+}
+function poRules(){ return STATE.preorderRules || []; }
+function poRows(rule){
+  return (STATE.preorderRows || []).filter(r => r.preorderId === rule.id);
+}
+function poToday(){
+  // 以資料最終日為「今天」，避免瀏覽器時鐘與資料不同步
+  let latest = null;
+  for(const r of (STATE.actualRows || [])){
+    if(r.date && (!latest || r.date > latest)) latest = r.date;
+  }
+  return latest ? dateToISO(latest) : null;
+}
+function poDaysBetween(a, b){
+  return Math.round((Date.parse(b + 'T00:00:00Z') - Date.parse(a + 'T00:00:00Z')) / 86400000);
+}
+// 目前處於時間軸的哪一段
+function poPhase(rule, today){
+  const tl = rule.timeline || [];
+  const stop = tl.find(t => t.label.includes('停售'));
+  const relaunch = tl.find(t => t.label.includes('重新上架'));
+  if(!today) return { key:'unknown', label:'—', cls:'pre' };
+  if(relaunch && today >= relaunch.date) return { key:'live', label:'已重新上架', cls:'live' };
+  if(today >= rule.start && today <= rule.end) return { key:'pre', label:'預購中', cls:'pre' };
+  if(stop && today >= stop.date && today < rule.start) return { key:'stop', label:'停售中（尚未開放預購）', cls:'stop' };
+  if(rule.end && today > rule.end) return { key:'wait', label:'預購結束・等待上架', cls:'stop' };
+  return { key:'before', label:'販售中', cls:'live' };
+}
+
+// 該規則涵蓋商品的實績聚合（停售前）
+function poActuals(rule){
+  const codes = new Set(rule.codes || []);
+  const byMonth = {}, byCh = {}, byCode = {};
+  let total = 0, qty = 0, lastDate = null;
+  for(const r of (STATE.actualRows || [])){
+    if(!codes.has(r.code)) continue;
+    const iso = dateToISO(r.date);
+    byMonth[r.month] = (byMonth[r.month] || 0) + r.amt;
+    byCh[r.ch]       = (byCh[r.ch] || 0) + r.amt;
+    byCode[r.code]   = byCode[r.code] || { amt:0, qty:0 };
+    byCode[r.code].amt += r.amt; byCode[r.code].qty += (r.qty || 0);
+    total += r.amt; qty += (r.qty || 0);
+    if(iso && (!lastDate || iso > lastDate)) lastDate = iso;
+  }
+  return { byMonth, byCh, byCode, total, qty, lastDate };
+}
+
+// 停售前 N 日的日均（用來推估停售期間的機會損失）
+function poDailyRate(rule, days){
+  const codes = new Set(rule.codes || []);
+  const stop = (rule.timeline || []).find(t => t.label.includes('停售'));
+  if(!stop) return null;
+  const end = stop.date;
+  const start = dateToISO(new Date(Date.parse(end + 'T00:00:00Z') - (days - 1) * 86400000));
+  let amt = 0, q = 0;
+  for(const r of (STATE.actualRows || [])){
+    if(!codes.has(r.code)) continue;
+    const iso = dateToISO(r.date);
+    if(!iso || iso < start || iso > end) continue;
+    amt += r.amt; q += (r.qty || 0);
+  }
+  return { start, end, days, amt, qty:q, perDay: amt / days, perDayQty: q / days };
+}
+
+// 同期間「學習商品」整體，用來算占比
+function poShareOfBiz(rule, span){
+  if(!span) return null;
+  let tot = 0;
+  for(const r of (STATE.actualRows || [])){
+    if(r.biz !== '學習商品') continue;
+    const iso = dateToISO(r.date);
+    if(!iso || iso < span.start || iso > span.end) continue;
+    tot += r.amt;
+  }
+  return tot > 0 ? span.amt / tot * 100 : null;
+}
+
+function poRenderBanner(){
+  const slot = document.getElementById('po-banner-slot');
+  if(!slot) return;
+  const rules = poRules();
+  if(!rules.length){ slot.innerHTML = ''; return; }
+  const today = poToday();
+  slot.innerHTML = rules.map(rule => {
+    const ph = poRows(rule);
+    const pq = ph.reduce((s, r) => s + (r.qty || 0), 0);
+    const pa = ph.reduce((s, r) => s + r.amt, 0);
+    const phase = poPhase(rule, today);
+    const relaunch = (rule.timeline || []).find(t => t.label.includes('重新上架'));
+    return `<div class="po-banner" data-po-go="1">
+      <span class="po-ico">📦</span>
+      <span class="po-txt"><b>${rule.title}</b> <span class="po-state ${phase.cls}">${phase.label}</span>
+        　預購累計 <b>${pq.toLocaleString()} 件／${poMoney(pa)}</b>（<b>不計入實績</b>，須待入庫出貨）${relaunch ? `　${relaunch.date.slice(5).replace('-','/')} 重新上架` : ''}</span>
+      <span class="po-go">查看詳情 ›</span>
+    </div>`;
+  }).join('');
+  slot.querySelectorAll('[data-po-go]').forEach(el => el.onclick = () => switchTab('preorder'));
+}
+
+function poTimelineHTML(rule, today){
+  const tl = rule.timeline || [];
+  return `<div class="po-timeline">` + tl.map((t, i) => {
+    const done = today && today >= t.date;
+    const next = tl[i + 1];
+    const now = today && today >= t.date && (!next || today < next.date);
+    return `<div class="po-tl-step${done ? ' done' : ''}${now ? ' now' : ''}">
+      <span class="po-tl-dot"></span>
+      <div class="po-tl-date">${t.date.slice(5).replace('-', '/')}</div>
+      <div class="po-tl-lbl">${t.label}</div>
+    </div>`;
+  }).join('') + `</div>`;
+}
+
+function poCardHTML(rule){
+  const today = poToday();
+  const phase = poPhase(rule, today);
+  const act   = poActuals(rule);
+  const pre   = poRows(rule);
+  const preQ  = pre.reduce((s, r) => s + (r.qty || 0), 0);
+  const preA  = pre.reduce((s, r) => s + r.amt, 0);
+  const rate  = poDailyRate(rule, 30);
+  const share = poShareOfBiz(rule, rate);
+
+  const stop     = (rule.timeline || []).find(t => t.label.includes('停售'));
+  const relaunch = (rule.timeline || []).find(t => t.label.includes('重新上架'));
+  const gapDays  = (stop && relaunch) ? poDaysBetween(stop.date, relaunch.date) - 1 : null;
+  const lossEst  = (rate && gapDays) ? rate.perDay * gapDays : null;
+  const elapsedGap = (stop && today) ? Math.max(0, poDaysBetween(stop.date, today)) : null;
+
+  // 預購進度
+  const preTotal   = poDaysBetween(rule.start, rule.end) + 1;
+  const preElapsed = today ? Math.min(preTotal, Math.max(0, poDaysBetween(rule.start, today) + 1)) : 0;
+
+  let h = `<div class="card">
+    <h2>${rule.title} <span class="pill">${phase.label}</span></h2>
+    <div class="legend" style="margin-bottom:12px">${rule.note}</div>
+    ${poTimelineHTML(rule, today)}
+    <div class="legend" style="margin:10px 0 14px">
+      對象製編：${(rule.codes || []).map(c => {
+        const nm = (STATE.master && STATE.master.products[c]) ? STATE.master.products[c].name : '';
+        return `<b>${c}</b>${nm ? ` ${nm}` : ''}`;
+      }).join('、')}
+    </div>
+    <div class="po-kpi-row">
+      <div class="po-kpi">
+        <div class="k">停售前 FY26 累計實績</div>
+        <div class="v">${fmtAmt(act.total)}<span class="u">萬</span></div>
+        <div class="s">${act.qty.toLocaleString()} 件${share != null ? `　停售前 30 日占學習商品 <b>${share.toFixed(1)}%</b>` : ''}</div>
+      </div>
+      <div class="po-kpi warn">
+        <div class="k">預購累計（不計入實績）</div>
+        <div class="v">${preQ.toLocaleString()}<span class="u">件</span></div>
+        <div class="s">${poMoney(preA)}　預購期第 ${preElapsed}/${preTotal} 天</div>
+      </div>
+      <div class="po-kpi bad">
+        <div class="k">停售空窗</div>
+        <div class="v">${gapDays != null ? gapDays : '—'}<span class="u">天</span></div>
+        <div class="s">${stop ? `${stop.date.slice(5).replace('-','/')}～${relaunch ? relaunch.date.slice(5).replace('-','/') : '?'}` : ''}${elapsedGap != null ? `　已過 ${elapsedGap} 天` : ''}</div>
+      </div>
+      <div class="po-kpi bad">
+        <div class="k">機會損失推估</div>
+        <div class="v">${lossEst != null ? fmtAmt(lossEst) : '—'}<span class="u">萬</span></div>
+        <div class="s">${rate ? `停售前 30 日日均 ${(rate.perDay/10000).toFixed(2)} 萬 × ${gapDays} 天` : ''}</div>
+      </div>
+    </div>
+
+    <div class="po-main-row">
+      <div class="po-chart-box"><canvas id="po-chart-${rule.id}"></canvas></div>
+      <div class="po-side">
+        <h3>停售前・通路別占比</h3>
+        <div class="scroll-x"><table class="grid">
+          <thead><tr><th class="l1">通路</th><th class="l1">實績（萬）</th><th class="l1">占比</th></tr></thead>
+          <tbody>`;
+  const chs = Object.entries(act.byCh).sort((a, b) => b[1] - a[1]);
+  for(const [c, v] of chs){
+    h += `<tr><td class="dim">${c}</td><td>${fmtAmt(v)}</td><td>${act.total > 0 ? (v / act.total * 100).toFixed(1) : '0.0'}%</td></tr>`;
+  }
+  h += `<tr class="total"><td class="dim">合計</td><td>${fmtAmt(act.total)}</td><td>100.0%</td></tr>
+          </tbody></table></div>
+        <h3 style="margin-top:14px">預購明細（不計入實績）</h3>
+        <div class="scroll-x"><table class="grid">
+          <thead><tr><th class="l1">日期</th><th class="l1">通路</th><th class="l1">件數</th><th class="l1">金額（元）</th></tr></thead>
+          <tbody>`;
+  if(pre.length === 0){
+    h += `<tr><td class="na" colspan="4" style="text-align:center;padding:14px">尚無預購資料</td></tr>`;
+  } else {
+    for(const r of pre.slice().sort((a, b) => a.date < b.date ? 1 : -1)){
+      h += `<tr><td class="dim">${r.date.slice(5).replace('-','/')}</td><td>${r.ch}</td>`
+         + `<td>${(r.qty || 0).toLocaleString()}</td><td>${Math.round(r.amt).toLocaleString()}</td></tr>`;
+    }
+    h += `<tr class="total"><td class="dim">合計</td><td>—</td><td>${preQ.toLocaleString()}</td><td>${Math.round(preA).toLocaleString()}</td></tr>`;
+  }
+  h += `</tbody></table></div>
+      </div>
+    </div>
+    <div class="legend">
+      ※ <b>預購金額不計入實績</b>：來源 Excel 會把預購單掛在訂單日，但商品須待 11 月底入庫後才出貨，
+      直接計入等於提前認列尚未發生的收入。系統在解析階段就將 ${rule.start.slice(5).replace('-','/')}～${rule.end.slice(5).replace('-','/')}
+      期間的對象製編分流到本分頁，全站其他分頁的實績一律不含這些金額。
+      <b style="color:var(--bad)">出貨完成後須將認列月份寫回 <code>scripts/update_data.py</code> 的 <code>recognizeMonth</code></b>
+      （目前為未認列），屆時這些金額才會計入該月實績。<br>
+      ※ <b>機會損失推估</b>為參考值：以停售前 30 日（${rate ? rate.start.slice(5).replace('-','/') + '～' + rate.end.slice(5).replace('-','/') : '—'}）
+      的日均 × 停售空窗天數計算，假設「若未停售則維持原銷售速度」。實際會受季節性、
+      替代商品排擠、預購轉單等因素影響，<b>不可直接當作損失金額對外引用</b>。
+    </div>
+  </div>`;
+  return h;
+}
+
+function poRenderChart(rule){
+  const cid = 'po-chart-' + rule.id;
+  destroyChart(cid);
+  const canvas = document.getElementById(cid);
+  if(!canvas || typeof Chart === 'undefined') return;
+  const act = poActuals(rule);
+  const labels = MONTHS.filter(m => act.byMonth[m] != null);
+  const data = labels.map(m => +(act.byMonth[m] / 10000).toFixed(1));
+  const stopM = (rule.timeline || []).find(t => t.label.includes('停售'));
+  const stopMonth = stopM ? `${parseInt(stopM.date.slice(5, 7), 10)}月` : null;
+  STATE.charts[cid] = new Chart(canvas.getContext('2d'), {
+    type: 'bar',
+    data: { labels, datasets: [{
+      label: '月別實績（萬）', data,
+      backgroundColor: labels.map(m => m === stopMonth ? '#FDBA74' : '#7DD3FC'),
+      borderColor:     labels.map(m => m === stopMonth ? '#EA580C' : '#0284C7'),
+      borderWidth: 1, borderRadius: 4,
+    }] },
+    options: {
+      responsive: true, maintainAspectRatio: false,
+      plugins: {
+        legend: { display: false },
+        title: { display: true, text: `月別實績推移（${stopMonth || ''} 為停售月，僅含停售前）`,
+                 font: { size: 12, weight: '600' }, color: '#0C4A6E' },
+        tooltip: { backgroundColor: '#0C4A6E', titleColor: '#fff', bodyColor: '#fff',
+                   callbacks: { label: c => `${Number(c.parsed.y).toLocaleString()} 萬` } },
+      },
+      scales: {
+        y: { beginAtZero: true, title: { display: true, text: '萬元', font: { size: 11, weight: '600' }, color: '#0369A1' },
+             ticks: { font: { size: 11 }, color: '#0369A1' }, grid: { color: '#F0F9FF' } },
+        x: { ticks: { font: { size: 11, weight: '600' }, color: '#0C4A6E' }, grid: { display: false } },
+      },
+    },
+  });
+}
+
+function renderPreorderTab(){
+  const panel = document.getElementById('panel-preorder');
+  if(!panel) return;
+  destroyCharts();
+  const rules = poRules();
+  if(!rules.length){
+    panel.innerHTML = '<div class="placeholder">目前沒有停售／預購中的商品。</div>';
+    return;
+  }
+  panel.innerHTML = rules.map(poCardHTML).join('');
+  rules.forEach(poRenderChart);
+}
+
 function renderHolidayTab(){
   const panel = document.getElementById("panel-holiday");
   destroyCharts();

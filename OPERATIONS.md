@@ -55,6 +55,23 @@ PLAYWRIGHT_BROWSERS_PATH=/opt/pw-browsers node <e2e腳本>
 > 測試時 console 會出現 `ERR_TUNNEL_CONNECTION_FAILED`（Chart.js 會自動退回
 > 本機 `chart.umd.js`）。**這是沙箱限制，不是網站問題**，實機不會發生。
 
+## 停售／預購商品（預購不計入實績）
+規則寫在 `scripts/update_data.py` 的 **`PREORDER_RULES`**，解析階段就把符合的列
+分流到 `data.json` 的 `preorderRows`，**不進 actualRows / actuals**，儀表板另有
+「停售／預購」分頁追蹤，主儀表板頂部有提醒條。
+
+目前規則：**巧虎雙語點讀圖鑑**（`20250FE00`、`20250FXBH`）
+9/21 各管道停售 → 9/29～11/26 預購 → 12/1 重新上架。
+預購須待 11 月底入庫後出貨，故不計入實績。
+
+> ⚠ **出貨後務必手動認列**：來源 Excel **不會**以出貨日重新開列，訂單會一直掛在
+> 訂單日。出貨完成後必須把該規則的 `recognizeMonth` 由 `None` 改為認列月份
+> （例 `'11月'` 或 `'12月'`），重跑 `update_data.py`，這些金額才會計入該月實績。
+> **忘記改＝該筆營收永久漏算。**
+
+新增其他停售商品時，在 `PREORDER_RULES` 加一組 dict 即可（id / title / codes /
+start / end / recognizeMonth / timeline / note），前端會自動生成對應區塊。
+
 ## 其他更新腳本
 - **期中目標**：`python3 scripts/update_midterm.py <期中目標.xlsx> [--version 2607]`
   寫入 `data.json` 的 `midTarget`（金額＋套數，事業×通路×月），其餘鍵完全不動。
@@ -80,7 +97,7 @@ PLAYWRIGHT_BROWSERS_PATH=/opt/pw-browsers node <e2e腳本>
 ## 儀表板功能備忘
 - 預設月份依「今天實際月份」自動切換。
 - 身份客製化：`?role=` 連結 → `gm / strategy / finance / product / marketing / tmsales / other`。
-- 分頁：主儀表板、前日業績、業績卡片、月別推移、週別趨勢、對目標、AOV、TOP20、手偶、
+- 分頁：主儀表板、前日業績、業績卡片、月別推移、週別趨勢、對目標、AOV、TOP20、手偶、停售／預購、
   事業別(學習商品/學習周邊/生活周邊/Mirafeel/數位典藏)、通路別、KOL檔期、國定假日／停班課。
 - 達成率配色規則：**≥100% 綠、<100% 紅**（無黃色）；圖表達成率折線維持紅色、只有數字標籤依此變色。
 - **三個比較基準**（header 切換鈕）：`期初目標`（budget）／`期中目標`（midTarget）／`前年比`（fy25）。
