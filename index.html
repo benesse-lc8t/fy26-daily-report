@@ -242,9 +242,17 @@
   .kpi-card .rate-row.dual .rate-cell{display:flex;align-items:baseline;justify-content:space-between;gap:10px}
   .kpi-card .rate-row.dual .rate-cell + .rate-cell{margin-top:7px;padding-top:7px;border-top:1px dashed var(--border)}
   .kpi-card .rate-row.dual .rate-lbl{font-size:15px;margin-bottom:0;white-space:nowrap}
-  .kpi-card .rate-row.dual .rate{font-size:38px;line-height:1.1;white-space:nowrap}
+  .kpi-card .rate-row.dual .rate{font-size:30px;line-height:1.1;white-space:nowrap}
+  /* 目前選中的比較基準：底色標示，讓人知道下方表格／圖表是以哪個基準計算 */
+  .kpi-card .rate-cell.rate-active{background:var(--subheader);border-radius:7px;
+       padding:4px 9px;margin:3px -9px 0;border-top:none}
+  .kpi-card .rate-cell.rate-active .rate-lbl{font-weight:700;color:var(--accent-dark)}
+  .kpi-card .rate-cell.rate-pace{border-top:1px dashed var(--border);margin-top:7px;padding-top:7px}
+  .kpi-card .rate-cell.rate-pace .rate{font-size:26px}
+  .kpi-card .rate-cell.rate-pace .rate-lbl{font-style:normal;color:var(--secondary)}
   .kpi-card .kpi-note{margin-top:9px;font-size:12.5px;line-height:1.45;color:var(--secondary)}
-  @media(max-width:640px){ .kpi-card .rate-row.dual .rate{font-size:32px} }
+  @media(max-width:640px){ .kpi-card .rate-row.dual .rate{font-size:26px}
+                           .kpi-card .rate-cell.rate-pace .rate{font-size:23px} }
 
   /* Pace banner */
   .pace-banner{background:var(--stripe);border:0.5px solid var(--border);border-radius:10px;margin-top:8px;padding:10px 0;display:grid;grid-template-columns:1.3fr 1fr 1.2fr;position:relative;overflow:hidden;align-items:center}
@@ -601,7 +609,8 @@
     </select>
   </div>
   <div class="compare-toggle" id="compare-toggle" role="tablist" aria-label="比較模式">
-    <button data-mode="budget" class="active" type="button">預算比</button>
+    <button data-mode="budget" class="active" type="button">期初目標</button>
+    <button data-mode="mid" type="button">期中目標</button>
     <button data-mode="yoy" type="button">前年比</button>
   </div>
   <div class="header-actions">
@@ -671,7 +680,7 @@
         <div class="ach-table"><table class="grid" id="biz-table"></table></div>
         <div class="ach-chart"><div class="chart-box"><canvas id="chart-biz"></canvas></div></div>
       </div>
-      <div class="legend">※ 棒：累計預算 vs 累計實績（萬元，左軸）／折線：累計達成率（%，右軸）。</div>
+      <div class="legend">※ 棒：累計目標 vs 累計實績（萬元，左軸）／折線：累計達成率（%，右軸）。依上方比較基準切換。</div>
     </div>
 
     <div class="card">
@@ -680,7 +689,7 @@
         <div class="ach-table"><table class="grid" id="ch-table"></table></div>
         <div class="ach-chart"><div class="chart-box"><canvas id="chart-ch"></canvas></div></div>
       </div>
-      <div class="legend">※ 棒：累計預算 vs 累計實績（萬元，左軸）／折線：累計達成率（%，右軸）。</div>
+      <div class="legend">※ 棒：累計目標 vs 累計實績（萬元，左軸）／折線：累計達成率（%，右軸）。依上方比較基準切換。</div>
     </div>
 
   </div>
@@ -714,7 +723,7 @@
         <div class="kpi-card" id="prevday-kpi"></div>
         <div class="prevday-chart-box"><canvas id="prevday-chart"></canvas></div>
       </div>
-      <div class="legend">※ 「預估目標」＝所選日期中屬於工作天的天數 ÷ 當月總工作天數 × 當月預算，跨月份時逐月估算後加總；如所選日期均為假日，則預估目標為 0，達成率不予顯示。上方篩選器可縮限事業別／管道別範圍，將同步影響本卡片、下方拆解表與直條圖組成。</div>
+      <div class="legend">※ 「預估目標」＝所選日期中屬於工作天的天數 ÷ 當月總工作天數 × 當月目標（依上方比較基準），跨月份時逐月估算後加總；如所選日期均為假日，則預估目標為 0，達成率不予顯示。上方篩選器可縮限事業別／管道別範圍，將同步影響本卡片、下方拆解表與直條圖組成。</div>
     </div>
 
     <div class="card">
@@ -775,7 +784,7 @@
     <div class="card subtle">
       <h2>📥 資料匯入</h2>
       <div class="card-desc">
-        將 3 個 Excel 檔案一次拖入下方區域，系統會根據檔名自動分類並處理。預算檔為必要，實績檔與商品主檔為選填。<br>
+        將 3 個 Excel 檔案一次拖入下方區域，系統會根據檔名自動分類並處理。期初目標檔為必要，實績檔與商品主檔為選填。<br>
         <strong>「實績明細」原始橫向檔可直接拖入</strong>，系統會自動轉換為縱向格式後載入（不需另外使用轉換器）。
       </div>
       <div class="dropzone" id="dropzone">
@@ -785,7 +794,7 @@
         <div class="dropzone-sub">或 <a>點擊選擇檔案</a></div>
         <div class="dropzone-hint">
           自動辨識：
-          <code>管道期初目標</code> → 📊 預算 ｜
+          <code>管道期初目標</code> → 📊 期初目標 ｜
           <code>實績明細</code> → 🔄 實績（自動轉換）｜
           <code>轉換後</code> → 📈 實績（直接載入）｜
           <code>商品品號主檔</code> → 📦 主檔
@@ -803,7 +812,7 @@
           📤 資料匯出（管理者用）
         </h3>
         <div style="font-size:11px;color:var(--secondary);margin-bottom:12px;line-height:1.6;padding-left:13px">
-          將目前載入的所有資料（預算 / 實績 / 主檔 / 工作日 / 假日）匯出為單一 <code style="background:var(--stripe);padding:1px 5px;border-radius:3px;color:var(--accent-dark)">data.json</code> 檔案。<br>
+          將目前載入的所有資料（期初目標 / 期中目標 / 實績 / 主檔 / 工作日 / 假日）匯出為單一 <code style="background:var(--stripe);padding:1px 5px;border-radius:3px;color:var(--accent-dark)">data.json</code> 檔案。<br>
           上傳到 GitHub repository 根目錄後，所有使用者開啟儀表板時會自動讀取最新資料（透過 Netlify 自動佈署）。
         </div>
         <div class="action-row" style="margin-top:0;padding-left:13px">
@@ -866,7 +875,7 @@ const MONTHS = ["4月","5月","6月","7月","8月","9月","10月","11月","12月
 const ROLE_PRESETS = [
   { id:'gm',        label:'總經理',      defaultTab:'main',        note:'全社整體 · 前日業績' },
   { id:'strategy',  label:'經營戰略',    defaultTab:'main',        note:'全社 · KPI · 資料檢視' },
-  { id:'finance',   label:'財務',        defaultTab:'vstarget',    note:'對目標 · 預算達成' },
+  { id:'finance',   label:'財務',        defaultTab:'vstarget',    note:'對目標 · 目標達成' },
   { id:'product',   label:'商品處',      defaultTab:'biz-學習商品', note:'學習商品 · 周邊 · 數位典藏' },
   { id:'marketing', label:'整合行銷',    defaultTab:'ch-WEB',      note:'WEB 通路達成狀況' },
   { id:'tmsales',   label:'電銷／CS',    defaultTab:'ch-TM',       note:'TM 電話銷售通路' },
@@ -975,8 +984,9 @@ const STATE = {
   selectedMonth:null,
   charts:{},              // canvasId → Chart instance
   activeTab:"main",
-  compareMode:"budget",   // 'budget' | 'yoy'
+  compareMode:"budget",   // 'budget'（期初目標）| 'mid'（期中目標）| 'yoy'（前年實績）
   fy25:null,              // {amount, qty, daily}: FY25 actuals for YoY comparison
+  midTarget:null,         // {amount, qty, version, actualMonths, ...}: 期中修正目標
   prevDaySelected:null,   // Set of "YYYY-MM-DD"：「前日業績」タブで選択された日付
   prevDayCollapsed:null,  // Set of monthLabel：「前日業績」タブで折りたたまれている月
   prevDayBizFilter:null,  // Set of biz：絞り込みフィルタ（事業別）
@@ -996,11 +1006,40 @@ const YOY_TABS = new Set([
   "ch-WEB","ch-TM","ch-KOL","ch-EC",
 ]);
 
-/* ---------- Compare-mode helpers ---------- */
-function isYoY(){ return STATE.compareMode === 'yoy' && STATE.fy25; }
-function targetLabel(){ return isYoY() ? '昨年實績' : '預算'; }
-function diffLabel(){   return isYoY() ? '昨年差'   : '預算差'; }
-function rateLabel(){   return isYoY() ? '前年比'   : '達成率'; }
+/* ---------- Compare-mode helpers ----------
+   三個比較基準：
+     budget = 期初目標（data.json 的 budget，年度一開始訂的）
+     mid    = 期中目標（data.json 的 midTarget，期中修正版）
+     yoy    = 前年實績（data.json 的 fy25）
+   三者結構相同：{amount|qty}[事業][通路][月]，故所有聚合函式共用同一套存取方式。
+   所選基準不存在時自動退回 budget，避免整頁空白。                        */
+function cmpMode(){
+  const m = STATE.compareMode;
+  if(m === 'yoy' && STATE.fy25)      return 'yoy';
+  if(m === 'mid' && STATE.midTarget) return 'mid';
+  return 'budget';
+}
+function cmpSource(){
+  const m = cmpMode();
+  return m === 'yoy' ? STATE.fy25 : (m === 'mid' ? STATE.midTarget : STATE.budget);
+}
+function isYoY(){ return cmpMode() === 'yoy'; }
+function isMid(){ return cmpMode() === 'mid'; }
+function targetLabel(){ const m=cmpMode(); return m==='yoy' ? '昨年實績' : (m==='mid' ? '期中目標' : '期初目標'); }
+function diffLabel(){   const m=cmpMode(); return m==='yoy' ? '昨年差'   : (m==='mid' ? '期中差'   : '期初差'); }
+function rateLabel(){   const m=cmpMode(); return m==='yoy' ? '前年比'   : (m==='mid' ? '期中達成率' : '期初達成率'); }
+
+// 任一基準的金額／套數聚合（不受目前 compareMode 影響），供 KPI 卡三基準並列使用
+function sumFrom(src, kind, biz, ch, months){
+  if(!src || !src[kind]) return null;
+  const bizes = biz==='all' ? BIZ_LIST_TOTAL : (Array.isArray(biz)?biz:[biz]);
+  const chs   = ch==='all'  ? CHANNEL_LIST   : (Array.isArray(ch)?ch:[ch]);
+  let s = 0;
+  for(const m of months) for(const b of bizes) for(const c of chs){
+    s += (src[kind][b]?.[c]?.[m]) || 0;
+  }
+  return s;
+}
 
 /* ---------- Tab navigation ---------- */
 function switchTab(tabId){
@@ -1051,6 +1090,7 @@ function applyCompareMode(){
     const show  = !yoy || YOY_TABS.has(tabId);
     b.style.display = show ? '' : 'none';
   });
+  // 期中目標：資料結構與期初目標相同（事業×通路×月），全分頁皆適用，不做限制
   // YoYモードでアクティブタブが非表示になったら trend に切替
   if(yoy && !YOY_TABS.has(STATE.activeTab) && STATE.activeTab !== 'loader' && STATE.activeTab !== 'converter'){
     switchTab('trend');
@@ -1065,7 +1105,11 @@ document.getElementById("compare-toggle").addEventListener("click", e=>{
   const newMode = btn.dataset.mode;
   if(newMode === STATE.compareMode) return;
   if(newMode === 'yoy' && !STATE.fy25){
-    alert('FY25 前年實績資料尚未載入（data.json に fy25 鍵不存在）');
+    alert('FY25 前年實績資料尚未載入（data.json 無 fy25 鍵）');
+    return;
+  }
+  if(newMode === 'mid' && !STATE.midTarget){
+    alert('期中目標資料尚未載入。\n請先執行：python3 scripts/update_midterm.py <期中目標.xlsx>');
     return;
   }
   STATE.compareMode = newMode;
@@ -1114,7 +1158,7 @@ function updateExportButton(){
     btn.disabled = false;
     if(info){
       const monthCount = STATE.actuals ? Object.keys(STATE.actuals).length : 0;
-      info.textContent = `已載入：預算 ✓ ${monthCount > 0 ? `/ 實績 ${monthCount} 個月 ` : ''}${STATE.master ? `/ 主檔 ${Object.keys(STATE.master.products).length} 件商品` : ''}`;
+      info.textContent = `已載入：期初目標 ✓ ${monthCount > 0 ? `/ 實績 ${monthCount} 個月 ` : ''}${STATE.master ? `/ 主檔 ${Object.keys(STATE.master.products).length} 件商品` : ''}`;
     }
   } else {
     btn.disabled = true;
@@ -1127,7 +1171,7 @@ function updateExportButton(){
    ============================================================ */
 function exportDataJSON(){
   if(!STATE.budget){
-    alert("尚未載入資料，請先載入預算檔。");
+    alert("尚未載入資料，請先載入期初目標檔。");
     return;
   }
   // FY25 比較資料が空で出力すると、推送到 GitHub 後に前年比モードが失効する。確認を取る。
@@ -1185,6 +1229,7 @@ function applyDataJSON(data){
   STATE.workingDays = data.workingDays || null;
   STATE.holidays = data.holidays ? new Set(data.holidays) : null;
   STATE.fy25 = data.fy25 || null;
+  STATE.midTarget = data.midTarget || null;
   STATE.kolSchedule = data.kolSchedule || [];
   STATE.holidayInfo = data.holidayInfo || [];
   STATE.generatedAt = data.generatedAt;
@@ -1308,7 +1353,7 @@ function renderFileList(){
 
     let icon = '📄';
     let typeLabel = '';
-    if(pf.type === 'budget'){ icon = '📊'; typeLabel = '預算'; }
+    if(pf.type === 'budget'){ icon = '📊'; typeLabel = '期初目標'; }
     else if(pf.type === 'actual'){ icon = '📈'; typeLabel = '實績（已轉換）'; }
     else if(pf.type === 'actual-original'){ icon = '🔄'; typeLabel = '實績（FY26 原始檔，自動轉換）'; }
     else if(pf.type === 'master'){ icon = '📦'; typeLabel = '主檔'; }
@@ -1327,7 +1372,7 @@ function renderFileList(){
     html += `<span class="file-name">${pf.file.name}${warningNote}</span>`;
     html += `<select onchange="changeFileType('${pf.id}', this.value)">`;
     html += `<option value=""${pf.type===null?' selected':''}>(未指定)</option>`;
-    html += `<option value="budget"${pf.type==='budget'?' selected':''}>📊 預算檔</option>`;
+    html += `<option value="budget"${pf.type==='budget'?' selected':''}>📊 期初目標檔</option>`;
     html += `<option value="actual-original"${pf.type==='actual-original'?' selected':''}>🔄 實績（FY26 原始檔，自動轉換）</option>`;
     html += `<option value="actual"${pf.type==='actual'?' selected':''}>📈 實績（已轉換縱向格式，直接載入）</option>`;
     html += `<option value="master"${pf.type==='master'?' selected':''}>📦 商品主檔</option>`;
@@ -1359,20 +1404,20 @@ async function runImport(){
   }
 
   if(!pfBudget){
-    setStatus("❌ 錯誤：未指定預算檔。預算檔為必要。", "error");
+    setStatus("❌ 錯誤：未指定期初目標檔。此檔為必要。", "error");
     document.getElementById("btn-load").disabled = false;
     return;
   }
 
   try{
     // ===== 1. 預算 =====
-    setStatus("讀取預算檔…", "");
+    setStatus("讀取期初目標檔…", "");
     {
       const buf = await pfBudget.file.arrayBuffer();
       STATE.budgetWB = XLSX.read(buf, {type:"array"});
     }
     parseBudget();
-    let parts = ["預算 ✓"];
+    let parts = ["期初目標 ✓"];
 
     // ===== 2. 主檔 =====
     if(pfMaster){
@@ -1712,14 +1757,14 @@ function convFormatTimestamp(){
 
 function loadConvertedDirectly(result){
   if(!STATE.budget){
-    alert("請先在「📥 匯入」分頁載入預算檔，再使用此功能。");
+    alert("請先在「📥 匯入」分頁載入期初目標檔，再使用此功能。");
     return;
   }
   applyConvertedRows(result);
 
   const monthCount = Object.keys(STATE.actuals).length;
   initMonthSelector();
-  let parts = ["預算 ✓"];
+  let parts = ["期初目標 ✓"];
   if(STATE.master) parts.push(`主檔 ✓ (${Object.keys(STATE.master.products).length})`);
   parts.push(`實績 ✓ (${monthCount} 個月，由轉換器直接載入)`);
   updateDataStatus(parts.join(" / "), true);
@@ -2040,7 +2085,7 @@ function renderPaceBanner(monthLabel, monthBudget, monthActual){
 
 /* ---------- Aggregation helpers ---------- */
 function bgt(biz, ch, month){
-  const src = isYoY() ? STATE.fy25 : STATE.budget;
+  const src = cmpSource();
   if(!src || !src.amount) return 0;
   const bizes = biz==='all' ? BIZ_LIST_TOTAL : (Array.isArray(biz)?biz:[biz]);
   const chs   = ch==='all'  ? CHANNEL_LIST : (Array.isArray(ch)?ch:[ch]);
@@ -2073,7 +2118,7 @@ function monthsThru(month){
 
 // 套数集計（予算 or YoY前年実績）
 function bgtQty(biz, ch, month){
-  const src = isYoY() ? STATE.fy25 : STATE.budget;
+  const src = cmpSource();
   if(!src || !src.qty) return 0;
   const bizes = biz==='all' ? BIZ_LIST_TOTAL : (Array.isArray(biz)?biz:[biz]);
   const chs   = ch==='all'  ? CHANNEL_LIST : (Array.isArray(ch)?ch:[ch]);
@@ -2200,53 +2245,57 @@ function renderOverallKPIs(){
     const partial = tp ? `${m}僅計入 ${tp.elapsed}/${tp.total} 工作天` : '';
     return {
       pct: actual / be * 100,
-      note: `※ 達成率的分母是${label}完整預算（含尚未發生的天數），月中會逐日上升；`
-          + `<b>進度達成</b>的分母是已過期間預算 ${fmtAmt(be)} 萬`
+      note: `※ 上列達成率的分母是${label}<b>完整${targetLabel()}</b>（含尚未發生的天數），月中會逐日上升；`
+          + `<b>進度達成</b>的分母是已過期間的${targetLabel()} ${fmtAmt(be)} 萬`
           + (partial ? `（${partial}）` : '')
-          + `，才能看出目前的速度是超前還是落後。`,
+          + `，才能看出目前的速度是超前還是落後。`
+          + (isMid() && STATE.midTarget && (STATE.midTarget.actualMonths||[]).length
+              ? ` 期中目標的 ${STATE.midTarget.actualMonths.join('、')} 因製作當時已結算、直接填入實績，達成率必然為 100%。`
+              : ''),
     };
   };
 
-  document.getElementById("kpi-year").innerHTML  = kpiCardHTML("FY26 年間", "全年（4月〜3月）", yearBudget, yearActual);
-  document.getElementById("kpi-month").innerHTML = kpiCardHTML("當月", m, monthBudget, monthActual,
-      mkPace([m], monthActual, '當月'));
-  document.getElementById("kpi-cum").innerHTML   = kpiCardHTML("累計", `4月〜${m}（${cumMonths.length}個月）`, cumBudget, cumActual,
-      mkPace(cumMonths, cumActual, '6個月'.replace('6', String(cumMonths.length))));
+  // 三個比較基準並列（期初／期中／前年），目前選中的以底色標示
+  const active = cmpMode();
+  const mkBases = months => [
+    { key:'budget', label:'期初目標', value:sumFrom(STATE.budget,   'amount','all','all',months), active:active==='budget' },
+    { key:'mid',    label:'期中目標', value:sumFrom(STATE.midTarget,'amount','all','all',months), active:active==='mid' },
+    { key:'yoy',    label:'前年同期', value:sumFrom(STATE.fy25,     'amount','all','all',months), active:active==='yoy' },
+  ].filter(b => b.value != null);
+
+  document.getElementById("kpi-year").innerHTML  = kpiCardHTML("FY26 年間", "全年（4月〜3月）",
+      yearBudget, yearActual, null, mkBases(MONTHS));
+  document.getElementById("kpi-month").innerHTML = kpiCardHTML("當月", m,
+      monthBudget, monthActual, mkPace([m], monthActual, '當月'), mkBases([m]));
+  document.getElementById("kpi-cum").innerHTML   = kpiCardHTML("累計", `4月〜${m}（${cumMonths.length}個月）`,
+      cumBudget, cumActual,
+      mkPace(cumMonths, cumActual, `${cumMonths.length}個月`), mkBases(cumMonths));
 
   // 全社當月の時間進度バナー（KPI 3枚の下、全幅）
   renderPaceBanner(m, monthBudget, monthActual);
 }
 
-function kpiCardHTML(label, sub, budget, actual, pace){
-  const cls = rateClass(budget, actual);
+// bases = [{label, value, active}]：三個比較基準（期初／期中／前年）並列顯示
+// pace  = {pct, note}：進度達成（分母為已過期間目標，隨時間推進而成長）
+function kpiCardHTML(label, sub, budget, actual, pace, bases){
   const unit = '<span style="font-size:22px;color:#9ca3af;font-weight:500">萬</span>';
-  let rateBlock = `
-    <div class="rate-row">
-      <div class="rate-lbl">${rateLabel()}</div>
-      <div class="rate ${cls}">${fmtRate(budget, actual)}</div>
-    </div>`;
-  let note = '';
-  // pace = { pct, elapsedBudget, note }：進度達成（分母為已過期間預算）
-  if(pace && pace.pct != null && isFinite(pace.pct)){
-    const pcls = pace.pct >= 100 ? 'good' : 'bad';
-    rateBlock = `
-    <div class="rate-row dual">
-      <div class="rate-cell">
-        <div class="rate-lbl">${rateLabel()}</div>
-        <div class="rate ${cls}">${fmtRate(budget, actual)}</div>
-      </div>
-      <div class="rate-cell">
-        <div class="rate-lbl">進度達成</div>
-        <div class="rate ${pcls}">${pace.pct.toFixed(1)}%</div>
-      </div>
-    </div>`;
-    note = `<div class="kpi-note">${pace.note}</div>`;
-  }
+  const row = (lbl, pct, extraCls) => {
+    const cls = (pct == null || !isFinite(pct)) ? 'na' : (pct >= 100 ? 'good' : 'bad');
+    const txt = (pct == null || !isFinite(pct)) ? '—' : pct.toFixed(1) + '%';
+    return `<div class="rate-cell${extraCls ? ' ' + extraCls : ''}">`
+         + `<div class="rate-lbl">${lbl}</div><div class="rate ${cls}">${txt}</div></div>`;
+  };
+  const cells = (bases && bases.length)
+    ? bases.map(b => row('對' + b.label, (b.value > 0 ? actual / b.value * 100 : null),
+                         b.active ? 'rate-active' : ''))
+    : [row(rateLabel(), (budget > 0 ? actual / budget * 100 : null), 'rate-active')];
+  if(pace && pace.pct != null && isFinite(pace.pct)) cells.push(row('進度達成', pace.pct, 'rate-pace'));
+  const note = (pace && pace.note) ? `<div class="kpi-note">${pace.note}</div>` : '';
   return `
     <div class="lbl">${label} <span class="small">${sub}</span></div>
     <div class="row"><span class="k">${targetLabel()}</span><span class="v">${fmtAmt(budget)} ${unit}</span></div>
     <div class="row"><span class="k">實績</span><span class="v">${fmtAmt(actual)} ${unit}</span></div>
-    ${rateBlock}${note}
+    <div class="rate-row dual">${cells.join('')}</div>${note}
   `;
 }
 
@@ -2818,10 +2867,10 @@ function fcstKpiHTML(d){
     <div class="fcst-kpi rate">
       <div class="k">預估達成率</div>
       <div class="v ${cls(eRate)}">${eRate!=null?eRate.toFixed(1):'—'}<span class="u">%</span></div>
-      <div class="s">月預算 ${fmtAmt(d.budget)} 萬</div>
+      <div class="s">月${targetLabel()} ${fmtAmt(d.budget)} 萬</div>
     </div>
     <div class="fcst-kpi gap">
-      <div class="k">預估對預算差</div>
+      <div class="k">預估對${targetLabel()}差</div>
       <div class="v ${gap!=null&&gap>=0?'good':'bad'}">${gap!=null?(gap>=0?'+':'−')+fmtAmt(Math.abs(gap)):'—'}<span class="u">萬</span></div>
       <div class="s">${gap!=null?(gap>=0?'預估超標':'預估缺口'):'—'}</div>
     </div>`;
@@ -2832,7 +2881,7 @@ function fcstScenarioTableHTML(d){
     return '<div class="fcst-empty">尚無已完結月份可供推算月末倍率（需至少一個完整月份的實績）。</div>';
   }
   let h = '<thead><tr><th class="l1">情境</th><th class="l1">月末倍率</th><th class="l1">剩餘日均<br>（萬）</th>'
-        + '<th class="l1">預估全月<br>（萬）</th><th class="l1">預估達成率</th><th class="l1">對預算差<br>（萬）</th></tr></thead><tbody>';
+        + `<th class="l1">預估全月<br>（萬）</th><th class="l1">預估達成率</th><th class="l1">對${targetLabel()}差<br>（萬）</th></tr></thead><tbody>`;
   for(const sc of d.scenarios){
     const trCls = sc.key === 'base' ? ' class="scn-base"' : (sc.key === 'live' ? ' class="scn-live"' : '');
     const rCls  = sc.rate == null ? 'na' : (sc.rate >= 100 ? 'good' : 'bad');
@@ -2843,7 +2892,7 @@ function fcstScenarioTableHTML(d){
        + `<td class="rate">${sc.rate!=null?`<span class="rate-badge ${rCls}">${sc.rate.toFixed(1)}%</span>`:'—'}</td>`
        + `<td style="color:${sc.gap>=0?'var(--good)':'var(--bad)'}">${(sc.gap>=0?'+':'−')+fmtAmt(Math.abs(sc.gap))}</td></tr>`;
   }
-  h += `<tr class="total"><td class="scn">月預算</td><td>—</td><td>—</td><td>${fmtAmt(d.budget)}</td><td>—</td><td>—</td></tr>`;
+  h += `<tr class="total"><td class="scn">月${targetLabel()}</td><td>—</td><td>—</td><td>${fmtAmt(d.budget)}</td><td>—</td><td>—</td></tr>`;
   h += '</tbody>';
   return `<table class="grid" id="fcst-scenario-table">${h}</table>`;
 }
@@ -2851,7 +2900,7 @@ function fcstScenarioTableHTML(d){
 function fcstDailyTableHTML(d){
   const WD = ['日','一','二','三','四','五','六'];
   let h = '<thead><tr><th class="l1">日期</th><th class="l1">星期</th><th class="l1">當日<br>（萬）</th>'
-        + '<th class="l1">累積<br>（萬）</th><th class="l1">累積預算進度<br>（萬）</th>'
+        + `<th class="l1">累積<br>（萬）</th><th class="l1">累積${targetLabel()}進度<br>（萬）</th>`
         + '<th class="l1">進度差<br>（萬）</th><th class="l1">累積達成率</th></tr></thead><tbody>';
   for(const r of d.rows){
     if(!r.has) continue;
@@ -2883,7 +2932,7 @@ function fcstNoteHTML(d){
   if(d.undated > 0){
     n += ` 另含無日期實績 ${fmtAmt(d.undated)} 萬（已計入累積，但不出現在逐日表）。`;
   }
-  n += ` 「累積預算進度」依當月工作天比例分攤月預算${d.totalWD?`（共 ${d.totalWD} 個工作天）`:''}。`
+  n += ` 「累積${targetLabel()}進度」依當月工作天比例分攤月${targetLabel()}${d.totalWD?`（共 ${d.totalWD} 個工作天）`:''}。`
      + `管道別／事業別選「全部」時，合計不含數位典藏（與全站其他分頁一致）。`;
   return n;
 }
@@ -2899,7 +2948,7 @@ function fcstRenderChart(d){
   const datasets = [
     { label:'累積實績', data:actual, borderColor:'#0284C7', backgroundColor:'rgba(2,132,199,.10)',
       borderWidth:3, tension:.2, pointRadius:0, fill:true, spanGaps:false, order:1 },
-    { label:'累積預算進度', data:bgtLine, borderColor:'#94A3B8', borderWidth:2,
+    { label:`累積${targetLabel()}進度`, data:bgtLine, borderColor:'#94A3B8', borderWidth:2,
       borderDash:[2,3], tension:.1, pointRadius:0, fill:false, order:5 },
   ];
   // 各情境の予測カーブ（最終実績日から月末まで）
@@ -3334,7 +3383,7 @@ const fy26ChartLabelsPlugin = {
         if(lbl.includes('達成率') || lbl.includes('前年比')){
           ctx.fillStyle = (v >= 100) ? '#16A34A' : '#E11D48';
           ctx.fillText(Math.floor(v) + '%', point.x, point.y - 12);
-        } else if(lbl === '預算' || lbl === '累計預算' || lbl === '昨年實績' || lbl === '累計昨年實績'){
+        } else if(lbl === targetLabel() || lbl === `累計${targetLabel()}`){
           ctx.fillStyle = '#0369A1';
           ctx.fillText(Math.floor(v).toLocaleString(), point.x, point.y - 4);
         } else if(lbl === '實績' || lbl === '累計實績'){
@@ -4441,7 +4490,7 @@ function renderVsTargetTab(){
   html += '</div>';
 
   html += '<div class="chart-box tall" style="margin-top:14px"><canvas id="chart-vstarget"></canvas></div>';
-  html += `<div class="legend">※ 月初〜月末的日次累積。<strong>目標累計</strong>（虛線・薄色）：當月預算 ÷ 工作日數 × 經過工作日。<strong>實績累計</strong>（實線・深色）：日次實績由月初累加。X 軸灰色背景＝週末或國定假日。紅色虛線＝資料最終日。預測達成日＝按目前每日銷售速度線性外挿至 100%。</div>`;
+  html += `<div class="legend">※ 月初〜月末的日次累積。<strong>目標累計</strong>（虛線・薄色）：當月目標（依上方比較基準）÷ 工作日數 × 經過工作日。<strong>實績累計</strong>（實線・深色）：日次實績由月初累加。X 軸灰色背景＝週末或國定假日。紅色虛線＝資料最終日。預測達成日＝按目前每日銷售速度線性外挿至 100%。</div>`;
   html += '</div>';
 
   panel.innerHTML = html;
@@ -4852,7 +4901,7 @@ function renderHandPuppetTab(){
   html += '<div class="card">';
   html += `<h2>巧虎手偶 — 達成狀況 <span class="pill">${codes.size} 商品 / 本月：${m}</span></h2>`;
   html += `<div style="font-size:18px;color:var(--secondary);margin:0 0 14px 0;line-height:1.6;padding:12px 16px;background:var(--stripe);border-radius:6px;border-left:3px solid var(--accent)">
-    對象商品：巧虎手偶 <strong>${codes.size}</strong> 個製編（與在庫儀表板一致）——${HANDPUPPET_CODES.map(c=>`${c} ${HANDPUPPET_NAMES[c]}`).join('、')}。預算為產品級非允許項目（biz×channel 級別），故僅顯示實績。
+    對象商品：巧虎手偶 <strong>${codes.size}</strong> 個製編（與在庫儀表板一致）——${HANDPUPPET_CODES.map(c=>`${c} ${HANDPUPPET_NAMES[c]}`).join('、')}。目標僅到事業×通路級別、無產品級目標，故僅顯示實績。
   </div>`;
   html += '<div class="kpi-grid">';
   html += handPuppetKpiCard('FY26 年間', '全年（4月〜3月）', 'year', yearQty, yearAmt);
