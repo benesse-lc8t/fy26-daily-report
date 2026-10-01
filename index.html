@@ -328,6 +328,8 @@
   .card{background:var(--card);border:0.5px solid var(--border);border-radius:12px;padding:20px 24px;margin-bottom:18px;box-shadow:var(--shadow-card)}
   .card h2{margin:0 0 14px 0;font-size:var(--fs-lg);font-weight:700;border-left:4px solid var(--accent);padding-left:14px;display:flex;align-items:center;gap:10px;color:var(--accent-dark);letter-spacing:.3px}
   .card h2 .pill{font-size:var(--fs-sm);font-weight:500;background:var(--subheader);color:var(--accent-dark);padding:3px 12px;border-radius:12px}
+  /* 資料空窗期：上方「本月份」已跳到新月份、但實績還停在上個月時的提示 */
+  .card h2 .pill.pill-warn{background:var(--warn-bg);color:#854D0E;font-weight:600}
 
   /* KPI grid */
   .kpi-grid{display:grid;grid-template-columns:repeat(3, 1fr);gap:14px}
@@ -882,7 +884,7 @@
   <div class="tab-panel" id="panel-prevday">
 
     <div class="card">
-      <h2>選擇日期 <span class="pill" id="prevday-pill">請選擇日期</span></h2>
+      <h2>選擇日期 <span class="pill" id="prevday-pill">請選擇日期</span><span class="pill" id="prevday-data-pill" style="display:none"></span></h2>
       <div class="legend" style="margin-bottom:10px">
         ※ 可任意勾選不連續日期，常見情境：「前一日」「前一工作天＋連假」「端午／春節等連續假期」。系統會加總所選日期的實績。
       </div>
@@ -2683,7 +2685,24 @@ function renderPrevDayDatePicker(){
     container.innerHTML = '<div class="legend">尚無實績日期資料，請先於「📥 匯入」分頁載入資料。</div>';
     return;
   }
+  // 日期格子只會長出「實績明細裡真的存在的日期」。每月初上方的「本月份」
+  // 會跟著系統日期跳到新月份，但實績通常隔天才匯入，兩者會短暫對不上，
+  // 容易被誤讀成「選了 10 月卻跑出 9 月」。在標題標示資料最終日以消除疑慮。
   const groups = groupDatesByMonth(dates);
+
+  const lastISO   = dates[dates.length - 1];
+  const curMonth  = STATE.selectedMonth;
+  // 以「日期格子裡有沒有該月」判定，不能用 hasActualData()：
+  // data.json 的 actuals 12 個月都有空殼，hasActualData('10月') 會回傳 true。
+  const monthGap  = curMonth && !(groups[curMonth] && groups[curMonth].length);
+  const dataPill  = document.getElementById("prevday-data-pill");
+  if(dataPill){
+    dataPill.style.display = '';
+    dataPill.className     = 'pill' + (monthGap ? ' pill-warn' : '');
+    dataPill.textContent   = `最新實績至 ${lastISO.replace(/-/g, '/')}`
+                           + (monthGap ? `（${curMonth}資料尚未匯入）` : '');
+  }
+
   // 最新月份（進行中）優先顯示在最上方，已結束月份由新到舊排列在後
   const monthOrder = MONTHS.filter(m => groups[m] && groups[m].length > 0).reverse();
 
@@ -5043,11 +5062,10 @@ function renderAovChart(biz, ch){
       interaction: { mode:'index', intersect:false },
       layout: { padding: { top: 24 } },
       plugins: {
-        legend: { position:'top', labels:{ font:{ size:20, weight:'600' }, color:'#0C4A6E', boxWidth:20, padding:18 } },
+        legend: { position:'top', labels:{ font:{ size:11, weight:'600' }, color:'#0C4A6E', boxWidth:14, padding:14 } },
         tooltip: {
           backgroundColor:'#0C4A6E', titleColor:'#fff', bodyColor:'#fff',
           borderColor:'#0284C7', borderWidth:1,
-          titleFont:{ size:17 }, bodyFont:{ size:16 },
           callbacks: {
             label: function(ctx){
               const v = ctx.parsed.y;
@@ -5059,10 +5077,10 @@ function renderAovChart(biz, ch){
       },
       scales: {
         y: { type:'linear', position:'left', beginAtZero:true,
-             title:{ display:true, text:'AOV（元）', font:{size:12, weight:'600'}, color:'#0369A1' },
-             ticks:{ font:{size:12}, color:'#0369A1', callback: v=>(+v).toLocaleString() },
+             title:{ display:true, text:'AOV（元）', font:{size:11, weight:'600'}, color:'#0369A1' },
+             ticks:{ font:{size:11}, color:'#0369A1', callback: v=>(+v).toLocaleString() },
              grid:{ color:'#F0F9FF' } },
-        x: { ticks:{ font:{size:12, weight:'600'}, color:'#0C4A6E' }, grid:{ display:false } },
+        x: { ticks:{ font:{size:11, weight:'600'}, color:'#0C4A6E' }, grid:{ display:false } },
       },
     },
   });
