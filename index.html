@@ -31,6 +31,18 @@
 
 <style>
   :root{
+    /* ── 字級：8 階系統 ────────────────────────────────────────
+       原本有 25 種字級（10〜52px），沒有節奏感；且三個文字色幾乎同色，
+       層級只能靠「放大字」硬做，於是出現 52px 數字配 10px 註記。
+       收斂為 8 階後，層級改由「顏色深淺 + 字重」承擔，字級負責尺度。 */
+    --fs-display:32px;  /* KPI 主數值 */
+    --fs-2xl:24px;      /* 次級大數字：pace 值、區塊 KPI */
+    --fs-xl:20px;       /* 並列達成率、stat 數值 */
+    --fs-lg:17px;       /* 卡片標題 h2、品牌 */
+    --fs-md:15px;       /* 小標題 h3、強調 */
+    --fs-base:14px;     /* 內文、表格、導覽 */
+    --fs-sm:13px;       /* 標籤、次要說明 */
+    --fs-xs:12px;       /* 註記、legend、徽章、單位（全站最小） */
     /* 字型：報表用無襯線體。0 為標準橢圓（非斜線零），避免與 Q/8 混淆 */
     --font-ui:"Segoe UI","Microsoft JhengHei","PingFang TC","Noto Sans TC",system-ui,-apple-system,"Helvetica Neue",Arial,sans-serif;
     --font-num:var(--font-ui);
@@ -38,26 +50,30 @@
     --font-num-feat:"tnum" 1,"zero" 0,"ss01" 0,"ss02" 0;
     --bg:#F0F9FF;
     --card:#FFFFFF;
-    --ink:#0C4A6E;
-    --secondary:#0369A1;
-    --muted:#0369A1;
+    --ink:#0B3A5C;        /* 主 11.8:1 */
+    --secondary:#15587F;   /* 次  7.7:1 */
+    --muted:#276C9B;       /* 註記 5.7:1 —— 取代原本的灰 */
     --accent:#0284C7;
     --accent-dark:#0C4A6E;
     --month-accent:#0C4A6E;
     --accent-light:#BAE6FD;
     --subheader:#E0F2FE;
     --stripe:#F0F9FF;
-    --border:#BAE6FD;
-    --border-strong:#7DD3FC;
+    --border:#D6E6F2;      /* 中性淡藍灰；原 #BAE6FD 亮天藍會讓密集表格「花」 */
+    --border-strong:#AFCEE4;
     --good:#15803D; --warn:#A16207; --bad:#B91C1C;
     --good-bg:#DCFCE7; --warn-bg:#FEF9C3; --bad-bg:#FEE2E2;
     --line:#E11D48;
     --rose:#E11D48;
     --rose-bg:#FFF1F2;
     --rose-text:#BE123C;
+    /* 陰影：原本白卡片用 rgba(0,0,0,.3) 的黑陰影，在淺底上顯得髒且浮 */
+    --shadow-card:0 1px 3px rgba(11,58,92,.07),0 1px 2px rgba(11,58,92,.04);
+    --shadow-pop:0 4px 14px rgba(11,58,92,.10);
+    --shadow-modal:0 16px 48px rgba(11,58,92,.18);
   }
   *{box-sizing:border-box}
-  body{margin:0;font-family:var(--font-ui);background:var(--bg);color:var(--ink);font-size:16px;
+  body{margin:0;font-family:var(--font-ui);background:var(--bg);color:var(--ink);font-size:var(--fs-base);
        font-variant-numeric:tabular-nums;font-feature-settings:var(--font-num-feat)}
   /* 全站數字一律沿用同一字型與字形設定，杜絕局部等寬字型造成的斜線零 */
   table,input,select,textarea,button,canvas{font-family:var(--font-ui)}
@@ -65,24 +81,24 @@
        font-variant-numeric:tabular-nums;font-feature-settings:var(--font-num-feat)}
 
   /* Header */
-  header{background:#0C2D6B;color:#fff;padding:15px 28px;display:flex;align-items:center;gap:24px;box-shadow:0 2px 16px rgba(0,0,0,.4);width:100%;margin:0}
-  header .brand{font-size:28px;font-weight:700;letter-spacing:.6px;line-height:1.15}
+  header{background:#0C2D6B;color:#fff;padding:15px 28px;display:flex;align-items:center;gap:24px;box-shadow:0 1px 4px rgba(11,58,92,.14);width:100%;margin:0}
+  header .brand{font-size:var(--fs-lg);font-weight:700;letter-spacing:.6px;line-height:1.15}
   header .month-bar{display:flex;align-items:center;gap:8px;background:rgba(255,255,255,.12);padding:6px 14px;border-radius:8px}
-  header .month-bar label{font-size:14px;color:rgba(255,255,255,.85)}
-  header .month-bar select{background:rgba(255,255,255,.95);color:#0C4A6E;border:none;padding:6px 12px;border-radius:6px;font-size:15px;font-weight:600;cursor:pointer;min-width:100px}
+  header .month-bar label{font-size:var(--fs-base);color:rgba(255,255,255,.85)}
+  header .month-bar select{background:rgba(255,255,255,.95);color:#0C4A6E;border:none;padding:6px 12px;border-radius:6px;font-size:var(--fs-base);font-weight:600;cursor:pointer;min-width:100px}
   header .compare-toggle{display:inline-flex;background:rgba(255,255,255,.12);padding:3px;border-radius:8px;gap:0}
-  header .compare-toggle button{background:transparent;color:rgba(255,255,255,.78);border:none;padding:6px 16px;font-size:14px;font-weight:600;cursor:pointer;border-radius:6px;font-family:inherit;letter-spacing:.3px;transition:all .15s}
+  header .compare-toggle button{background:transparent;color:rgba(255,255,255,.78);border:none;padding:6px 16px;font-size:var(--fs-base);font-weight:600;cursor:pointer;border-radius:6px;font-family:inherit;letter-spacing:.3px;transition:all .15s}
   header .compare-toggle button.active{background:rgba(255,255,255,.2);color:#fff;box-shadow:0 0 0 1px rgba(255,255,255,.3)}
   header .compare-toggle button:not(.active):hover{color:#fff;background:rgba(255,255,255,.1)}
   header .header-meta{margin-left:auto;display:flex;flex-direction:column;align-items:flex-end;gap:2px}
-  header .data-status{font-size:13px;opacity:.9}
+  header .data-status{font-size:var(--fs-sm);opacity:.9}
   header .data-status.ok{color:#86EFAC}
   header .data-status.err{color:#FCA5A5}
-  header .data-updated{font-size:12px;opacity:.7;letter-spacing:.3px;color:rgba(255,255,255,.85)}
+  header .data-updated{font-size:var(--fs-xs);opacity:.7;letter-spacing:.3px;color:rgba(255,255,255,.85)}
 
   /* Header-mounted small action buttons (匯入 / 轉換) */
   header .header-actions{display:flex;gap:6px}
-  header .header-actions .tab-btn{background:rgba(255,255,255,.18);color:#fff;border:none;border-radius:6px;padding:5px 10px;font-size:11px;font-weight:600;cursor:pointer;font-family:inherit;letter-spacing:.3px;transition:all .15s;line-height:1.2}
+  header .header-actions .tab-btn{background:rgba(255,255,255,.18);color:#fff;border:none;border-radius:6px;padding:5px 10px;font-size:var(--fs-xs);font-weight:600;cursor:pointer;font-family:inherit;letter-spacing:.3px;transition:all .15s;line-height:1.2}
   header .header-actions .tab-btn:hover{background:rgba(255,255,255,.32)}
   header .header-actions .tab-btn.active{background:#fff;color:var(--accent-dark)}
 
@@ -95,25 +111,25 @@
 
   /* Column 1: blue pill (main tabs) */
   nav.tabs .tab-col-1{display:flex;flex-direction:column;gap:6px}
-  nav.tabs .tab-col-1 .tab-btn{background:#E0F2FE;color:#0369A1;border:none;border-radius:6px;padding:10px 12px;font-size:22px;font-weight:500;cursor:pointer;transition:all .15s;font-family:inherit;text-align:left;width:100%}
+  nav.tabs .tab-col-1 .tab-btn{background:#E0F2FE;color:var(--secondary);border:none;border-radius:7px;padding:8px 12px;font-size:var(--fs-base);font-weight:500;cursor:pointer;transition:all .15s;font-family:inherit;text-align:left;width:100%}
   nav.tabs .tab-col-1 .tab-btn:hover{background:#BAE6FD}
   nav.tabs .tab-col-1 .tab-btn.active{background:#0284C7;color:#fff;font-weight:600}
   nav.tabs .tab-col-1 .tab-btn.active:hover{background:#0284C7;color:#fff}
 
   /* Column 2: rose pill (business / channel tabs) */
   nav.tabs .tab-col-2{display:flex;flex-direction:column;gap:6px}
-  nav.tabs .tab-col-2 .tab-btn{background:#FFF1F2;color:#BE123C;border:none;border-radius:6px;padding:9px 12px;font-size:21px;font-weight:500;cursor:pointer;transition:all .15s;font-family:inherit;text-align:left;width:100%}
+  nav.tabs .tab-col-2 .tab-btn{background:#FFF1F2;color:var(--rose-text);border:none;border-radius:7px;padding:7px 12px;font-size:var(--fs-base);font-weight:500;cursor:pointer;transition:all .15s;font-family:inherit;text-align:left;width:100%}
   nav.tabs .tab-col-2 .tab-btn:hover{background:#FFE4E6}
   nav.tabs .tab-col-2 .tab-btn.active{background:#E11D48;color:#fff;font-weight:600}
   nav.tabs .tab-col-2 .tab-btn.active:hover{background:#E11D48;color:#fff}
 
   /* Column 3: gray */
   nav.tabs .tab-col-3{display:flex;flex-direction:column;gap:6px}
-  nav.tabs .tab-col-3 .tab-btn{background:#F1F5F9;color:#64748B;border:none;border-radius:6px;padding:9px 12px;font-size:21px;font-weight:500;cursor:pointer;transition:all .15s;font-family:inherit;text-align:left;width:100%}
-  nav.tabs .tab-col-3 .tab-btn:hover{background:#E2E8F0;color:#475569}
-  nav.tabs .tab-col-3 .tab-btn.active{background:#64748B;color:#fff;font-weight:500}
+  nav.tabs .tab-col-3 .tab-btn{background:#EEF4F9;color:var(--secondary);border:none;border-radius:7px;padding:7px 12px;font-size:var(--fs-base);font-weight:500;cursor:pointer;transition:all .15s;font-family:inherit;text-align:left;width:100%}
+  nav.tabs .tab-col-3 .tab-btn:hover{background:var(--border);color:var(--secondary)}
+  nav.tabs .tab-col-3 .tab-btn.active{background:var(--secondary);color:#fff;font-weight:500}
   nav.tabs .tab-col-3 .tab-btn.active:hover{background:#64748B;color:#fff}
-  nav.tabs .sidebar-feedback-link{display:block;background:#EFF6FF;color:#1D4ED8;border:1px solid #BFDBFE;border-radius:6px;padding:10px 12px;font-size:18px;font-weight:600;text-align:center;text-decoration:none;transition:all .15s;letter-spacing:.3px}
+  nav.tabs .sidebar-feedback-link{display:block;background:#EFF6FF;color:#1D4ED8;border:1px solid #BFDBFE;border-radius:6px;padding:10px 12px;font-size:var(--fs-md);font-weight:600;text-align:center;text-decoration:none;transition:all .15s;letter-spacing:.3px}
   nav.tabs .sidebar-feedback-link:hover{background:#DBEAFE;border-color:#93C5FD}
 
   @media (max-width: 900px){
@@ -124,10 +140,15 @@
     .card{padding:16px 14px}
     nav.tabs{width:100%;position:static;max-height:none;border-right:none;flex-direction:row;flex-wrap:wrap;box-sizing:border-box}
     nav.tabs .tab-col-1, nav.tabs .tab-col-2, nav.tabs .tab-col-3{flex-direction:row;flex-wrap:wrap}
+    /* 側欄按鈕在桌機是 width:100% 的直式清單；手機若沿用，16 個項目會佔滿整個首屏，
+       要捲過整頁導覽才看得到內容。改為自動寬度，讓它們折行成緊湊的 chip 列。 */
+    nav.tabs .tab-col-1 .tab-btn,
+    nav.tabs .tab-col-2 .tab-btn,
+    nav.tabs .tab-col-3 .tab-btn{width:auto;flex:0 0 auto;padding:6px 11px;text-align:center}
     nav.tabs .tab-divider{width:100%;margin:4px 0}
     /* header 原本不換行，在平板／手機會把整頁撐寬 */
     header{flex-wrap:wrap;gap:10px 14px;padding:12px 16px;box-sizing:border-box}
-    header .brand{font-size:22px;flex:1 1 100%}
+    header .brand{font-size:var(--fs-lg);flex:1 1 100%}
     header .header-meta{margin-left:0;align-items:flex-start;flex:1 1 100%}
     header .header-actions{flex-wrap:wrap}
   }
@@ -135,9 +156,9 @@
     .layout > main{padding:12px 10px}
     .card{padding:14px 12px}
     header{padding:10px 12px}
-    header .brand{font-size:19px}
+    header .brand{font-size:var(--fs-md)}
     header .month-bar{padding:5px 10px}
-    header .compare-toggle button{padding:5px 11px;font-size:13px}
+    header .compare-toggle button{padding:5px 11px;font-size:var(--fs-sm)}
   }
 
   /* Chart + Table side-by-side layout (70%/30%) */
@@ -146,7 +167,7 @@
   .chart-table-row .chart-side .chart-box{margin-top:0;height:100%;min-height:340px}
   .chart-table-row .chart-side .chart-box.tall{min-height:380px}
   .chart-table-row .table-side{flex:3;min-width:0;overflow-x:auto}
-  .chart-table-row .table-side table.grid{font-size:13px}
+  .chart-table-row .table-side table.grid{font-size:var(--fs-sm)}
   .chart-table-row .table-side table.grid th{padding:6px 8px}
   .chart-table-row .table-side table.grid td{padding:6px 8px}
   @media (max-width: 1200px){
@@ -168,8 +189,8 @@
   /* AOV：當月 + 累計 KPI + 月次推移圖 同一水平區塊 */
   .aov-row{display:flex;gap:16px;align-items:stretch;margin-top:4px}
   .aov-row .kpi-card{flex:1;min-width:0}
-  .aov-row .aov-chart{flex:1.6;min-width:0;position:relative;background:var(--card);border:0.5px solid var(--border);border-radius:12px;padding:14px 16px;box-shadow:0 4px 16px rgba(0,0,0,.3);display:flex;flex-direction:column}
-  .aov-row .aov-chart-title{font-size:16px;font-weight:700;color:var(--accent-dark);margin-bottom:8px}
+  .aov-row .aov-chart{flex:1.6;min-width:0;position:relative;background:var(--card);border:0.5px solid var(--border);border-radius:12px;padding:14px 16px;box-shadow:var(--shadow-card);display:flex;flex-direction:column}
+  .aov-row .aov-chart-title{font-size:var(--fs-md);font-weight:700;color:var(--accent-dark);margin-bottom:8px}
   .aov-row .aov-chart .chart-box{flex:1;min-height:280px;margin-top:0}
   @media (max-width:1100px){
     .aov-row{flex-direction:column}
@@ -184,9 +205,9 @@
   .overview-row #pace-banner-container .pace-banner{margin-top:0;width:100%;grid-template-columns:1fr;align-content:center;gap:0}
   .overview-row #pace-banner-container .pace-cell{border-right:none;border-bottom:1px solid var(--border);padding:9px 20px}
   .overview-row #pace-banner-container .pace-cell:last-child{border-bottom:none}
-  .overview-row #pace-banner-container .pace-val{font-size:30px}
-  .overview-row #pace-banner-container .pace-lbl{font-size:14px}
-  .overview-row #pace-banner-container .pace-sub{font-size:13px}
+  .overview-row #pace-banner-container .pace-val{font-size:var(--fs-xl)}
+  .overview-row #pace-banner-container .pace-lbl{font-size:var(--fs-base)}
+  .overview-row #pace-banner-container .pace-sub{font-size:var(--fs-sm)}
   @media(max-width:1200px){
     .overview-row{flex-wrap:wrap}
     .overview-row .kpi-card{flex:1 1 30%}
@@ -210,49 +231,49 @@
   .tab-panel{display:none}
   .tab-panel.active{display:block}
 
-  .placeholder{background:var(--card);border:1px dashed var(--border-strong);border-radius:12px;padding:80px 24px;text-align:center;color:var(--muted);font-size:16px}
+  .placeholder{background:var(--card);border:1px dashed var(--border-strong);border-radius:12px;padding:80px 24px;text-align:center;color:var(--muted);font-size:var(--fs-md)}
 
   /* Card */
-  .card{background:var(--card);border:0.5px solid var(--border);border-radius:12px;padding:20px 24px;margin-bottom:18px;box-shadow:0 4px 16px rgba(0,0,0,.3)}
-  .card h2{margin:0 0 16px 0;font-size:18px;font-weight:700;border-left:4px solid var(--accent);padding-left:14px;display:flex;align-items:center;gap:10px;color:var(--accent-dark);letter-spacing:.3px}
-  .card h2 .pill{font-size:13px;font-weight:500;background:var(--subheader);color:var(--accent-dark);padding:3px 12px;border-radius:12px}
+  .card{background:var(--card);border:0.5px solid var(--border);border-radius:12px;padding:20px 24px;margin-bottom:18px;box-shadow:var(--shadow-card)}
+  .card h2{margin:0 0 14px 0;font-size:var(--fs-lg);font-weight:700;border-left:4px solid var(--accent);padding-left:14px;display:flex;align-items:center;gap:10px;color:var(--accent-dark);letter-spacing:.3px}
+  .card h2 .pill{font-size:var(--fs-sm);font-weight:500;background:var(--subheader);color:var(--accent-dark);padding:3px 12px;border-radius:12px}
 
   /* KPI grid */
   .kpi-grid{display:grid;grid-template-columns:repeat(3, 1fr);gap:14px}
-  .kpi-card{background:var(--card);border:0.5px solid var(--border);border-radius:12px;padding:20px 22px;position:relative;overflow:hidden;box-shadow:0 4px 16px rgba(0,0,0,.3)}
+  .kpi-card{background:var(--card);border:0.5px solid var(--border);border-radius:12px;padding:20px 22px;position:relative;overflow:hidden;box-shadow:var(--shadow-card)}
   .kpi-card::before{content:"";position:absolute;top:0;left:0;width:5px;height:100%;background:var(--accent)}
   .kpi-card.year::before{background:var(--accent)}
   .kpi-card.month::before{background:#4ADE80}
   .kpi-card.cum::before{background:#FBBF24}
-  .kpi-card .lbl{font-size:16px;color:var(--secondary);font-weight:600;text-transform:uppercase;letter-spacing:.5px}
+  .kpi-card .lbl{font-size:var(--fs-sm);color:var(--secondary);font-weight:600;text-transform:uppercase;letter-spacing:.5px}
   .kpi-card .lbl .small{text-transform:none;letter-spacing:0;color:var(--muted);margin-left:4px;font-weight:500}
   .kpi-card .row{display:flex;justify-content:space-between;align-items:baseline;margin-top:10px}
-  .kpi-card .row .k{font-size:20px;color:var(--secondary);font-weight:500}
-  .kpi-card .row .v{font-size:48px;font-weight:700;font-variant-numeric:tabular-nums;color:var(--ink)}
-  .kpi-card .row .v.small{font-size:24px;font-weight:600}
+  .kpi-card .row .k{font-size:var(--fs-sm);color:var(--secondary);font-weight:500}
+  .kpi-card .row .v{font-size:var(--fs-display);font-weight:700;font-variant-numeric:tabular-nums;color:var(--ink)}
+  .kpi-card .row .v.small{font-size:var(--fs-lg);font-weight:600}
   .kpi-card .rate-row{margin-top:12px;padding-top:12px;border-top:1px dashed var(--border)}
-  .kpi-card .rate{font-size:52px;font-weight:700;font-variant-numeric:tabular-nums}
+  .kpi-card .rate{font-size:var(--fs-2xl);font-weight:700;font-variant-numeric:tabular-nums}
   .kpi-card .rate.good{color:var(--good)}
   .kpi-card .rate.warn{color:var(--warn)}
   .kpi-card .rate.bad{color:var(--bad)}
-  .kpi-card .rate.na{color:#94A3B8}
-  .kpi-card .rate-lbl{font-size:16px;color:var(--muted);margin-bottom:2px;font-weight:500}
+  .kpi-card .rate.na{color:var(--muted)}
+  .kpi-card .rate-lbl{font-size:var(--fs-sm);color:var(--muted);margin-bottom:2px;font-weight:500}
   /* 達成率 ＋ 進度達成：上下兩列（卡片內容寬僅約 280px，並排會裁掉百分號） */
   .kpi-card .rate-row.dual{display:block}
   .kpi-card .rate-row.dual .rate-cell{display:flex;align-items:baseline;justify-content:space-between;gap:10px}
   .kpi-card .rate-row.dual .rate-cell + .rate-cell{margin-top:7px;padding-top:7px;border-top:1px dashed var(--border)}
-  .kpi-card .rate-row.dual .rate-lbl{font-size:15px;margin-bottom:0;white-space:nowrap}
-  .kpi-card .rate-row.dual .rate{font-size:30px;line-height:1.1;white-space:nowrap}
+  .kpi-card .rate-row.dual .rate-lbl{font-size:var(--fs-base);margin-bottom:0;white-space:nowrap}
+  .kpi-card .rate-row.dual .rate{font-size:var(--fs-xl);line-height:1.1;white-space:nowrap}
   /* 目前選中的比較基準：底色標示，讓人知道下方表格／圖表是以哪個基準計算 */
   .kpi-card .rate-cell.rate-active{background:var(--subheader);border-radius:7px;
        padding:4px 9px;margin:3px -9px 0;border-top:none}
   .kpi-card .rate-cell.rate-active .rate-lbl{font-weight:700;color:var(--accent-dark)}
   .kpi-card .rate-cell.rate-pace{border-top:1px dashed var(--border);margin-top:7px;padding-top:7px}
-  .kpi-card .rate-cell.rate-pace .rate{font-size:26px}
+  .kpi-card .rate-cell.rate-pace .rate{font-size:var(--fs-lg)}
   .kpi-card .rate-cell.rate-pace .rate-lbl{font-style:normal;color:var(--secondary)}
-  .kpi-card .kpi-note{margin-top:9px;font-size:12.5px;line-height:1.45;color:var(--secondary)}
-  @media(max-width:640px){ .kpi-card .rate-row.dual .rate{font-size:26px}
-                           .kpi-card .rate-cell.rate-pace .rate{font-size:23px} }
+  .kpi-card .kpi-note{margin-top:9px;font-size:var(--fs-xs);line-height:1.45;color:var(--secondary)}
+  @media(max-width:640px){ .kpi-card .rate-row.dual .rate{font-size:var(--fs-lg)}
+                           .kpi-card .rate-cell.rate-pace .rate{font-size:var(--fs-lg)} }
 
   /* Pace banner */
   .pace-banner{background:var(--stripe);border:0.5px solid var(--border);border-radius:10px;margin-top:8px;padding:10px 0;display:grid;grid-template-columns:1.3fr 1fr 1.2fr;position:relative;overflow:hidden;align-items:center}
@@ -261,34 +282,34 @@
   .pace-banner.pace-onpace::before{background:linear-gradient(180deg,var(--accent-dark),var(--accent))}
   .pace-banner.pace-warn::before{background:linear-gradient(180deg,#A16207,#F59E0B)}
   .pace-banner.pace-bad::before{background:linear-gradient(180deg,#B91C1C,#EF4444)}
-  .pace-banner.pace-na::before{background:linear-gradient(180deg,#64748B,#94A3B8)}
+  .pace-banner.pace-na::before{background:linear-gradient(180deg,#64748B,var(--muted))}
 
   .pace-cell{padding:4px 22px;border-right:1px solid var(--stripe)}
   .pace-cell:last-child{border-right:none}
-  .pace-cell .pace-lbl{font-size:16px;color:var(--secondary);font-weight:600;letter-spacing:.5px;text-transform:uppercase}
-  .pace-cell .pace-val{font-size:44px;font-weight:700;margin-top:3px;color:var(--ink);font-variant-numeric:tabular-nums;line-height:1.15}
-  .pace-cell .pace-val .pace-unit{font-size:18px;color:var(--muted);font-weight:500;margin-left:2px}
-  .pace-cell .pace-sub{font-size:16px;color:var(--secondary);margin-top:3px;font-weight:500}
+  .pace-cell .pace-lbl{font-size:var(--fs-md);color:var(--secondary);font-weight:600;letter-spacing:.5px;text-transform:uppercase}
+  .pace-cell .pace-val{font-size:var(--fs-2xl);font-weight:700;margin-top:3px;color:var(--ink);font-variant-numeric:tabular-nums;line-height:1.15}
+  .pace-cell .pace-val .pace-unit{font-size:var(--fs-md);color:var(--muted);font-weight:500;margin-left:2px}
+  .pace-cell .pace-sub{font-size:var(--fs-md);color:var(--secondary);margin-top:3px;font-weight:500}
 
-  .pace-banner .progress-rate{font-size:48px;font-weight:700}
+  .pace-banner .progress-rate{font-size:var(--fs-display);font-weight:700}
   .pace-banner.pace-good .progress-rate{color:var(--good)}
   .pace-banner.pace-onpace .progress-rate{color:var(--accent-dark)}
   .pace-banner.pace-warn .progress-rate{color:var(--warn)}
   .pace-banner.pace-bad .progress-rate{color:var(--bad)}
-  .pace-banner.pace-na .progress-rate{color:#94A3B8}
+  .pace-banner.pace-na .progress-rate{color:var(--muted)}
 
-  .pace-empty{background:var(--stripe);border:1px dashed var(--border);border-radius:12px;padding:14px;text-align:center;color:var(--muted);font-size:14px;margin-top:14px}
+  .pace-empty{background:var(--stripe);border:1px dashed var(--border);border-radius:12px;padding:14px;text-align:center;color:var(--muted);font-size:var(--fs-base);margin-top:14px}
 
   /* Tables */
-  table.grid{width:100%;border-collapse:collapse;font-size:15px}
-  table.grid th,table.grid td{border:1px solid var(--border);padding:9px 12px;text-align:right;white-space:nowrap;font-variant-numeric:tabular-nums;font-weight:500;color:var(--ink)}
-  table.grid th{font-weight:700;text-align:center;font-size:15px}
+  table.grid{width:100%;border-collapse:collapse;font-size:var(--fs-base)}
+  table.grid th,table.grid td{border:1px solid var(--border);padding:8px 11px;text-align:right;white-space:nowrap;font-variant-numeric:tabular-nums;font-weight:500;color:var(--ink)}
+  table.grid th{font-weight:700;text-align:center;font-size:var(--fs-base)}
   table.grid th.l1{background:var(--month-accent);color:#fff;border-color:var(--month-accent)}
   table.grid th.l2{background:var(--subheader);color:var(--secondary);border-color:var(--border)}
   table.grid td.dim{text-align:left;font-weight:700;background:var(--stripe);color:var(--accent-dark)}
   table.grid tbody tr:nth-child(even) td:not(.dim){background:var(--stripe)}
   table.grid tr.total td{background:var(--subheader)!important;color:var(--accent-dark)!important;font-weight:700}
-  table.grid td.na{color:#94A3B8;text-align:center;font-weight:400}
+  table.grid td.na{color:var(--muted);text-align:center;font-weight:400}
   table.grid td.rate{text-align:center;background:var(--card)}
   table.grid tbody tr:nth-child(even) td.rate{background:var(--stripe)}
   table.grid td.subtotal{background:var(--subheader);color:var(--accent-dark);font-weight:700}
@@ -300,16 +321,16 @@
   #weekly-table tbody td:first-child{background:var(--stripe);color:var(--accent-dark)}
 
   /* Rate badge (pill style for achievement rate) */
-  .rate-badge{display:inline-block;padding:4px 14px;border-radius:20px;font-weight:700;font-size:14px;font-variant-numeric:tabular-nums;letter-spacing:.3px;min-width:66px;text-align:center}
+  .rate-badge{display:inline-block;padding:4px 14px;border-radius:20px;font-weight:700;font-size:var(--fs-base);font-variant-numeric:tabular-nums;letter-spacing:.3px;min-width:66px;text-align:center}
   .rate-badge.good{background:var(--good-bg);color:var(--good);border:1px solid rgba(74,222,128,.3)}
   .rate-badge.warn{background:var(--warn-bg);color:var(--warn);border:1px solid rgba(251,191,36,.3)}
   .rate-badge.bad{background:var(--bad-bg);color:var(--bad);border:1px solid rgba(248,113,113,.3)}
-  .rate-badge.na{background:transparent;color:#94A3B8}
+  .rate-badge.na{background:transparent;color:var(--muted)}
 
 
   /* ===== 月累積預估趨勢（前日業績分頁下方） ===== */
   .fcst-filter-row{display:flex;flex-wrap:wrap;gap:10px 14px;align-items:center;margin-bottom:14px}
-  .fcst-filter-row label{font-size:14px;color:var(--secondary);font-weight:600}
+  .fcst-filter-row label{font-size:var(--fs-base);color:var(--secondary);font-weight:600}
   .fcst-filter-row select{min-width:120px}
   .fcst-kpi-row{display:grid;grid-template-columns:repeat(4,1fr);gap:12px;margin-bottom:14px}
   .fcst-kpi{background:var(--stripe);border:0.5px solid var(--border);border-radius:10px;padding:12px 16px;position:relative;overflow:hidden}
@@ -317,36 +338,36 @@
   .fcst-kpi.est::before{background:#A855F7}
   .fcst-kpi.rate::before{background:#FBBF24}
   .fcst-kpi.gap::before{background:var(--line)}
-  .fcst-kpi .k{font-size:14px;color:var(--secondary);font-weight:600;letter-spacing:.3px}
-  .fcst-kpi .v{font-size:34px;font-weight:700;color:var(--ink);line-height:1.15;margin-top:4px;
+  .fcst-kpi .k{font-size:var(--fs-base);color:var(--secondary);font-weight:600;letter-spacing:.3px}
+  .fcst-kpi .v{font-size:var(--fs-2xl);font-weight:700;color:var(--ink);line-height:1.15;margin-top:4px;
        font-variant-numeric:tabular-nums;font-feature-settings:var(--font-num-feat)}
-  .fcst-kpi .v .u{font-size:16px;color:var(--muted);font-weight:500;margin-left:3px}
+  .fcst-kpi .v .u{font-size:var(--fs-md);color:var(--muted);font-weight:500;margin-left:3px}
   .fcst-kpi .v.good{color:var(--good)} .fcst-kpi .v.bad{color:var(--bad)}
-  .fcst-kpi .s{font-size:13px;color:var(--secondary);margin-top:3px;font-weight:500}
+  .fcst-kpi .s{font-size:var(--fs-sm);color:var(--secondary);margin-top:3px;font-weight:500}
   .fcst-main-row{display:flex;gap:14px;align-items:stretch}
   .fcst-chart-box{flex:1.05;min-width:0;min-height:330px;position:relative}
   .fcst-scenario-col{flex:1;min-width:0}
-  .fcst-scenario-col h3{margin:0 0 8px 0;font-size:15px;font-weight:700;color:var(--accent-dark)}
+  .fcst-scenario-col h3{margin:0 0 8px 0;font-size:var(--fs-base);font-weight:700;color:var(--accent-dark)}
   /* 6 欄情境表：縮排版以在桌機一次看完，不必橫向捲動 */
-  .fcst-scenario-col table.grid{font-size:13px}
-  .fcst-scenario-col table.grid th{padding:6px 7px;font-size:12.5px;line-height:1.25}
+  .fcst-scenario-col table.grid{font-size:var(--fs-sm)}
+  .fcst-scenario-col table.grid th{padding:6px 7px;font-size:var(--fs-xs);line-height:1.25}
   .fcst-scenario-col table.grid td{padding:7px 7px}
-  .fcst-scenario-col .rate-badge{padding:3px 9px;font-size:12.5px;min-width:56px}
+  .fcst-scenario-col .rate-badge{padding:3px 9px;font-size:var(--fs-xs);min-width:56px}
   table.grid td.scn{text-align:left;font-weight:700;background:var(--stripe);color:var(--accent-dark)}
   table.grid tr.scn-base td{background:#F5F3FF!important;color:#6D28D9!important;font-weight:700}
   table.grid tr.scn-live td{background:#FFF7ED!important;color:#9A3412!important;font-weight:700}
   .fcst-daily{margin-top:14px}
-  .fcst-daily summary{cursor:pointer;font-size:14px;font-weight:700;color:var(--accent-dark);
+  .fcst-daily summary{cursor:pointer;font-size:var(--fs-base);font-weight:700;color:var(--accent-dark);
        background:var(--subheader);border-radius:8px;padding:8px 14px;user-select:none;list-style:none}
   .fcst-daily summary::-webkit-details-marker{display:none}
-  .fcst-daily summary::before{content:"▸ ";font-size:12px}
+  .fcst-daily summary::before{content:"▸ ";font-size:var(--fs-xs)}
   .fcst-daily[open] summary::before{content:"▾ "}
   .fcst-daily .scroll-x{margin-top:10px;max-height:420px;overflow-y:auto}
-  .fcst-daily table.grid{font-size:13px}
+  .fcst-daily table.grid{font-size:var(--fs-sm)}
   .fcst-daily table.grid th{position:sticky;top:0;z-index:2}
   table.grid td.dow-we{color:#BE123C}
   .fcst-empty{background:var(--stripe);border:1px dashed var(--border);border-radius:10px;
-       padding:26px;text-align:center;color:var(--muted);font-size:14px}
+       padding:26px;text-align:center;color:var(--muted);font-size:var(--fs-base)}
   @media(max-width:1100px){
     .fcst-kpi-row{grid-template-columns:repeat(2,1fr)}
     .fcst-main-row{flex-wrap:wrap}
@@ -355,11 +376,11 @@
   }
   @media(max-width:640px){
     .fcst-kpi-row{grid-template-columns:1fr}
-    .fcst-kpi .v{font-size:28px}
+    .fcst-kpi .v{font-size:var(--fs-xl)}
     .fcst-filter-row{gap:8px}
     .fcst-filter-row select{flex:1 1 auto;min-width:0}
     .fcst-chart-box{min-height:250px}
-    .fcst-daily table.grid{font-size:12px}
+    .fcst-daily table.grid{font-size:var(--fs-xs)}
   }
 
   /* ===== 停售／預購（商品狀態）===== */
@@ -369,11 +390,11 @@
        border-left:5px solid #EA580C;border-radius:10px;padding:11px 16px;margin-bottom:14px;
        cursor:pointer;transition:.12s}
   .po-banner:hover{background:#FFEDD5}
-  .po-banner .po-ico{font-size:20px;line-height:1}
-  .po-banner .po-txt{flex:1;min-width:0;font-size:14px;color:#7C2D12;line-height:1.5}
+  .po-banner .po-ico{font-size:var(--fs-md);line-height:1}
+  .po-banner .po-txt{flex:1;min-width:0;font-size:var(--fs-base);color:#7C2D12;line-height:1.5}
   .po-banner .po-txt b{color:#9A3412}
-  .po-banner .po-go{font-size:13px;font-weight:700;color:#9A3412;white-space:nowrap}
-  .po-state{display:inline-block;padding:3px 12px;border-radius:14px;font-size:13px;font-weight:700}
+  .po-banner .po-go{font-size:var(--fs-sm);font-weight:700;color:#9A3412;white-space:nowrap}
+  .po-state{display:inline-block;padding:3px 12px;border-radius:14px;font-size:var(--fs-sm);font-weight:700}
   .po-state.stop{background:#FEE2E2;color:#B91C1C}
   .po-state.pre{background:#FFEDD5;color:#9A3412}
   .po-state.live{background:#DCFCE7;color:#15803D}
@@ -388,8 +409,8 @@
        border-radius:50%;background:#fff;border:3px solid var(--border);z-index:1}
   .po-tl-step.done .po-tl-dot{border-color:#EA580C;background:#EA580C}
   .po-tl-step.now .po-tl-dot{border-color:#EA580C;background:#fff;box-shadow:0 0 0 4px rgba(234,88,12,.22)}
-  .po-tl-date{font-size:13px;font-weight:700;color:var(--ink);font-variant-numeric:tabular-nums}
-  .po-tl-lbl{font-size:12px;color:var(--secondary);margin-top:2px;line-height:1.35}
+  .po-tl-date{font-size:var(--fs-sm);font-weight:700;color:var(--ink);font-variant-numeric:tabular-nums}
+  .po-tl-lbl{font-size:var(--fs-xs);color:var(--secondary);margin-top:2px;line-height:1.35}
   .po-tl-step.now .po-tl-date,.po-tl-step.now .po-tl-lbl{color:#9A3412}
   /* KPI */
   .po-kpi-row{display:grid;grid-template-columns:repeat(4,1fr);gap:12px;margin-bottom:14px}
@@ -398,18 +419,18 @@
   .po-kpi::before{content:"";position:absolute;left:0;top:0;width:4px;height:100%;background:var(--accent)}
   .po-kpi.warn::before{background:#EA580C}
   .po-kpi.bad::before{background:var(--line)}
-  .po-kpi .k{font-size:14px;color:var(--secondary);font-weight:600}
-  .po-kpi .v{font-size:32px;font-weight:700;color:var(--ink);line-height:1.15;margin-top:4px;
+  .po-kpi .k{font-size:var(--fs-base);color:var(--secondary);font-weight:600}
+  .po-kpi .v{font-size:var(--fs-2xl);font-weight:700;color:var(--ink);line-height:1.15;margin-top:4px;
        font-variant-numeric:tabular-nums;font-feature-settings:var(--font-num-feat)}
-  .po-kpi .v .u{font-size:15px;color:var(--muted);font-weight:500;margin-left:3px}
-  .po-kpi .s{font-size:12.5px;color:var(--secondary);margin-top:3px;line-height:1.4}
+  .po-kpi .v .u{font-size:var(--fs-base);color:var(--muted);font-weight:500;margin-left:3px}
+  .po-kpi .s{font-size:var(--fs-xs);color:var(--secondary);margin-top:3px;line-height:1.4}
   .po-main-row{display:flex;gap:14px;align-items:stretch}
   .po-chart-box{flex:1.1;min-width:0;min-height:300px;position:relative}
   .po-chart-box canvas{max-width:100%}
   .po-side{flex:1;min-width:0}
-  .po-side h3{margin:0 0 8px 0;font-size:15px;font-weight:700;color:var(--accent-dark)}
-  .po-side table.grid{font-size:13px}
-  .po-side table.grid th{padding:6px 8px;font-size:12.5px}
+  .po-side h3{margin:0 0 8px 0;font-size:var(--fs-base);font-weight:700;color:var(--accent-dark)}
+  .po-side table.grid{font-size:var(--fs-sm)}
+  .po-side table.grid th{padding:6px 8px;font-size:var(--fs-xs)}
   .po-side table.grid td{padding:7px 8px}
   @media(max-width:1100px){
     .po-kpi-row{grid-template-columns:repeat(2,1fr)}
@@ -418,7 +439,7 @@
   }
   @media(max-width:640px){
     .po-kpi-row{grid-template-columns:1fr}
-    .po-kpi .v{font-size:27px}
+    .po-kpi .v{font-size:var(--fs-xl)}
     .po-timeline{flex-direction:column;gap:12px}
     .po-tl-step{padding-top:0;padding-left:26px;text-align:left}
     .po-tl-step::before{top:0;bottom:0;left:7px;right:auto;width:3px;height:auto}
@@ -430,31 +451,31 @@
 
   /* Filter row (SKU tab etc.) */
   .filter-row{display:flex;flex-wrap:wrap;gap:8px;align-items:center;margin-bottom:10px;padding:12px 16px;background:var(--stripe);border:0.5px solid var(--border);border-radius:8px}
-  .filter-row label{font-size:14px;color:var(--secondary);font-weight:500}
-  .filter-row select{padding:6px 12px;border:1px solid var(--border);border-radius:6px;background:var(--card);font-size:14px;cursor:pointer;font-family:inherit;color:var(--ink)}
+  .filter-row label{font-size:var(--fs-base);color:var(--secondary);font-weight:500}
+  .filter-row select{padding:6px 12px;border:1px solid var(--border);border-radius:6px;background:var(--card);font-size:var(--fs-base);cursor:pointer;font-family:inherit;color:var(--ink)}
   .filter-row select:focus{outline:none;border-color:var(--accent)}
 
   /* SKU rank badges */
-  .rank-badge{display:inline-block;padding:2px 9px;border-radius:11px;font-weight:700;font-size:11px;letter-spacing:.5px;min-width:48px;text-align:center}
+  .rank-badge{display:inline-block;padding:2px 9px;border-radius:11px;font-weight:700;font-size:var(--fs-xs);letter-spacing:.5px;min-width:48px;text-align:center}
   .rank-badge.gold{background:linear-gradient(135deg,#FDE68A,#F59E0B);color:#78350F;box-shadow:0 1px 3px rgba(245,158,11,.5);border:1px solid #D97706}
-  .rank-badge.silver{background:linear-gradient(135deg,#F1F5F9,#94A3B8);color:#1E293B;box-shadow:0 1px 3px rgba(148,163,184,.45);border:1px solid #64748B}
+  .rank-badge.silver{background:linear-gradient(135deg,#F1F5F9,var(--muted));color:#1E293B;box-shadow:0 1px 3px rgba(148,163,184,.45);border:1px solid #64748B}
   .rank-badge.bronze{background:linear-gradient(135deg,#FED7AA,#C2410C);color:#fff;box-shadow:0 1px 3px rgba(194,65,12,.45);border:1px solid #9A3412}
   .rank-num{display:inline-block;min-width:32px;text-align:center;color:var(--muted);font-weight:600}
 
-  .sku-stats{margin-top:8px;padding:12px 16px;background:var(--subheader);border-left:3px solid var(--accent);border-radius:6px;font-size:12px;color:var(--accent-dark)}
+  .sku-stats{margin-top:8px;padding:12px 16px;background:var(--subheader);border-left:3px solid var(--accent);border-radius:6px;font-size:var(--fs-xs);color:var(--accent-dark)}
   .sku-stats strong{color:var(--accent-dark)}
 
   /* 使用者指定：AOV / TOP20 / 手偶 分頁字級放大易讀 */
-  #panel-sku .sku-stats{font-size:19px;line-height:1.75}
-  #panel-sku table.grid,#panel-handpuppet table.grid{font-size:18px}
-  #panel-sku table.grid th,#panel-handpuppet table.grid th{font-size:18px}
-  #panel-sku table.grid td.sku-code{font-size:17px;color:var(--ink)}
-  #panel-sku table.grid td.sku-name{font-size:18px}
-  #panel-sku .filter-row label,#panel-sku .filter-row select{font-size:17px}
-  #panel-aov .card h2,#panel-sku .card h2,#panel-handpuppet .card h2{font-size:23px}
-  #panel-aov .card h2 .pill,#panel-sku .card h2 .pill,#panel-handpuppet .card h2 .pill{font-size:16px}
+  #panel-sku .sku-stats{font-size:var(--fs-md);line-height:1.75}
+  #panel-sku table.grid,#panel-handpuppet table.grid{font-size:var(--fs-md)}
+  #panel-sku table.grid th,#panel-handpuppet table.grid th{font-size:var(--fs-md)}
+  #panel-sku table.grid td.sku-code{font-size:var(--fs-md);color:var(--ink)}
+  #panel-sku table.grid td.sku-name{font-size:var(--fs-md)}
+  #panel-sku .filter-row label,#panel-sku .filter-row select{font-size:var(--fs-md)}
+  #panel-aov .card h2,#panel-sku .card h2,#panel-handpuppet .card h2{font-size:var(--fs-lg)}
+  #panel-aov .card h2 .pill,#panel-sku .card h2 .pill,#panel-handpuppet .card h2 .pill{font-size:var(--fs-md)}
   table.grid td.sku-name{text-align:left;white-space:normal;max-width:420px;line-height:1.35;color:var(--ink)}
-  table.grid td.sku-code{font-family:var(--font-num);font-size:12px;color:var(--secondary);
+  table.grid td.sku-code{font-family:var(--font-num);font-size:var(--fs-xs);color:var(--secondary);
        letter-spacing:.055em;font-variant-numeric:tabular-nums;font-feature-settings:var(--font-num-feat)}
   table.grid td.sku-rank{text-align:center;width:70px}
   /* 表格內嵌橫條小圖（TOP20 數量/金額/構成比） */
@@ -463,52 +484,52 @@
   td .cellbar .cb-num{position:relative;z-index:1}
 
   /* Subtle card (gray theme) for import/converter */
-  .card.subtle{background:#F8FAFC;border-color:#CBD5E1}
-  .card.subtle h2{color:var(--secondary);border-left-color:#94A3B8;font-size:16px}
-  .card.subtle .card-desc{font-size:11px;color:var(--secondary);margin-bottom:12px;line-height:1.5}
+  .card.subtle{background:var(--stripe);border-color:var(--border-strong)}
+  .card.subtle h2{color:var(--secondary);border-left-color:var(--muted);font-size:var(--fs-md)}
+  .card.subtle .card-desc{font-size:var(--fs-xs);color:var(--secondary);margin-bottom:12px;line-height:1.5}
   .card.subtle .card-desc a{color:var(--accent);text-decoration:none}
   .card.subtle .card-desc a:hover{text-decoration:underline}
 
   /* Dropzone */
-  .dropzone{position:relative;border:2px dashed #CBD5E1;border-radius:12px;padding:30px 24px;text-align:center;background:#fff;transition:all .15s;cursor:pointer}
+  .dropzone{position:relative;border:2px dashed var(--border);border-radius:12px;padding:30px 24px;text-align:center;background:#fff;transition:all .15s;cursor:pointer}
   .dropzone input[type=file]{display:none}
   .dropzone:hover{border-color:var(--accent);background:var(--bg)}
   .dropzone.dragover{border-color:var(--accent);background:var(--bg);border-style:solid}
-  .dropzone-icon{font-size:34px;color:#CBD5E1;margin-bottom:4px;line-height:1}
-  .dropzone-title{font-size:13px;font-weight:600;color:var(--secondary);margin-top:4px}
-  .dropzone-sub{font-size:12px;color:var(--muted);margin-top:4px}
+  .dropzone-icon{font-size:var(--fs-2xl);color:var(--border-strong);margin-bottom:4px;line-height:1}
+  .dropzone-title{font-size:var(--fs-sm);font-weight:600;color:var(--secondary);margin-top:4px}
+  .dropzone-sub{font-size:var(--fs-xs);color:var(--muted);margin-top:4px}
   .dropzone-sub a{color:var(--accent);text-decoration:underline;cursor:pointer}
-  .dropzone-hint{font-size:11px;color:var(--muted);margin-top:8px;line-height:1.5}
+  .dropzone-hint{font-size:var(--fs-xs);color:var(--muted);margin-top:8px;line-height:1.5}
 
   /* File list */
   .file-list{margin-top:12px}
   .file-list:empty{display:none}
-  .file-row{display:flex;align-items:center;gap:10px;padding:10px 14px;border:1px solid var(--border);border-radius:8px;margin-bottom:5px;background:var(--card);font-size:14px}
+  .file-row{display:flex;align-items:center;gap:10px;padding:10px 14px;border:1px solid var(--border);border-radius:8px;margin-bottom:5px;background:var(--card);font-size:var(--fs-base)}
   .file-row.unknown{border-color:#FBBF24;background:#FFFBEB}
-  .file-row .file-icon{font-size:14px}
-  .file-row .file-name{flex:1;font-size:12px;word-break:break-all;color:var(--ink)}
-  .file-row select{font-size:11px;padding:4px 8px;border:1px solid var(--border);border-radius:6px;background:#fff;cursor:pointer;font-family:inherit;min-width:110px;color:var(--ink)}
-  .file-row .file-size{font-size:10px;color:var(--muted);white-space:nowrap;min-width:55px;text-align:right}
-  .file-row .file-remove{background:transparent;border:none;cursor:pointer;color:var(--muted);font-size:13px;padding:3px 7px;border-radius:4px;line-height:1}
+  .file-row .file-icon{font-size:var(--fs-base)}
+  .file-row .file-name{flex:1;font-size:var(--fs-xs);word-break:break-all;color:var(--ink)}
+  .file-row select{font-size:var(--fs-xs);padding:4px 8px;border:1px solid var(--border);border-radius:6px;background:#fff;cursor:pointer;font-family:inherit;min-width:110px;color:var(--ink)}
+  .file-row .file-size{font-size:var(--fs-xs);color:var(--muted);white-space:nowrap;min-width:55px;text-align:right}
+  .file-row .file-remove{background:transparent;border:none;cursor:pointer;color:var(--muted);font-size:var(--fs-sm);padding:3px 7px;border-radius:4px;line-height:1}
   .file-row .file-remove:hover{color:var(--bad);background:var(--bad-bg)}
 
   /* Action row */
   .action-row{display:flex;gap:10px;align-items:center;margin-top:14px;flex-wrap:wrap}
-  button.secondary{background:transparent;color:var(--secondary);border:1px solid var(--border-strong);border-radius:8px;padding:8px 14px;font-size:12px;cursor:pointer;font-family:inherit}
+  button.secondary{background:transparent;color:var(--secondary);border:1px solid var(--border-strong);border-radius:8px;padding:8px 14px;font-size:var(--fs-xs);cursor:pointer;font-family:inherit}
   button.secondary:hover:not(:disabled){background:var(--stripe);color:var(--accent-dark);border-color:var(--accent)}
   button.secondary:disabled{opacity:.5;cursor:not-allowed}
 
   /* Stats grid */
   .stats-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(170px,1fr));gap:10px;margin-top:12px}
   .stats-grid .stat{background:var(--card);border:0.5px solid var(--border);border-radius:8px;padding:12px 16px}
-  .stats-grid .stat .lbl{font-size:13px;color:var(--muted);font-weight:500}
-  .stats-grid .stat .val{font-size:28px;font-weight:700;color:var(--accent-dark);margin-top:4px;font-variant-numeric:tabular-nums}
-  .stats-grid .stat .sub{font-size:12px;color:var(--muted);margin-top:2px}
+  .stats-grid .stat .lbl{font-size:var(--fs-sm);color:var(--muted);font-weight:500}
+  .stats-grid .stat .val{font-size:var(--fs-xl);font-weight:700;color:var(--accent-dark);margin-top:4px;font-variant-numeric:tabular-nums}
+  .stats-grid .stat .sub{font-size:var(--fs-xs);color:var(--muted);margin-top:2px}
 
   /* Trend tab navigation */
   .trend-nav{background:#fff;border:0.5px solid var(--border);border-radius:8px;padding:8px 12px;margin-bottom:14px;display:flex;flex-wrap:wrap;gap:4px;align-items:center}
-  .trend-nav .nav-label{font-size:11px;color:var(--muted);font-weight:500;margin-right:6px}
-  .trend-nav a{padding:4px 11px;color:var(--accent-dark);text-decoration:none;font-size:12px;border-radius:6px;border:1px solid transparent;transition:all .12s}
+  .trend-nav .nav-label{font-size:var(--fs-xs);color:var(--muted);font-weight:500;margin-right:6px}
+  .trend-nav a{padding:4px 11px;color:var(--accent-dark);text-decoration:none;font-size:var(--fs-xs);border-radius:6px;border:1px solid transparent;transition:all .12s}
   .trend-nav a:hover{background:var(--bg);border-color:var(--border)}
   .trend-nav .sep{color:var(--border-strong);margin:0 2px}
 
@@ -519,32 +540,32 @@
   /* Loader */
   .loader-row{display:flex;flex-wrap:wrap;gap:12px;align-items:flex-end}
   .file-input{display:flex;flex-direction:column;gap:4px;flex:1;min-width:240px}
-  .file-input label.title{font-size:11px;color:var(--muted);font-weight:500}
-  .file-input .fname{font-size:12px;color:var(--ink);padding:8px 12px;background:var(--stripe);border:1px dashed var(--border);border-radius:8px;cursor:pointer;transition:all .15s}
+  .file-input label.title{font-size:var(--fs-xs);color:var(--muted);font-weight:500}
+  .file-input .fname{font-size:var(--fs-xs);color:var(--ink);padding:8px 12px;background:var(--stripe);border:1px dashed var(--border);border-radius:8px;cursor:pointer;transition:all .15s}
   .file-input .fname:hover{background:var(--bg);border-color:var(--accent)}
   .file-input .fname.loaded{background:var(--good-bg);border-color:#10B981;border-style:solid;color:#065F46}
   .file-input input[type=file]{display:none}
 
-  button.primary{background:var(--accent-dark);color:#fff;border:none;border-radius:8px;padding:8px 18px;font-size:13px;font-weight:600;cursor:pointer;transition:all .15s;letter-spacing:.3px}
+  button.primary{background:var(--accent-dark);color:#fff;border:none;border-radius:8px;padding:8px 18px;font-size:var(--fs-sm);font-weight:600;cursor:pointer;transition:all .15s;letter-spacing:.3px}
   button.primary:hover{background:#162943}
-  button.primary:disabled{background:#94A3B8;cursor:not-allowed}
+  button.primary:disabled{background:var(--muted);cursor:not-allowed}
 
-  .status{font-size:12px;color:var(--secondary);margin-top:8px;padding:8px 12px;background:var(--stripe);border-radius:8px;border:1px solid var(--border)}
+  .status{font-size:var(--fs-xs);color:var(--secondary);margin-top:8px;padding:8px 12px;background:var(--stripe);border-radius:8px;border:1px solid var(--border)}
   .status.error{color:var(--bad);background:var(--bad-bg);border-color:#FCA5A5}
   .status.success{color:var(--good);background:var(--good-bg);border-color:#86EFAC}
 
-  .legend{font-size:14px;color:var(--muted);margin-top:6px}
+  .legend{font-size:var(--fs-base);color:var(--muted);margin-top:6px}
 
   .prevday-month-group{margin-bottom:14px}
   .prevday-month-group.collapsed{margin-bottom:6px}
-  .prevday-month-hd{display:flex;align-items:center;gap:8px;margin-bottom:8px;font-size:14px;font-weight:700;color:var(--accent-dark);cursor:pointer;user-select:none}
+  .prevday-month-hd{display:flex;align-items:center;gap:8px;margin-bottom:8px;font-size:var(--fs-base);font-weight:700;color:var(--accent-dark);cursor:pointer;user-select:none}
   .prevday-month-group.collapsed .prevday-month-hd{margin-bottom:0;opacity:.7}
-  .prevday-month-toggle{display:inline-block;width:14px;font-size:11px;color:var(--muted)}
-  .prevday-sel-badge{font-size:11px;font-weight:600;color:#fff;background:var(--accent);border-radius:10px;padding:1px 9px}
-  .prevday-mini-btn{font-size:11px;font-weight:500;color:var(--accent);background:var(--subheader);border:0.5px solid var(--border);border-radius:8px;padding:2px 10px;cursor:pointer}
+  .prevday-month-toggle{display:inline-block;width:14px;font-size:var(--fs-xs);color:var(--muted)}
+  .prevday-sel-badge{font-size:var(--fs-xs);font-weight:600;color:#fff;background:var(--accent);border-radius:10px;padding:1px 9px}
+  .prevday-mini-btn{font-size:var(--fs-xs);font-weight:500;color:var(--accent);background:var(--subheader);border:0.5px solid var(--border);border-radius:8px;padding:2px 10px;cursor:pointer}
   .prevday-mini-btn:hover{background:var(--border)}
   .prevday-date-grid{display:flex;flex-wrap:wrap;gap:6px}
-  .prevday-date-chip{display:inline-flex;align-items:center;gap:5px;font-size:12px;font-variant-numeric:tabular-nums;color:var(--secondary);background:var(--card);border:0.5px solid var(--border);border-radius:8px;padding:5px 10px;cursor:pointer;user-select:none;transition:all .12s}
+  .prevday-date-chip{display:inline-flex;align-items:center;gap:5px;font-size:var(--fs-xs);font-variant-numeric:tabular-nums;color:var(--secondary);background:var(--card);border:0.5px solid var(--border);border-radius:8px;padding:5px 10px;cursor:pointer;user-select:none;transition:all .12s}
   .prevday-date-chip:hover{border-color:var(--accent)}
   .prevday-date-chip input{cursor:pointer}
   .prevday-date-chip input:checked ~ *{}
@@ -552,21 +573,21 @@
   .prevday-date-chip.holiday{color:var(--bad)}
   .prevday-date-chip.holiday:has(input:checked){background:var(--bad);border-color:var(--bad);color:#fff}
   .prevday-actions{margin-top:12px;display:flex;align-items:center;gap:10px}
-  .prevday-btn{font-size:12px;font-weight:600;color:var(--secondary);background:var(--subheader);border:0.5px solid var(--border);border-radius:8px;padding:6px 14px;cursor:pointer}
+  .prevday-btn{font-size:var(--fs-xs);font-weight:600;color:var(--secondary);background:var(--subheader);border:0.5px solid var(--border);border-radius:8px;padding:6px 14px;cursor:pointer}
   .prevday-btn:hover{background:var(--border)}
 
   .prevday-filter-row{display:flex;flex-wrap:wrap;align-items:center;gap:14px;margin-bottom:16px}
   .prevday-dropdown-wrap{position:relative}
-  .prevday-dropdown-btn{font-size:12px;font-weight:600;color:var(--accent-dark);background:var(--subheader);border:0.5px solid var(--border);border-radius:8px;padding:7px 14px;cursor:pointer;display:inline-flex;align-items:center;gap:6px;min-width:140px;justify-content:space-between}
+  .prevday-dropdown-btn{font-size:var(--fs-xs);font-weight:600;color:var(--accent-dark);background:var(--subheader);border:0.5px solid var(--border);border-radius:8px;padding:7px 14px;cursor:pointer;display:inline-flex;align-items:center;gap:6px;min-width:140px;justify-content:space-between}
   .prevday-dropdown-btn:hover{background:var(--border)}
-  .prevday-dropdown-btn .caret{font-size:10px;color:var(--muted)}
-  .prevday-dropdown-panel{position:absolute;top:calc(100% + 6px);left:0;z-index:20;background:var(--card);border:0.5px solid var(--border);border-radius:10px;box-shadow:0 8px 24px rgba(0,0,0,.35);padding:10px;min-width:160px}
+  .prevday-dropdown-btn .caret{font-size:var(--fs-xs);color:var(--muted)}
+  .prevday-dropdown-panel{position:absolute;top:calc(100% + 6px);left:0;z-index:20;background:var(--card);border:0.5px solid var(--border);border-radius:10px;box-shadow:var(--shadow-pop);padding:10px;min-width:160px}
   .prevday-dropdown-actions{display:flex;gap:6px;margin-bottom:8px;padding-bottom:8px;border-bottom:1px dashed var(--border)}
-  .prevday-dropdown-item{display:flex;align-items:center;gap:8px;font-size:13px;color:var(--secondary);padding:4px 2px;cursor:pointer;white-space:nowrap}
+  .prevday-dropdown-item{display:flex;align-items:center;gap:8px;font-size:var(--fs-sm);color:var(--secondary);padding:4px 2px;cursor:pointer;white-space:nowrap}
   .prevday-dropdown-item input{cursor:pointer}
   .prevday-stack-toggle{display:inline-flex;align-items:center;gap:6px}
-  .prevday-stack-lbl{font-size:12px;color:var(--muted);font-weight:500}
-  .prevday-stack-toggle button{font-size:12px;font-weight:600;color:var(--secondary);background:var(--card);border:0.5px solid var(--border);border-radius:8px;padding:6px 14px;cursor:pointer}
+  .prevday-stack-lbl{font-size:var(--fs-xs);color:var(--muted);font-weight:500}
+  .prevday-stack-toggle button{font-size:var(--fs-xs);font-weight:600;color:var(--secondary);background:var(--card);border:0.5px solid var(--border);border-radius:8px;padding:6px 14px;cursor:pointer}
   .prevday-stack-toggle button.active{background:var(--accent);border-color:var(--accent);color:#fff}
   .prevday-overview-row{display:flex;flex-wrap:wrap;gap:18px;align-items:stretch}
   /* min-width:0 不可省：flex 項目預設 min-width:auto，會被 canvas 的固有寬度撐住，
@@ -583,85 +604,85 @@
   /* ── 品項複選篩選 (Biz SKU Filter) ── */
   .biz-sku-filter{background:var(--stripe);border:0.5px solid var(--border);border-radius:8px;padding:10px 14px;margin-bottom:14px}
   .biz-sku-filter-toolbar{display:flex;flex-wrap:wrap;align-items:center;gap:8px;margin-bottom:8px}
-  .biz-sku-filter-toolbar .sku-label{font-size:12px;font-weight:600;color:var(--secondary)}
-  .biz-sku-search{padding:5px 10px;border:1px solid var(--border);border-radius:6px;font-size:12px;font-family:inherit;color:var(--ink);background:var(--card);width:200px}
+  .biz-sku-filter-toolbar .sku-label{font-size:var(--fs-xs);font-weight:600;color:var(--secondary)}
+  .biz-sku-search{padding:5px 10px;border:1px solid var(--border);border-radius:6px;font-size:var(--fs-xs);font-family:inherit;color:var(--ink);background:var(--card);width:200px}
   .biz-sku-search:focus{outline:none;border-color:var(--accent)}
-  .biz-sku-action{font-size:11px;font-weight:600;color:var(--secondary);background:var(--card);border:0.5px solid var(--border);border-radius:6px;padding:4px 10px;cursor:pointer}
+  .biz-sku-action{font-size:var(--fs-xs);font-weight:600;color:var(--secondary);background:var(--card);border:0.5px solid var(--border);border-radius:6px;padding:4px 10px;cursor:pointer}
   .biz-sku-action:hover{border-color:var(--accent);color:var(--accent)}
-  .biz-sku-count{font-size:11px;color:var(--muted);margin-left:auto}
+  .biz-sku-count{font-size:var(--fs-xs);color:var(--muted);margin-left:auto}
   .biz-sku-list{max-height:164px;overflow-y:auto;display:grid;grid-template-columns:repeat(auto-fill,minmax(220px,1fr));gap:2px}
-  .biz-sku-list label{display:flex;align-items:center;gap:6px;font-size:11px;padding:3px 6px;border-radius:4px;cursor:pointer;color:var(--ink);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+  .biz-sku-list label{display:flex;align-items:center;gap:6px;font-size:var(--fs-xs);padding:3px 6px;border-radius:4px;cursor:pointer;color:var(--ink);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
   .biz-sku-list label:hover{background:var(--bg)}
   .biz-sku-list input[type=checkbox]{accent-color:var(--accent);flex-shrink:0}
   .biz-sku-list label.hidden{display:none}
-  .biz-sku-no-products{font-size:12px;color:var(--muted);padding:8px 0}
-  .biz-sku-empty{text-align:center;padding:40px 0;color:var(--muted);font-size:13px}
+  .biz-sku-no-products{font-size:var(--fs-xs);color:var(--muted);padding:8px 0}
+  .biz-sku-empty{text-align:center;padding:40px 0;color:var(--muted);font-size:var(--fs-sm)}
 
   /* ── 業績卡片 Tab ── */
   .cards-toolbar{display:flex;align-items:center;gap:10px;flex-wrap:wrap;margin-bottom:0}
-  .cards-view-lbl{font-size:13px;color:var(--secondary);font-weight:500}
-  .cards-view-btn{font-size:12px;font-weight:600;color:var(--secondary);background:var(--card);border:0.5px solid var(--border);border-radius:8px;padding:6px 14px;cursor:pointer}
+  .cards-view-lbl{font-size:var(--fs-sm);color:var(--secondary);font-weight:500}
+  .cards-view-btn{font-size:var(--fs-xs);font-weight:600;color:var(--secondary);background:var(--card);border:0.5px solid var(--border);border-radius:8px;padding:6px 14px;cursor:pointer}
   .cards-view-btn.active{background:var(--accent);border-color:var(--accent);color:#fff}
-  .cards-last-date{font-size:11px;color:var(--muted);margin-left:auto}
+  .cards-last-date{font-size:var(--fs-xs);color:var(--muted);margin-left:auto}
   .cards-grid{display:grid;grid-template-columns:repeat(2,1fr);gap:18px}
   @media(max-width:1024px){.cards-grid{grid-template-columns:1fr}}
 
-  .bc{background:var(--card);border:0.5px solid var(--border);border-radius:12px;overflow:hidden;box-shadow:0 4px 16px rgba(0,0,0,.3)}
+  .bc{background:var(--card);border:0.5px solid var(--border);border-radius:12px;overflow:hidden;box-shadow:var(--shadow-card)}
   .bc-hero{padding:14px 18px 12px;border-left:6px solid var(--bc-color,#0284C7)}
   .bc-hero-top{display:flex;align-items:baseline;gap:12px;margin-bottom:10px;flex-wrap:wrap}
-  .bc-name{font-size:19px;font-weight:700;color:var(--bc-color,#0C4A6E)}
-  .bc-sub{font-size:13px;color:var(--muted);font-weight:400}
-  .bc-cumul{font-size:30px;font-weight:700;letter-spacing:-0.5px;color:var(--bc-color,#0C4A6E);margin-left:auto}
-  .bc-cumul-unit{font-size:14px;font-weight:400;margin-left:2px}
-  .bc-target-label{font-size:13px;color:var(--muted);margin-left:4px}
+  .bc-name{font-size:var(--fs-md);font-weight:700;color:var(--bc-color,#0C4A6E)}
+  .bc-sub{font-size:var(--fs-sm);color:var(--muted);font-weight:400}
+  .bc-cumul{font-size:var(--fs-xl);font-weight:700;letter-spacing:-0.5px;color:var(--bc-color,#0C4A6E);margin-left:auto}
+  .bc-cumul-unit{font-size:var(--fs-base);font-weight:400;margin-left:2px}
+  .bc-target-label{font-size:var(--fs-sm);color:var(--muted);margin-left:4px}
   .bc-bars{display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-top:4px}
   .bc-bar-row{}
   .bc-bar-labels{display:flex;justify-content:space-between;align-items:baseline;margin-bottom:3px}
-  .bc-bar-key{font-size:13px;color:var(--muted)}
-  .bc-bar-val{font-size:18px;font-weight:700}
+  .bc-bar-key{font-size:var(--fs-sm);color:var(--muted)}
+  .bc-bar-val{font-size:var(--fs-md);font-weight:700}
   .bc-bar-val.good{color:var(--good)}
   .bc-bar-val.warn{color:var(--warn)}
   .bc-bar-val.bad{color:var(--bad)}
   .bc-bar-track{height:7px;background:rgba(0,0,0,.1);border-radius:3px;overflow:hidden}
   .bc-bar-fill{height:100%;border-radius:3px;transition:width .3s}
 
-  .bc-table{width:100%;border-collapse:collapse;table-layout:fixed;font-size:17px}
+  .bc-table{width:100%;border-collapse:collapse;table-layout:fixed;font-size:var(--fs-md)}
   .bc-table thead tr{background:var(--stripe)}
-  .bc-table th{font-size:14px;font-weight:500;color:var(--muted);padding:5px 8px;text-align:right;border-bottom:0.5px solid var(--border);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+  .bc-table th{font-size:var(--fs-base);font-weight:500;color:var(--muted);padding:5px 8px;text-align:right;border-bottom:0.5px solid var(--border);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
   .bc-table th:first-child{text-align:left;width:84px}
   .bc-table td{padding:4px 8px;text-align:right;border-bottom:0.5px solid var(--border-light,#F0F4F8);color:var(--ink);font-variant-numeric:tabular-nums}
-  .bc-table td:first-child{text-align:left;color:var(--secondary);font-size:15px}
-  .bc-table .row-pri td{font-size:18px;font-weight:600}
-  .bc-table .row-pri td:first-child{font-size:15px}
-  .bc-table .row-dim td{font-size:15px;color:var(--muted)}
+  .bc-table td:first-child{text-align:left;color:var(--secondary);font-size:var(--fs-base)}
+  .bc-table .row-pri td{font-size:var(--fs-md);font-weight:600}
+  .bc-table .row-pri td:first-child{font-size:var(--fs-base)}
+  .bc-table .row-dim td{font-size:var(--fs-base);color:var(--muted)}
   .bc-table .row-total{background:var(--stripe)}
-  .bc-table .row-total td{font-weight:700;font-size:18px}
+  .bc-table .row-total td{font-weight:700;font-size:var(--fs-md)}
   .bc-rate-cell{display:flex;flex-direction:column;align-items:flex-end;gap:2px;padding:2px 8px 3px}
-  .bc-rate-num{font-size:15px;font-weight:700;line-height:1}
+  .bc-rate-num{font-size:var(--fs-base);font-weight:700;line-height:1}
   .bc-rate-num.good{color:var(--good)}
   .bc-rate-num.warn{color:var(--warn)}
   .bc-rate-num.bad{color:var(--bad)}
   .bc-rate-num.na{color:var(--muted)}
   .bc-rate-track{height:4px;width:44px;background:rgba(0,0,0,.08);border-radius:2px;overflow:hidden}
   .bc-rate-fill{height:100%;border-radius:2px}
-  .bc-foot{font-size:14px;color:var(--muted);padding:6px 14px 8px;background:var(--stripe);border-top:0.5px solid var(--border)}
+  .bc-foot{font-size:var(--fs-base);color:var(--muted);padding:6px 14px 8px;background:var(--stripe);border-top:0.5px solid var(--border)}
 
   /* ===== 身份客製化（角色標籤 + 選擇器） ===== */
-  .role-chip{display:flex;align-items:center;gap:6px;font-size:12px;color:#fff;background:rgba(255,255,255,.14);border:1px solid rgba(255,255,255,.30);border-radius:14px;padding:4px 11px;cursor:pointer;white-space:nowrap;font-family:inherit}
+  .role-chip{display:flex;align-items:center;gap:6px;font-size:var(--fs-xs);color:#fff;background:rgba(255,255,255,.14);border:1px solid rgba(255,255,255,.30);border-radius:14px;padding:4px 11px;cursor:pointer;white-space:nowrap;font-family:inherit}
   .role-chip:hover{background:rgba(255,255,255,.26)}
   .role-modal-mask{position:fixed;inset:0;background:rgba(12,45,107,.55);display:none;align-items:center;justify-content:center;z-index:9999}
   .role-modal-mask.show{display:flex}
-  .role-modal{background:#fff;border-radius:14px;max-width:720px;width:calc(100% - 40px);max-height:calc(100vh - 60px);overflow:auto;box-shadow:0 20px 60px rgba(0,0,0,.3);padding:30px 32px}
-  .role-modal h3{margin:0 0 6px;font-size:27px;color:#0C2D6B}
-  .role-modal p.role-sub{margin:0 0 20px;font-size:18px;color:#64748B;line-height:1.6}
+  .role-modal{background:#fff;border-radius:14px;max-width:720px;width:calc(100% - 40px);max-height:calc(100vh - 60px);overflow:auto;box-shadow:var(--shadow-modal);padding:30px 32px}
+  .role-modal h3{margin:0 0 6px;font-size:var(--fs-xl);color:#0C2D6B}
+  .role-modal p.role-sub{margin:0 0 20px;font-size:var(--fs-md);color:var(--secondary);line-height:1.6}
   .role-grid{display:grid;grid-template-columns:1fr 1fr;gap:12px}
-  .role-btn{text-align:left;border:1.5px solid #E2E8F0;border-radius:10px;padding:14px 16px;background:#F8FAFC;cursor:pointer;transition:.12s;font-family:inherit}
+  .role-btn{text-align:left;border:1.5px solid var(--border);border-radius:10px;padding:14px 16px;background:var(--stripe);cursor:pointer;transition:.12s;font-family:inherit}
   .role-btn:hover{border-color:#0284C7;background:#F0F9FF}
   .role-btn.current{border-color:#0284C7;background:#E0F2FE}
-  .role-btn .role-btn-label{font-size:21px;font-weight:700;color:#0C4A6E}
-  .role-btn .role-btn-note{font-size:17px;color:#64748B;margin-top:3px}
+  .role-btn .role-btn-label{font-size:var(--fs-lg);font-weight:700;color:#0C4A6E}
+  .role-btn .role-btn-note{font-size:var(--fs-md);color:var(--secondary);margin-top:3px}
   .role-modal-foot{margin-top:18px;display:flex;justify-content:flex-end;gap:10px}
-  .role-modal-foot button{font-family:inherit;font-size:18px;border-radius:8px;padding:9px 18px;cursor:pointer;border:1px solid #CBD5E1;background:#fff;color:#475569}
+  .role-modal-foot button{font-family:inherit;font-size:var(--fs-md);border-radius:8px;padding:9px 18px;cursor:pointer;border:1px solid var(--border);background:#fff;color:var(--secondary)}
   .role-modal-foot button:hover{background:#F1F5F9}
   @media(max-width:520px){ .role-grid{grid-template-columns:1fr} }
 
@@ -881,16 +902,16 @@
       <div class="status" id="status">尚未選擇檔案。</div>
 
       <div style="margin-top:24px;padding-top:18px;border-top:1px solid var(--border)">
-        <h3 style="margin:0 0 8px 0;font-size:14px;font-weight:600;color:var(--accent-dark);display:flex;align-items:center;gap:8px;border-left:3px solid var(--accent);padding-left:10px">
+        <h3 style="margin:0 0 8px 0;font-size:var(--fs-base);font-weight:600;color:var(--accent-dark);display:flex;align-items:center;gap:8px;border-left:3px solid var(--accent);padding-left:10px">
           📤 資料匯出（管理者用）
         </h3>
-        <div style="font-size:11px;color:var(--secondary);margin-bottom:12px;line-height:1.6;padding-left:13px">
+        <div style="font-size:var(--fs-xs);color:var(--secondary);margin-bottom:12px;line-height:1.6;padding-left:13px">
           將目前載入的所有資料（期初目標 / 期中目標 / 實績 / 主檔 / 工作日 / 假日）匯出為單一 <code style="background:var(--stripe);padding:1px 5px;border-radius:3px;color:var(--accent-dark)">data.json</code> 檔案。<br>
           上傳到 GitHub repository 根目錄後，所有使用者開啟儀表板時會自動讀取最新資料（透過 Netlify 自動佈署）。
         </div>
         <div class="action-row" style="margin-top:0;padding-left:13px">
           <button class="primary" id="btn-export" disabled>📥 下載 data.json</button>
-          <span style="font-size:11px;color:var(--muted)" id="export-info">需先載入資料</span>
+          <span style="font-size:var(--fs-xs);color:var(--muted)" id="export-info">需先載入資料</span>
         </div>
       </div>
     </div>
@@ -1457,9 +1478,9 @@ function renderFileList(){
 
     let warningNote = '';
     if(pf.type === 'fy25-reject'){
-      warningNote = ' <span style="color:#b45309;font-size:10px">⛔ FY25 比較資料已預載入 data.json，請從清單移除（✕）</span>';
+      warningNote = ' <span style="color:#b45309;font-size:var(--fs-xs)">⛔ FY25 比較資料已預載入 data.json，請從清單移除（✕）</span>';
     } else if(isDup){
-      warningNote = ' <span style="color:#b45309;font-size:10px">⚠ 同類型重複（後者覆蓋前者）</span>';
+      warningNote = ' <span style="color:#b45309;font-size:var(--fs-xs)">⚠ 同類型重複（後者覆蓋前者）</span>';
     }
 
     html += `<div class="file-row${cls}">`;
@@ -1821,8 +1842,8 @@ function renderConverterResult(result){
   let html = '<div class="stats-grid">';
   html += `<div class="stat"><div class="lbl">總筆數</div><div class="val">${result.rows.length.toLocaleString()}</div></div>`;
   html += `<div class="stat"><div class="lbl">月份數</div><div class="val">${result.months.length}</div><div class="sub">${result.months.join(", ")}</div></div>`;
-  html += `<div class="stat"><div class="lbl">未稅金額合計</div><div class="val">${Math.floor(totalAmt/10000).toLocaleString()} <span style="font-size:22px;color:#9ca3af;font-weight:500">萬</span></div></div>`;
-  html += `<div class="stat"><div class="lbl">事業別 / 管道</div><div class="val" style="font-size:13px">${bizSet.size} / ${chSet.size} 種</div><div class="sub">${[...bizSet].join("、")}</div></div>`;
+  html += `<div class="stat"><div class="lbl">未稅金額合計</div><div class="val">${Math.floor(totalAmt/10000).toLocaleString()} <span style="font-size:var(--fs-lg);color:var(--muted);font-weight:500">萬</span></div></div>`;
+  html += `<div class="stat"><div class="lbl">事業別 / 管道</div><div class="val" style="font-size:var(--fs-sm)">${bizSet.size} / ${chSet.size} 種</div><div class="sub">${[...bizSet].join("、")}</div></div>`;
   html += '</div>';
 
   html += '<div class="action-row" style="margin-top:14px">';
@@ -2171,7 +2192,7 @@ function renderPaceBanner(monthLabel, monthBudget, monthActual){
       </div>
       <div class="pace-cell">
         <div class="pace-lbl">資料最終日</div>
-        <div class="pace-val" style="font-size:18px">${formatYMD(tp.latestDate)}</div>
+        <div class="pace-val" style="font-size:var(--fs-md)">${formatYMD(tp.latestDate)}</div>
         <div class="pace-sub">本月最新有資料的日期</div>
       </div>
     </div>
@@ -2374,7 +2395,7 @@ function renderOverallKPIs(){
 // bases = [{label, value, active}]：三個比較基準（期初／期中／前年）並列顯示
 // pace  = {pct, note}：進度達成（分母為已過期間目標，隨時間推進而成長）
 function kpiCardHTML(label, sub, budget, actual, pace, bases){
-  const unit = '<span style="font-size:22px;color:#9ca3af;font-weight:500">萬</span>';
+  const unit = '<span style="font-size:var(--fs-lg);color:var(--muted);font-weight:500">萬</span>';
   const row = (lbl, pct, extraCls) => {
     const cls = (pct == null || !isFinite(pct)) ? 'na' : (pct >= 100 ? 'good' : 'bad');
     const txt = (pct == null || !isFinite(pct)) ? '—' : pct.toFixed(1) + '%';
@@ -2485,7 +2506,7 @@ function renderPrevDayTab(){
 }
 
 const PREVDAY_BIZ_COLORS = ['#0284C7','#22C55E','#F59E0B','#A855F7','#EC4899'];
-const PREVDAY_CH_COLORS  = ['#0C4A6E','#0284C7','#7DD3FC','#FBBF24','#94A3B8'];
+const PREVDAY_CH_COLORS  = ['#0C4A6E','#0284C7','#7DD3FC','#FBBF24','var(--muted)'];
 
 function buildDropdownHTML(id, label, options, selectedSet){
   const allSelected = options.length > 0 && options.every(o=>selectedSet.has(o));
@@ -2697,7 +2718,7 @@ function renderPrevDaySummary(){
     return `<div class="rate-cell${b.active ? ' rate-active' : ''}">`
          + `<div class="rate-lbl">對${b.label}</div><div class="rate ${cls}">${txt}</div></div>`;
   };
-  const unit = '<span style="font-size:22px;color:#9ca3af;font-weight:500">萬</span>';
+  const unit = '<span style="font-size:var(--fs-lg);color:var(--muted);font-weight:500">萬</span>';
 
   kpiEl.innerHTML = `
     <div class="lbl">選定期間績效 <span class="small">${selected[0]} ～ ${selected[selected.length-1]}（共 ${selected.length} 天，含 ${wdCount} 個工作天）</span></div>
@@ -3065,7 +3086,7 @@ function fcstRenderChart(d){
   const datasets = [
     { label:'累積實績', data:actual, borderColor:'#0284C7', backgroundColor:'rgba(2,132,199,.10)',
       borderWidth:3, tension:.2, pointRadius:0, fill:true, spanGaps:false, order:1 },
-    { label:`累積${targetLabel()}進度`, data:bgtLine, borderColor:'#94A3B8', borderWidth:2,
+    { label:`累積${targetLabel()}進度`, data:bgtLine, borderColor:'var(--muted)', borderWidth:2,
       borderDash:[2,3], tension:.1, pointRadius:0, fill:false, order:5 },
   ];
   // 各情境の予測カーブ（最終実績日から月末まで）
@@ -3098,7 +3119,7 @@ function fcstRenderChart(d){
         y:{ beginAtZero:true, title:{ display:true, text:'累積金額（萬元）', font:{size:11,weight:'600'}, color:'#0369A1' },
             ticks:{ font:{size:11}, color:'#0369A1', callback:v=>(+v).toLocaleString() }, grid:{ color:'#F0F9FF' } },
         x:{ title:{ display:true, text:'日', font:{size:11,weight:'600'}, color:'#0369A1' },
-            ticks:{ font:{size:10}, color:'#0C4A6E', maxRotation:0, autoSkip:true, maxTicksLimit:16 }, grid:{ display:false } },
+            ticks:{ font:{size:11}, color:'#0C4A6E', maxRotation:0, autoSkip:true, maxTicksLimit:16 }, grid:{ display:false } },
       },
     },
   });
@@ -3189,7 +3210,7 @@ function cardRateClass(actual, budget){
   return 'bad';
 }
 function cardRateColorHex(cls){
-  return cls === 'good' ? '#16A34A' : cls === 'warn' ? '#D97706' : cls === 'bad' ? '#A32D2D' : '#94A3B8';
+  return cls === 'good' ? '#16A34A' : cls === 'warn' ? '#D97706' : cls === 'bad' ? '#A32D2D' : 'var(--muted)';
 }
 
 function bcRateCell(actual, budget){
@@ -3252,9 +3273,9 @@ function renderOneCard(name, color, subLabel, bizArg, chArg, colDims, colLabel, 
     };
   });
 
-  const fmtV  = v => v === 0 ? '<span style="color:#94A3B8">0</span>' : fmtAmt(v);
+  const fmtV  = v => v === 0 ? '<span style="color:var(--muted)">0</span>' : fmtAmt(v);
   const fmtD  = v => { const r = Math.round(v/10000); return r >= 0 ? `<span class="bc-rate-num good">+${r.toLocaleString()}</span>` : `<span class="bc-rate-num bad">${r.toLocaleString()}</span>`; };
-  const fmtG  = v => `<span style="color:var(--muted);font-size:14px">${fmtAmt(v)}</span>`;
+  const fmtG  = v => `<span style="color:var(--muted);font-size:var(--fs-base)">${fmtAmt(v)}</span>`;
 
   let html = `<div class="bc" style="--bc-color:${color}">`;
 
@@ -3321,13 +3342,13 @@ function renderOneCard(name, color, subLabel, bizArg, chArg, colDims, colLabel, 
   html += `<td>${fmtD(cumDiff)}</td></tr>`;
 
   // 達成率
-  html += `<tr><td style="font-size:15px;color:var(--secondary);padding:3px 8px">達成率</td>`;
+  html += `<tr><td style="font-size:var(--fs-base);color:var(--secondary);padding:3px 8px">達成率</td>`;
   cols.forEach(c => { html += bcRateCell(c.cumA, c.cumB); });
   html += bcRateCell(cumAct, cumBgt);
   html += `</tr>`;
 
   // 時間進度達成
-  html += `<tr><td style="font-size:15px;color:var(--secondary);padding:3px 8px">進度達成</td>`;
+  html += `<tr><td style="font-size:var(--fs-base);color:var(--secondary);padding:3px 8px">進度達成</td>`;
   cols.forEach(c => { html += bcPaceCell(c.cumA, c.cumB, tpPct); });
   html += bcPaceCell(cumAct, cumBgt, tpPct);
   html += `</tr>`;
@@ -3375,7 +3396,7 @@ function renderCardsTab(){
     });
   } else {
     const chCards = CHANNEL_LIST.map(ch => ({
-      name: ch, color: CARDS_CH_COLORS[ch] || '#64748B', sub: null, biz: 'all', ch,
+      name: ch, color: CARDS_CH_COLORS[ch] || '#15587F', sub: null, biz: 'all', ch,
     }));
     chCards.forEach(card => {
       html += renderOneCard(card.name, card.color, null, card.biz, card.ch, BIZ_LIST_TOTAL, 'biz', month, cumMonths, timePace);
@@ -3696,7 +3717,7 @@ const BIZ_SKU_CH_COLORS = {
   'TM':    '#D97706',
   'KOL':   '#16A34A',
   'EC':    '#0EA5E9',
-  '經代銷': '#94A3B8',
+  '經代銷': 'var(--muted)',
 };
 
 function getSkuProductList(biz){
@@ -3794,7 +3815,7 @@ function renderBizSkuFilterHTML(biz, products, selectedSet){
       const chk = selectedSet.has(p.code) ? ' checked' : '';
       const nameLabel = p.name ? `${p.name}` : p.code;
       const amtLabel  = `(${Math.round(p.totalAmt/10000)}萬)`;
-      checkboxes += `<label title="${p.code}"><input type="checkbox" class="biz-sku-cb" data-biz="${biz}" value="${p.code}"${chk}><span>${nameLabel}</span><span style="color:var(--muted);margin-left:4px;font-size:10px">${amtLabel}</span></label>`;
+      checkboxes += `<label title="${p.code}"><input type="checkbox" class="biz-sku-cb" data-biz="${biz}" value="${p.code}"${chk}><span>${nameLabel}</span><span style="color:var(--muted);margin-left:4px;font-size:var(--fs-xs)">${amtLabel}</span></label>`;
     });
   }
   return `<div class="biz-sku-filter" id="biz-sku-filter-${bizSafe(biz)}">
@@ -3846,7 +3867,7 @@ function renderBizSkuContentHTML(biz, codeSet){
   html += `</tbody></table></div></div></div>`;
 
   // Monthly detail table (Month × channel qty)
-  html += `<details open style="margin-top:10px"><summary style="font-size:12px;font-weight:600;color:var(--secondary);cursor:pointer;padding:4px 0">▸ 月份 × 管道（套數）</summary>
+  html += `<details open style="margin-top:10px"><summary style="font-size:var(--fs-xs);font-weight:600;color:var(--secondary);cursor:pointer;padding:4px 0">▸ 月份 × 管道（套數）</summary>
     <div class="scroll-x" style="margin-top:8px"><table class="grid">
     <thead><tr><th class="l1">月份</th>`;
   CHANNEL_LIST.forEach(c => { html += `<th class="l2">${c}</th>`; });
@@ -3891,7 +3912,7 @@ function renderBizSkuChartWith(biz, codeSet, root){
   const datasets = CHANNEL_LIST.map(ch => ({
     label: ch,
     data: MONTHS.map(m => Math.round(monthly[m].byChannel[ch].qty)),
-    backgroundColor: BIZ_SKU_CH_COLORS[ch] || '#94A3B8',
+    backgroundColor: BIZ_SKU_CH_COLORS[ch] || 'var(--muted)',
     stack: 'total',
     borderRadius: 2,
   }));
@@ -4332,9 +4353,9 @@ function renderWeeklyContent(){
   if(yoy){
     datasets.push({
       label:'前年同週銷售', data: dataPrev.map(d => Math.floor(d.total/10000)),
-      borderColor:'#94A3B8', backgroundColor:'rgba(148,163,184,.10)',
+      borderColor:'var(--muted)', backgroundColor:'rgba(148,163,184,.10)',
       borderWidth:2, borderDash:[6,4], pointRadius:3,
-      pointBackgroundColor:'#94A3B8', pointBorderColor:'#fff', pointBorderWidth:1,
+      pointBackgroundColor:'var(--muted)', pointBorderColor:'#fff', pointBorderWidth:1,
       tension:0.25, fill:false,
     });
   }
@@ -4622,9 +4643,9 @@ function renderVsTargetTab(){
   html += '</div>';
 
   html += '<div class="stats-grid">';
-  html += `<div class="stat"><div class="lbl">目前累計實績</div><div class="val">${data.latestActualCum != null ? Math.floor(data.latestActualCum/10000).toLocaleString() : "—"} <span style="font-size:11px;color:#94A3B8">萬</span></div><div class="sub">${data.latestDate ? `截至 ${formatYMD(data.latestDate)}` : "尚無資料"}</div></div>`;
-  html += `<div class="stat"><div class="lbl">目前${targetLabel()}累計</div><div class="val">${data.latestTargetCum != null ? Math.floor(data.latestTargetCum/10000).toLocaleString() : "—"} <span style="font-size:11px;color:#94A3B8">萬</span></div><div class="sub">每日${targetLabel()} ${Math.floor(data.perDayTarget/10000).toLocaleString()} 萬 × ${data.elapsedWorkDaysAtLatest} 工作日</div></div>`;
-  html += `<div class="stat"><div class="lbl">差額（實績 − ${targetLabel()}）</div><div class="val" style="color:${diffColor}">${diffStr} <span style="font-size:11px;color:#94A3B8">萬</span></div><div class="sub">${diffSub}${altDiffSub}</div></div>`;
+  html += `<div class="stat"><div class="lbl">目前累計實績</div><div class="val">${data.latestActualCum != null ? Math.floor(data.latestActualCum/10000).toLocaleString() : "—"} <span style="font-size:var(--fs-xs);color:var(--muted)">萬</span></div><div class="sub">${data.latestDate ? `截至 ${formatYMD(data.latestDate)}` : "尚無資料"}</div></div>`;
+  html += `<div class="stat"><div class="lbl">目前${targetLabel()}累計</div><div class="val">${data.latestTargetCum != null ? Math.floor(data.latestTargetCum/10000).toLocaleString() : "—"} <span style="font-size:var(--fs-xs);color:var(--muted)">萬</span></div><div class="sub">每日${targetLabel()} ${Math.floor(data.perDayTarget/10000).toLocaleString()} 萬 × ${data.elapsedWorkDaysAtLatest} 工作日</div></div>`;
+  html += `<div class="stat"><div class="lbl">差額（實績 − ${targetLabel()}）</div><div class="val" style="color:${diffColor}">${diffStr} <span style="font-size:var(--fs-xs);color:var(--muted)">萬</span></div><div class="sub">${diffSub}${altDiffSub}</div></div>`;
   html += `<div class="stat"><div class="lbl">100% 預測達成日</div><div class="val">${predStr}</div><div class="sub">${predSub}</div></div>`;
   html += '</div>';
 
@@ -4687,7 +4708,7 @@ function renderVsTargetTab(){
              title:{ display:true, text:'累計金額（萬元）', font:{size:11, weight:'600'}, color:'#0369A1' },
              ticks:{ font:{size:11}, color:'#0369A1', callback: v=>(+v).toLocaleString() },
              grid:{ color:'#F0F9FF' } },
-        x: { ticks:{ font:{size:10}, color:'#0C4A6E', maxRotation:0, autoSkip:false },
+        x: { ticks:{ font:{size:11}, color:'#0C4A6E', maxRotation:0, autoSkip:false },
              grid:{ display:false } },
       },
     },
@@ -4732,7 +4753,7 @@ function renderAovTab(){
   // KPI Card
   html += '<div class="card">';
   html += `<h2>AOV 分析 — 學習商品 <span class="pill">本月：${m}</span></h2>`;
-  html += `<div style="font-size:18px;color:var(--secondary);margin:0 0 14px 0;line-height:1.6;padding:12px 16px;background:var(--stripe);border-radius:6px;border-left:3px solid var(--accent)">
+  html += `<div style="font-size:var(--fs-md);color:var(--secondary);margin:0 0 14px 0;line-height:1.6;padding:12px 16px;background:var(--stripe);border-radius:6px;border-left:3px solid var(--accent)">
     <strong>AOV (Average Order Value)</strong> = 未稅金額 ÷ 套數，每套商品的平均單價（單位：元）。<br>
     <strong>AOV ${rateLabel()}</strong> = 實績AOV ÷ ${targetLabel()}AOV × 100。對象：學習商品（套數有意義的事業）。
   </div>`;
@@ -4781,9 +4802,9 @@ function aovKpiCard(label, sub, classKey, bgtAov, actAov){
   return `
     <div class="kpi-card ${classKey}">
       <div class="lbl">${label} <span class="small">${sub}</span></div>
-      <div class="row"><span class="k">${targetLabel()} AOV</span><span class="v">${fmtYuan(bgtAov)} <span style="font-size:11px;color:#94A3B8;font-weight:500">元</span></span></div>
-      <div class="row"><span class="k">實績 AOV</span><span class="v">${fmtYuan(actAov)} <span style="font-size:11px;color:#94A3B8;font-weight:500">元</span></span></div>
-      <div class="row"><span class="k">差額</span><span class="v" style="color:${diffColor};font-size:15px">${diffStr}</span></div>
+      <div class="row"><span class="k">${targetLabel()} AOV</span><span class="v">${fmtYuan(bgtAov)} <span style="font-size:var(--fs-xs);color:var(--muted);font-weight:500">元</span></span></div>
+      <div class="row"><span class="k">實績 AOV</span><span class="v">${fmtYuan(actAov)} <span style="font-size:var(--fs-xs);color:var(--muted);font-weight:500">元</span></span></div>
+      <div class="row"><span class="k">差額</span><span class="v" style="color:${diffColor};font-size:var(--fs-base)">${diffStr}</span></div>
       <div class="rate-row">
         <div class="rate-lbl">AOV ${rateLabel()}</div>
         <div class="rate ${cls}">${rateStr}</div>
@@ -4942,10 +4963,10 @@ function renderAovChart(biz, ch){
       },
       scales: {
         y: { type:'linear', position:'left', beginAtZero:true,
-             title:{ display:true, text:'AOV（元）', font:{size:18, weight:'600'}, color:'#0369A1' },
-             ticks:{ font:{size:16}, color:'#0369A1', callback: v=>(+v).toLocaleString() },
+             title:{ display:true, text:'AOV（元）', font:{size:12, weight:'600'}, color:'#0369A1' },
+             ticks:{ font:{size:12}, color:'#0369A1', callback: v=>(+v).toLocaleString() },
              grid:{ color:'#F0F9FF' } },
-        x: { ticks:{ font:{size:17, weight:'600'}, color:'#0C4A6E' }, grid:{ display:false } },
+        x: { ticks:{ font:{size:12, weight:'600'}, color:'#0C4A6E' }, grid:{ display:false } },
       },
     },
   });
@@ -5005,7 +5026,7 @@ function aggregateHandPuppet(codes){
 function renderHandPuppetTab(){
   const panel = document.getElementById("panel-handpuppet");
   if(!STATE.master){
-    panel.innerHTML = `<div class="placeholder">⚠ 需要載入商品主檔（master）才能識別「手偶」相關商品。<br><span style="font-size:12px;color:var(--muted)">請至「📥 匯入」分頁載入「集計商品品號主檔」。</span></div>`;
+    panel.innerHTML = `<div class="placeholder">⚠ 需要載入商品主檔（master）才能識別「手偶」相關商品。<br><span style="font-size:var(--fs-xs);color:var(--muted)">請至「📥 匯入」分頁載入「集計商品品號主檔」。</span></div>`;
     return;
   }
   destroyCharts();
@@ -5039,7 +5060,7 @@ function renderHandPuppetTab(){
   // KPI
   html += '<div class="card">';
   html += `<h2>巧虎手偶 — 達成狀況 <span class="pill">${codes.size} 商品 / 本月：${m}</span></h2>`;
-  html += `<div style="font-size:18px;color:var(--secondary);margin:0 0 14px 0;line-height:1.6;padding:12px 16px;background:var(--stripe);border-radius:6px;border-left:3px solid var(--accent)">
+  html += `<div style="font-size:var(--fs-md);color:var(--secondary);margin:0 0 14px 0;line-height:1.6;padding:12px 16px;background:var(--stripe);border-radius:6px;border-left:3px solid var(--accent)">
     對象商品：巧虎手偶 <strong>${codes.size}</strong> 個製編（與在庫儀表板一致）——${HANDPUPPET_CODES.map(c=>`${c} ${HANDPUPPET_NAMES[c]}`).join('、')}。目標僅到事業×通路級別、無產品級目標，故僅顯示實績。
   </div>`;
   html += '<div class="kpi-grid">';
@@ -5171,8 +5192,8 @@ function handPuppetKpiCard(label, sub, classKey, qty, amt){
   return `
     <div class="kpi-card ${classKey}">
       <div class="lbl">${label} <span class="small">${sub}</span></div>
-      <div class="row"><span class="k">實績套數</span><span class="v">${Math.floor(qty).toLocaleString()} <span style="font-size:11px;color:#94A3B8;font-weight:500">套</span></span></div>
-      <div class="row"><span class="k">實績金額</span><span class="v">${Math.floor(amt/10000).toLocaleString()} <span style="font-size:11px;color:#94A3B8;font-weight:500">萬</span></span></div>
+      <div class="row"><span class="k">實績套數</span><span class="v">${Math.floor(qty).toLocaleString()} <span style="font-size:var(--fs-xs);color:var(--muted);font-weight:500">套</span></span></div>
+      <div class="row"><span class="k">實績金額</span><span class="v">${Math.floor(amt/10000).toLocaleString()} <span style="font-size:var(--fs-xs);color:var(--muted);font-weight:500">萬</span></span></div>
       <div class="rate-row">
         <div class="rate-lbl">AOV (1套單價)</div>
         <div class="rate" style="color:var(--accent-dark)">${aov != null ? Math.floor(aov).toLocaleString() + ' 元' : '—'}</div>
@@ -5209,7 +5230,7 @@ function renderKolTab(){
 
   const sched = STATE.kolSchedule || [];
   if(sched.length === 0){
-    panel.innerHTML = `<div class="placeholder">⚠ 尚未載入 KOL 檔期規劃表（data.json 無 kolSchedule）。<br><span style="font-size:12px;color:var(--muted)">請上傳「KOL檔期規劃表」Excel 後更新 data.json。</span></div>`;
+    panel.innerHTML = `<div class="placeholder">⚠ 尚未載入 KOL 檔期規劃表（data.json 無 kolSchedule）。<br><span style="font-size:var(--fs-xs);color:var(--muted)">請上傳「KOL檔期規劃表」Excel 後更新 data.json。</span></div>`;
     return;
   }
 
@@ -5246,28 +5267,28 @@ function renderKolTab(){
   // ===== KPI =====
   html += '<div class="card">';
   html += `<h2>KOL 檔期 × 業績關聯 <span class="pill">${camps.length} 檔期</span></h2>`;
-  html += `<div style="font-size:18px;color:var(--secondary);margin:0 0 14px 0;line-height:1.6;padding:12px 16px;background:var(--stripe);border-radius:6px;border-left:3px solid var(--accent)">
+  html += `<div style="font-size:var(--fs-md);color:var(--secondary);margin:0 0 14px 0;line-height:1.6;padding:12px 16px;background:var(--stripe);border-radius:6px;border-left:3px solid var(--accent)">
     業績歸屬口徑：以「<strong>事業別＋檔期起訖日（含迄日）</strong>」回推 KOL 通路業績。同事業同時段不重疊檔期，故歸屬乾淨；跨事業可並行不互相干擾。KOL 通路原始資料未標記個別 KOL，故不同事業別的並行檔期各自獨立計算。
   </div>`;
   html += '<div class="kpi-grid">';
   html += `<div class="kpi-card year"><div class="lbl">檔期總數 <span class="small">${allStart.slice(5,7)}/${allStart.slice(8,10)}〜${allEnd.slice(5,7)}/${allEnd.slice(8,10)}</span></div>
-    <div class="row"><span class="k">規劃檔期</span><span class="v">${camps.length} <span style="font-size:11px;color:#94A3B8;font-weight:500">檔</span></span></div></div>`;
+    <div class="row"><span class="k">規劃檔期</span><span class="v">${camps.length} <span style="font-size:var(--fs-xs);color:var(--muted);font-weight:500">檔</span></span></div></div>`;
   html += `<div class="kpi-card month"><div class="lbl">歸屬業績合計 <span class="small">檔期期間內</span></div>
-    <div class="row"><span class="k">KOL通路</span><span class="v">${fmtAmt(totAmt)} <span style="font-size:11px;color:#94A3B8;font-weight:500">萬</span></span></div></div>`;
+    <div class="row"><span class="k">KOL通路</span><span class="v">${fmtAmt(totAmt)} <span style="font-size:var(--fs-xs);color:var(--muted);font-weight:500">萬</span></span></div></div>`;
   html += `<div class="kpi-card cum"><div class="lbl">最強檔期 <span class="small">${best.start.slice(5).replace('-','/')}〜${best.end.slice(5).replace('-','/')}</span></div>
-    <div class="row"><span class="k">${best.kol.length>10?best.kol.slice(0,10)+'…':best.kol}</span><span class="v">${fmtAmt(best.perf.amt)} <span style="font-size:11px;color:#94A3B8;font-weight:500">萬</span></span></div></div>`;
+    <div class="row"><span class="k">${best.kol.length>10?best.kol.slice(0,10)+'…':best.kol}</span><span class="v">${fmtAmt(best.perf.amt)} <span style="font-size:var(--fs-xs);color:var(--muted);font-weight:500">萬</span></span></div></div>`;
   html += '</div></div>';
 
   // ===== 甘特圖時間軸 =====
   const NAMEW = 168;
   html += '<div class="card"><h2>KOL 檔期時間軸（甘特圖）</h2>';
-  html += `<div style="font-size:11px;color:var(--muted);margin-bottom:10px">色塊＝檔期期間，長度＝天數，數字＝該檔期歸屬 KOL 通路業績（萬）。顏色代表事業別。</div>`;
+  html += `<div style="font-size:var(--fs-xs);color:var(--muted);margin-bottom:10px">色塊＝檔期期間，長度＝天數，數字＝該檔期歸屬 KOL 通路業績（萬）。顏色代表事業別。</div>`;
   html += `<div style="position:relative;overflow-x:auto">`;
   html += `<div style="min-width:720px;position:relative">`;
   // gridline overlay
   html += `<div style="position:absolute;left:${NAMEW}px;right:0;top:22px;bottom:0;pointer-events:none">`;
   for(const t of monthTicks){
-    html += `<div style="position:absolute;left:${t.left}%;top:0;bottom:0;border-left:1px dashed #E2E8F0"></div>`;
+    html += `<div style="position:absolute;left:${t.left}%;top:0;bottom:0;border-left:1px dashed var(--border)"></div>`;
   }
   html += `</div>`;
   // header row (month labels)
@@ -5275,7 +5296,7 @@ function renderKolTab(){
   html += `<div style="width:${NAMEW}px;flex-shrink:0"></div>`;
   html += `<div style="flex:1;position:relative">`;
   for(const t of monthTicks){
-    html += `<div style="position:absolute;left:${t.left}%;font-size:11px;font-weight:700;color:#0C4A6E;padding-left:4px">${t.label}</div>`;
+    html += `<div style="position:absolute;left:${t.left}%;font-size:var(--fs-xs);font-weight:700;color:#0C4A6E;padding-left:4px">${t.label}</div>`;
   }
   html += `</div></div>`;
   // campaign rows (chronological)
@@ -5287,17 +5308,17 @@ function renderKolTab(){
     const nameShort = c.kol.length > 14 ? c.kol.slice(0,14) + '…' : c.kol;
     const amtLbl = fmtAmt(c.perf.amt);
     html += `<div style="display:flex;align-items:center;height:30px;border-bottom:1px solid #F1F5F9">`;
-    html += `<div style="width:${NAMEW}px;flex-shrink:0;font-size:11px;color:#334155;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;padding-right:8px" title="${c.kol}（${c.biz}）">
+    html += `<div style="width:${NAMEW}px;flex-shrink:0;font-size:var(--fs-xs);color:#334155;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;padding-right:8px" title="${c.kol}（${c.biz}）">
       <span style="display:inline-block;width:8px;height:8px;border-radius:2px;background:${color};margin-right:5px;vertical-align:middle"></span>${nameShort}</div>`;
     html += `<div style="flex:1;position:relative;height:100%">`;
     html += `<div style="position:absolute;left:${left}%;width:${width}%;top:6px;height:18px;background:${color};border-radius:3px;display:flex;align-items:center;justify-content:flex-end;min-width:2px" title="${c.kol}｜${c.biz}｜${c.start}〜${c.end}｜${amtLbl}萬">
-      <span style="font-size:10px;font-weight:700;color:#fff;padding:0 5px;white-space:nowrap">${amtLbl}</span></div>`;
+      <span style="font-size:var(--fs-xs);font-weight:700;color:#fff;padding:0 5px;white-space:nowrap">${amtLbl}</span></div>`;
     html += `</div></div>`;
   }
   html += `</div></div>`; // min-width, overflow
   // legend
   const bizSet = Array.from(new Set(camps.map(c=>c.biz)));
-  html += `<div style="margin-top:12px;display:flex;gap:14px;flex-wrap:wrap;font-size:11px;color:#475569">`;
+  html += `<div style="margin-top:12px;display:flex;gap:14px;flex-wrap:wrap;font-size:var(--fs-xs);color:var(--secondary)">`;
   for(const b of bizSet){
     html += `<span><span style="display:inline-block;width:10px;height:10px;border-radius:2px;background:${kolBizColor(b)};margin-right:4px;vertical-align:middle"></span>${b}</span>`;
   }
@@ -5305,7 +5326,7 @@ function renderKolTab(){
 
   // ===== 每日 KOL 業績 × 檔期關聯圖 =====
   html += '<div class="card"><h2>每日 KOL 通路業績 × 檔期對照</h2>';
-  html += `<div style="font-size:11px;color:var(--muted);margin-bottom:8px">藍柱＝落在任一檔期期間內的當日 KOL 業績；灰柱＝非檔期期間。用來檢視業績高峰是否對到檔期。</div>`;
+  html += `<div style="font-size:var(--fs-xs);color:var(--muted);margin-bottom:8px">藍柱＝落在任一檔期期間內的當日 KOL 業績；灰柱＝非檔期期間。用來檢視業績高峰是否對到檔期。</div>`;
   html += '<div class="chart-box tall"><canvas id="chart-kol-daily"></canvas></div>';
   html += '</div>';
 
@@ -5354,7 +5375,7 @@ function renderKolTab(){
       const inCamp = camps.some(c => iso >= c.start && iso <= c.end);
       labels.push(`${d.getUTCMonth()+1}/${d.getUTCDate()}`);
       vals.push(+((dailyMap[iso]||0)/10000).toFixed(2));
-      colors.push(inCamp ? '#0284C7' : '#CBD5E1');
+      colors.push(inCamp ? '#0284C7' : 'var(--border)');
       d = new Date(d.getTime() + 86400000);
     }
     const ctx = document.getElementById("chart-kol-daily").getContext('2d');
@@ -5370,7 +5391,7 @@ function renderKolTab(){
         },
         scales: {
           y: { beginAtZero:true, title:{ display:true, text:'金額（萬元）', font:{size:11,weight:'600'}, color:'#0369A1' }, ticks:{ font:{size:11}, color:'#0369A1' }, grid:{color:'#F0F9FF'} },
-          x: { ticks:{ font:{size:13.5}, color:'#64748B', maxRotation:90, minRotation:90, autoSkip:true, maxTicksLimit:40 }, grid:{display:false} },
+          x: { ticks:{ font:{size:12}, color:'#15587F', maxRotation:90, minRotation:90, autoSkip:true, maxTicksLimit:40 }, grid:{display:false} },
         },
       },
     });
@@ -5494,7 +5515,7 @@ function poReconcileHTML(rule){
   const dq = Object.values(daily).reduce((a, b) => a + b, 0);
   const da = Object.values(dailyAmt).reduce((a, b) => a + b, 0);
 
-  let h = `<h3 style="margin-top:16px">預購對帳　<span style="font-size:12px;font-weight:500;color:var(--secondary)">台帳 ${L.sourceFile}</span></h3>`
+  let h = `<h3 style="margin-top:16px">預購對帳　<span style="font-size:var(--fs-xs);font-weight:500;color:var(--secondary)">台帳 ${L.sourceFile}</span></h3>`
         + `<div class="scroll-x"><table class="grid"><thead><tr>`
         + `<th class="l1">通路</th><th class="l1">預購台帳<br>（接單）</th>`
         + `<th class="l1">每日檔<br>（已排除）</th><th class="l1">差</th><th class="l1">說明</th>`
@@ -5509,7 +5530,7 @@ function poReconcileHTML(rule){
     const col = diff === 0 ? 'var(--good)' : 'var(--bad)';
     h += `<tr><td class="dim">${c}</td><td>${lq.toLocaleString()}</td><td>${dqc.toLocaleString()}</td>`
        + `<td style="color:${col};font-weight:700">${diff > 0 ? '+' : ''}${diff}</td>`
-       + `<td style="text-align:left;font-weight:500;font-size:12.5px">${why}</td></tr>`;
+       + `<td style="text-align:left;font-weight:500;font-size:var(--fs-xs)">${why}</td></tr>`;
   }
   const tDiff = (L.totalQty || 0) - dq;
   h += `<tr class="total"><td class="dim">合計（套）</td><td>${(L.totalQty || 0).toLocaleString()}</td>`
@@ -5732,7 +5753,7 @@ function renderHolidayTab(){
 
   let html = '<div class="card">';
   html += `<h2>國定假日與停班課資訊表 <span class="pill">FY26 · 2026/4/1〜2027/3/31</span></h2>`;
-  html += `<div style="font-size:12px;color:var(--secondary);margin:0 0 14px 0;line-height:1.7;padding:10px 14px;background:var(--stripe);border-radius:6px;border-left:3px solid var(--accent)">
+  html += `<div style="font-size:var(--fs-xs);color:var(--secondary);margin:0 0 14px 0;line-height:1.7;padding:10px 14px;background:var(--stripe);border-radius:6px;border-left:3px solid var(--accent)">
     國定假日共 <strong>${nHol}</strong> 日、停班停課 <strong>${nSus}</strong> 日。停班停課（如颱風假）以 <span style="color:#B45309;font-weight:700">🌀 橘色</span> 標示。資料來源：Excel「國定假日表」＋人工登錄之停班停課。
   </div>`;
   html += '<div class="scroll-x"><table class="grid">';
@@ -5741,13 +5762,13 @@ function renderHolidayTab(){
     const sus = isSus(e);
     const rowStyle = sus ? ' style="background:#FFF7ED"' : '';
     const badge = sus
-      ? '<span style="display:inline-block;padding:1px 9px;border-radius:10px;background:#FED7AA;color:#B45309;font-size:11px;font-weight:700">停班停課</span>'
-      : '<span style="display:inline-block;padding:1px 9px;border-radius:10px;background:#DBEAFE;color:#1D4ED8;font-size:11px;font-weight:700">國定假日</span>';
+      ? '<span style="display:inline-block;padding:1px 9px;border-radius:10px;background:#FED7AA;color:#B45309;font-size:var(--fs-xs);font-weight:700">停班停課</span>'
+      : '<span style="display:inline-block;padding:1px 9px;border-radius:10px;background:#DBEAFE;color:#1D4ED8;font-size:var(--fs-xs);font-weight:700">國定假日</span>';
     html += `<tr${rowStyle}>`;
     let refsHtml = '';
     if(sus && Array.isArray(e.refs) && e.refs.length){
       refsHtml = ' ' + e.refs.map((u, i) =>
-        `<a href="${u}" target="_blank" rel="noopener" style="font-size:11px;color:#0284C7;text-decoration:underline;white-space:nowrap">🔗 新聞${e.refs.length > 1 ? (i+1) : ''}</a>`
+        `<a href="${u}" target="_blank" rel="noopener" style="font-size:var(--fs-xs);color:#0284C7;text-decoration:underline;white-space:nowrap">🔗 新聞${e.refs.length > 1 ? (i+1) : ''}</a>`
       ).join(' ');
     }
     html += `<td class="dim" style="white-space:nowrap">${sus ? '🌀 ' : ''}${fmt(e.date)}</td>`;
@@ -5879,7 +5900,7 @@ function renderSkuContent(){
       html += `<tr>`;
       html += `<td class="sku-rank">${rankCell}</td>`;
       html += `<td class="sku-code">${sku.code}</td>`;
-      html += `<td class="sku-name">${sku.name || '<span style="color:#9ca3af">(無名稱)</span>'}</td>`;
+      html += `<td class="sku-name">${sku.name || '<span style="color:var(--muted)">(無名稱)</span>'}</td>`;
       html += `<td>${cellBar(sku.qty/maxQty*100, '#0284C7', Math.floor(sku.qty).toLocaleString())}</td>`;
       html += `<td>${cellBar(sku.amt/maxAmt*100, '#16A34A', Math.floor(sku.amt/10000).toLocaleString())}</td>`;
       html += `<td>${cellBar(ratio/maxRatio*100, '#F59E0B', ratio.toFixed(1)+'%')}</td>`;
