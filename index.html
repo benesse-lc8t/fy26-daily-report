@@ -344,6 +344,7 @@
   .kpi-card .row .k{font-size:var(--fs-sm);color:var(--secondary);font-weight:500}
   .kpi-card .row .v{font-size:var(--fs-display);font-weight:700;font-variant-numeric:tabular-nums;color:var(--ink)}
   .kpi-card .row .v.small{font-size:var(--fs-lg);font-weight:600}
+  .kpi-card .row .v.na{color:var(--muted);font-weight:500}
   .kpi-card .rate-row{margin-top:12px;padding-top:12px;border-top:1px dashed var(--border)}
   .kpi-card .rate{font-size:var(--fs-2xl);font-weight:700;font-variant-numeric:tabular-nums}
   .kpi-card .rate.good{color:var(--good)}
@@ -2254,7 +2255,7 @@ function renderPaceBanner(monthLabel, monthBudget, monthActual){
   if(!container) return;
 
   const tp = getTimeProgress(monthLabel);
-  if(!tp || monthBudget <= 0){
+  if(!tp || monthBudget <= 0 || !hasActualData(monthLabel)){
     if(!STATE.workingDays){
       container.innerHTML = '<div class="pace-empty">⚠ 時間進度：工作日資料未載入。請使用「📥 匯入」分頁載入原始實績檔（含「年度工作天」工作表）。</div>';
     } else {
@@ -2476,7 +2477,7 @@ function renderOverallKPIs(){
   document.getElementById("kpi-year").innerHTML  = kpiCardHTML("FY26 年間", "全年（4月〜3月）",
       yearBudget, yearActual, null, mkBases(MONTHS));
   document.getElementById("kpi-month").innerHTML = kpiCardHTML("當月", m,
-      monthBudget, monthActual, mkPace([m], monthActual, '當月'), mkBases([m]));
+      monthBudget, monthActual, mkPace([m], monthActual, '當月'), mkBases([m]), !hasActualData(m));
   document.getElementById("kpi-cum").innerHTML   = kpiCardHTML("累計", `4月〜${m}（${cumMonths.length}個月）`,
       cumBudget, cumActual,
       mkPace(cumMonths, cumActual, `${cumMonths.length}個月`), mkBases(cumMonths));
@@ -2487,7 +2488,10 @@ function renderOverallKPIs(){
 
 // bases = [{label, value, active}]：三個比較基準（期初／期中／前年）並列顯示
 // pace  = {pct, note}：進度達成（分母為已過期間目標，隨時間推進而成長）
-function kpiCardHTML(label, sub, budget, actual, pace, bases){
+// noData=true：該月尚無實績（例如每月 1 號上午，新月份資料還沒匯入）。
+// 下方「事業別／管道別達成率」表的當月欄位本來就會顯示「—」，
+// KPI 卡若仍顯示 0 / 0.0%，同一個畫面會出現兩種說法。
+function kpiCardHTML(label, sub, budget, actual, pace, bases, noData){
   const unit = '<span style="font-size:var(--fs-lg);color:var(--muted);font-weight:500">萬</span>';
   const row = (lbl, pct, extraCls) => {
     const cls = (pct == null || !isFinite(pct)) ? 'na' : (pct >= 100 ? 'good' : 'bad');
@@ -2496,15 +2500,20 @@ function kpiCardHTML(label, sub, budget, actual, pace, bases){
          + `<div class="rate-lbl">${lbl}</div><div class="rate ${cls}">${txt}</div></div>`;
   };
   const cells = (bases && bases.length)
-    ? bases.map(b => row('對' + b.label, (b.value > 0 ? actual / b.value * 100 : null),
+    ? bases.map(b => row('對' + b.label, (noData || !(b.value > 0)) ? null : actual / b.value * 100,
                          b.active ? 'rate-active' : ''))
-    : [row(rateLabel(), (budget > 0 ? actual / budget * 100 : null), 'rate-active')];
-  if(pace && pace.pct != null && isFinite(pace.pct)) cells.push(row('進度達成', pace.pct, 'rate-pace'));
-  const note = (pace && pace.note) ? `<div class="kpi-note">${pace.note}</div>` : '';
+    : [row(rateLabel(), (noData || !(budget > 0)) ? null : actual / budget * 100, 'rate-active')];
+  if(!noData && pace && pace.pct != null && isFinite(pace.pct)) cells.push(row('進度達成', pace.pct, 'rate-pace'));
+  const note = noData
+    ? `<div class="kpi-note">※ ${sub} 尚無實績資料，達成率不予顯示。</div>`
+    : ((pace && pace.note) ? `<div class="kpi-note">${pace.note}</div>` : '');
+  const actCell = noData
+    ? `<span class="v na">—</span>`
+    : `<span class="v">${fmtAmt(actual)} ${unit}</span>`;
   return `
     <div class="lbl">${label} <span class="small">${sub}</span></div>
     <div class="row"><span class="k">${targetLabel()}</span><span class="v">${fmtAmt(budget)} ${unit}</span></div>
-    <div class="row"><span class="k">實績</span><span class="v">${fmtAmt(actual)} ${unit}</span></div>
+    <div class="row"><span class="k">實績</span>${actCell}</div>
     <div class="rate-row dual">${cells.join('')}</div>${note}
   `;
 }
@@ -3240,9 +3249,15 @@ function fcstRenderFilters(){
   const cSel = document.getElementById('fcst-ch');
   const bSel = document.getElementById('fcst-biz');
   if(!mSel || !cSel || !bSel) return;
-  const cur = STATE.fcstMonth || STATE.selectedMonth;
+  let cur = STATE.fcstMonth || STATE.selectedMonth;
   const avail = MONTHS.filter(m=>hasActualData(m));
   const monthOpts = avail.length ? avail : MONTHS;
+  // 月初空窗期：上方月份已跳到新月、該月卻還沒有實績，因此不在選項裡。
+  // 不校正的話下拉會顯示第一個選項（4月）、內容卻用新月份計算，兩者對不上。
+  if(!monthOpts.includes(cur)){
+    cur = monthOpts[monthOpts.length - 1];
+    STATE.fcstMonth = cur;
+  }
   mSel.innerHTML = monthOpts.map(m=>`<option value="${m}"${m===cur?' selected':''}>${m}</option>`).join('');
   cSel.innerHTML = [`<option value="${FCST_ALL}"${STATE.fcstCh===FCST_ALL?' selected':''}>全部</option>`]
     .concat(CHANNEL_LIST.map(c=>`<option value="${c}"${STATE.fcstCh===c?' selected':''}>${c}</option>`)).join('');
@@ -3761,8 +3776,17 @@ function commonChartOptions(){
   };
 }
 
+// data.json 的 actuals 12 個月都有空殼物件（未來月份是 0），
+// 原本只檢查鍵存在，於是尚未發生的月份也被當成「有實績」，
+// 每月 1 號整張表會排滿 0.0% 而不是「—」。改為檢查金額是否 > 0。
 function hasActualData(month){
-  return !!(STATE.actuals && STATE.actuals[month]);
+  const md = STATE.actuals && STATE.actuals[month];
+  if(!md || !md.amount) return false;
+  for(const biz in md.amount){
+    const chs = md.amount[biz];
+    for(const c in chs) if(chs[c] > 0) return true;
+  }
+  return false;
 }
 
 /* ============================================================
@@ -4256,7 +4280,7 @@ function renderDetailTab(filterType, filterValue){
   const cb = sumOver(biz, ch, cumMonths, bgt);
   const ca = sumOver(biz, ch, cumMonths, act);
   document.getElementById(`kpi-${idPrefix}-y`).innerHTML = kpiCardHTML("FY26 年間", "全年（4月〜3月）", yb, ya);
-  document.getElementById(`kpi-${idPrefix}-m`).innerHTML = kpiCardHTML("當月", m, mb, ma);
+  document.getElementById(`kpi-${idPrefix}-m`).innerHTML = kpiCardHTML("當月", m, mb, ma, null, null, !hasActualData(m));
   document.getElementById(`kpi-${idPrefix}-c`).innerHTML = kpiCardHTML("累計", `4月〜${m}（${cumMonths.length}個月）`, cb, ca);
 
   // Monthly trend chart（四大事業は品項複選版なので biz-sku を配線；scope を panel に限定して trend タブとの ID 衝突を回避）
