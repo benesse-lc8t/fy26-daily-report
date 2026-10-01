@@ -68,6 +68,16 @@
     --rose-bg:#FFF1F2;
     --rose-text:#BE123C;
     /* 陰影：原本白卡片用 rgba(0,0,0,.3) 的黑陰影，在淺底上顯得髒且浮 */
+    /* ── 版面與圖表尺寸 ──────────────────────────────────────
+       原本圖表固定 340/380px 高，且卡片永遠單欄滿版：1920px 螢幕上
+       一張 4 根棒的圖會被拉成 740×340，右半邊全是空白（左重右輕）。
+       改為「圖表降高 + 卡片流式格線」：寬螢幕時卡片自動排成兩欄，
+       右方空出的位置由下一張卡片遞補上來。 */
+    --chart-h:264px;        /* 標準圖表高（原 340） */
+    --chart-h-tall:300px;   /* 高圖表（原 380） */
+    --chart-h-sm:236px;     /* 輔助／窄欄圖表（原 280〜320） */
+    --content-max:1760px;   /* 內容最大寬（超寬螢幕的安全上限） */
+    --flow-gap:16px;        /* 流式格線的卡片間距 */
     --shadow-card:0 1px 3px rgba(11,58,92,.07),0 1px 2px rgba(11,58,92,.04);
     --shadow-pop:0 4px 14px rgba(11,58,92,.10);
     --shadow-modal:0 16px 48px rgba(11,58,92,.18);
@@ -161,12 +171,17 @@
     header .compare-toggle button{padding:5px 11px;font-size:var(--fs-sm)}
   }
 
-  /* Chart + Table side-by-side layout (70%/30%) */
+  /* 圖＋表左右並列。原本是 7:3 —— 圖在左邊吃掉 70%，表被擠到右邊剩一條，
+     正是「左重右輕」。改為 1.3:1（約 57:43），資訊密度高的表格拿回版面。 */
   .chart-table-row{display:flex;gap:14px;align-items:stretch;margin-top:12px}
-  .chart-table-row .chart-side{flex:7;min-width:0}
-  .chart-table-row .chart-side .chart-box{margin-top:0;height:100%;min-height:340px}
-  .chart-table-row .chart-side .chart-box.tall{min-height:380px}
-  .chart-table-row .table-side{flex:3;min-width:0;overflow-x:auto}
+  .chart-table-row .chart-side{flex:1.3;min-width:0}
+  .chart-table-row .chart-side .chart-box{margin-top:0;height:100%;min-height:var(--chart-h)}
+  .chart-table-row .chart-side .chart-box.tall{min-height:var(--chart-h-tall)}
+  .chart-table-row .table-side{flex:1;min-width:0;overflow-x:auto}
+  .chart-table-row.even{align-items:flex-start}
+  .chart-table-row.even .chart-side{flex:1}
+  .chart-table-row.even .chart-side .chart-box{height:var(--chart-h-tall);min-height:0}
+  .chart-table-row.even .table-side{flex:1}
   .chart-table-row .table-side table.grid{font-size:var(--fs-sm)}
   .chart-table-row .table-side table.grid th{padding:6px 8px}
   .chart-table-row .table-side table.grid td{padding:6px 8px}
@@ -175,15 +190,30 @@
     .chart-table-row .chart-side, .chart-table-row .table-side{flex:none;width:100%}
   }
 
-  /* 達成率：表格 + 圖表 同一水平區塊左右並列（表格保持全字級） */
-  .ach-row{display:flex;gap:20px;align-items:stretch;margin-top:6px}
-  .ach-row .ach-table{flex:1.15;min-width:0;overflow-x:auto}
-  .ach-row .ach-chart{flex:1;min-width:0;position:relative}
-  .ach-row .ach-chart .chart-box{height:100%;min-height:320px;margin-top:0}
+  /* 達成率：表格 + 圖表。
+     這張表有 10 欄（3 個期間 × 3 個指標 + 名稱），最窄也要約 740px；
+     原本 1100px 以上就左右並列，表格只分到 600 多 px，最右邊的
+     「累計達成率」會被 overflow 切掉（要橫向捲動才看得到）。
+     改為預設上下堆疊，只有 1840px 以上、表格確定放得下時才並列。 */
+  .ach-row{display:flex;flex-direction:column;gap:14px;align-items:stretch;margin-top:6px}
+  .ach-row .ach-table{flex:none;width:100%;min-width:0;overflow-x:auto}
+  .ach-row .ach-chart{flex:none;width:100%;min-width:0;position:relative}
+  .ach-row .ach-chart .chart-box{height:100%;min-height:var(--chart-h-sm);margin-top:0}
   @media (max-width:1100px){
-    .ach-row{flex-direction:column}
-    .ach-row .ach-table, .ach-row .ach-chart{flex:none;width:100%}
-    .ach-row .ach-chart .chart-box{min-height:300px}
+    /* 平板／窄視窗：10 欄表格縮一級字，盡量免於橫向捲動 */
+    .ach-row .ach-table table.grid,
+    .ach-row .ach-table table.grid th{font-size:var(--fs-sm)}
+    .ach-row .ach-table table.grid th,
+    .ach-row .ach-table table.grid td{padding:5px 6px}
+  }
+  @media (min-width:1840px){
+    .ach-row{flex-direction:row;gap:20px}
+    .ach-row .ach-table{flex:1.15;width:auto}
+    .ach-row .ach-chart{flex:1;width:auto}
+    .ach-row .ach-table table.grid{font-size:var(--fs-sm)}
+    .ach-row .ach-table table.grid th{font-size:var(--fs-sm)}
+    .ach-row .ach-table table.grid th,
+    .ach-row .ach-table table.grid td{padding:6px 7px}
   }
 
   /* AOV：當月 + 累計 KPI + 月次推移圖 同一水平區塊 */
@@ -191,11 +221,11 @@
   .aov-row .kpi-card{flex:1;min-width:0}
   .aov-row .aov-chart{flex:1.6;min-width:0;position:relative;background:var(--card);border:0.5px solid var(--border);border-radius:12px;padding:14px 16px;box-shadow:var(--shadow-card);display:flex;flex-direction:column}
   .aov-row .aov-chart-title{font-size:var(--fs-md);font-weight:700;color:var(--accent-dark);margin-bottom:8px}
-  .aov-row .aov-chart .chart-box{flex:1;min-height:280px;margin-top:0}
+  .aov-row .aov-chart .chart-box{flex:1;min-height:var(--chart-h-sm);margin-top:0}
   @media (max-width:1100px){
     .aov-row{flex-direction:column}
     .aov-row .kpi-card, .aov-row .aov-chart{flex:none;width:100%}
-    .aov-row .aov-chart .chart-box{min-height:300px}
+    .aov-row .aov-chart .chart-box{min-height:var(--chart-h-sm)}
   }
 
   /* 全社業績：3 KPI 卡 + 進度資訊 同一水平列，進度移到最右方 */
@@ -228,8 +258,69 @@
   main{padding:18px 24px;flex:1;min-width:0}
 
   /* Tab panels */
-  .tab-panel{display:none}
+  .tab-panel{display:none;max-width:var(--content-max);margin-inline:auto}
   .tab-panel.active{display:block}
+
+  /* ── 卡片流式格線（寬螢幕兩欄，右方空位由後面的卡片遞補）──────────
+     只套用在標示 data-flow 的分頁；需要整列的卡片加 class="card wide"。
+     grid-auto-flow:row dense 讓後面的半寬卡片回填前面留下的空格。
+
+     兩個門檻，差別在「半欄放不放得下該分頁最寬的表」：
+       1520px  一般分頁（月別推移、手偶）—— 表格只有 4〜7 欄。
+       1840px  含「達成率」表的分頁（主儀表板、管道別）—— 該表有
+               10 欄（3 期間 × 3 指標 + 名稱），最窄也要約 740px，
+               半欄不足時整個分頁退回單欄，避免出現「左邊半張卡、
+               右邊整片空白」的更糟版面。 */
+  @media (min-width:1520px){
+    .tab-panel.active[data-flow]:not(:has(.ach-row)){
+      display:grid;
+      grid-template-columns:repeat(2,minmax(0,1fr));
+      gap:var(--flow-gap);
+      align-items:start;
+      grid-auto-flow:row dense;
+    }
+    .tab-panel.active[data-flow]:not(:has(.ach-row)) > *{min-width:0}
+    .tab-panel.active[data-flow]:not(:has(.ach-row)) > div:empty{display:none}
+    .tab-panel.active[data-flow]:not(:has(.ach-row)) > .card{margin-bottom:0;padding:18px 16px}
+    .tab-panel.active[data-flow]:not(:has(.ach-row)) > .wide{grid-column:1 / -1}
+    .tab-panel.active[data-flow]:not(:has(.ach-row)) > :not(.card){grid-column:1 / -1}
+    .tab-panel.active[data-flow]:not(:has(.ach-row)) > .card:not(.wide) .chart-table-row,
+    .tab-panel.active[data-flow]:not(:has(.ach-row)) > .card:not(.wide) .ach-row{flex-direction:column;gap:12px}
+    .tab-panel.active[data-flow]:not(:has(.ach-row)) > .card:not(.wide) .chart-table-row > *,
+    .tab-panel.active[data-flow]:not(:has(.ach-row)) > .card:not(.wide) .ach-row > *{flex:none;width:100%}
+    .tab-panel.active[data-flow]:not(:has(.ach-row)) > .card:not(.wide) .chart-side .chart-box{height:var(--chart-h)}
+    .tab-panel.active[data-flow]:not(:has(.ach-row)) > .card:not(.wide) .chart-side .chart-box.tall{height:var(--chart-h-tall)}
+    .tab-panel.active[data-flow]:not(:has(.ach-row)) > .card:not(.wide) .ach-chart .chart-box{height:var(--chart-h-sm)}
+    .tab-panel.active[data-flow]:not(:has(.ach-row)) > .card:not(.wide) table.grid,
+    .tab-panel.active[data-flow]:not(:has(.ach-row)) > .card:not(.wide) table.grid th{font-size:var(--fs-sm)}
+    .tab-panel.active[data-flow]:not(:has(.ach-row)) > .card:not(.wide) table.grid th,
+    .tab-panel.active[data-flow]:not(:has(.ach-row)) > .card:not(.wide) table.grid td{padding:6px 7px}
+  }
+  @media (min-width:1840px){
+    .tab-panel.active[data-flow]:has(.ach-row){
+      display:grid;
+      grid-template-columns:repeat(2,minmax(0,1fr));
+      gap:var(--flow-gap);
+      align-items:start;
+      grid-auto-flow:row dense;
+    }
+    .tab-panel.active[data-flow]:has(.ach-row) > *{min-width:0}
+    .tab-panel.active[data-flow]:has(.ach-row) > div:empty{display:none}
+    .tab-panel.active[data-flow]:has(.ach-row) > .card{margin-bottom:0;padding:18px 16px}
+    .tab-panel.active[data-flow]:has(.ach-row) > .wide{grid-column:1 / -1}
+    .tab-panel.active[data-flow]:has(.ach-row) > :not(.card){grid-column:1 / -1}
+    .tab-panel.active[data-flow]:has(.ach-row) > .card:not(.wide) .chart-table-row,
+    .tab-panel.active[data-flow]:has(.ach-row) > .card:not(.wide) .ach-row{flex-direction:column;gap:12px}
+    .tab-panel.active[data-flow]:has(.ach-row) > .card:not(.wide) .chart-table-row > *,
+    .tab-panel.active[data-flow]:has(.ach-row) > .card:not(.wide) .ach-row > *{flex:none;width:100%}
+    .tab-panel.active[data-flow]:has(.ach-row) > .card:not(.wide) .chart-side .chart-box{height:var(--chart-h)}
+    .tab-panel.active[data-flow]:has(.ach-row) > .card:not(.wide) .chart-side .chart-box.tall{height:var(--chart-h-tall)}
+    .tab-panel.active[data-flow]:has(.ach-row) > .card:not(.wide) .ach-chart .chart-box{height:var(--chart-h-sm)}
+    .tab-panel.active[data-flow]:has(.ach-row) > .card:not(.wide) table.grid,
+    .tab-panel.active[data-flow]:has(.ach-row) > .card:not(.wide) table.grid th{font-size:var(--fs-sm)}
+    .tab-panel.active[data-flow]:has(.ach-row) > .card:not(.wide) table.grid th,
+    .tab-panel.active[data-flow]:has(.ach-row) > .card:not(.wide) table.grid td{padding:6px 7px}
+  }
 
   .placeholder{background:var(--card);border:1px dashed var(--border-strong);border-radius:12px;padding:80px 24px;text-align:center;color:var(--muted);font-size:var(--fs-md)}
 
@@ -345,7 +436,7 @@
   .fcst-kpi .v.good{color:var(--good)} .fcst-kpi .v.bad{color:var(--bad)}
   .fcst-kpi .s{font-size:var(--fs-sm);color:var(--secondary);margin-top:3px;font-weight:500}
   .fcst-main-row{display:flex;gap:14px;align-items:stretch}
-  .fcst-chart-box{flex:1.05;min-width:0;min-height:330px;position:relative}
+  .fcst-chart-box{flex:1.05;min-width:0;min-height:var(--chart-h-tall);position:relative}
   .fcst-scenario-col{flex:1;min-width:0}
   .fcst-scenario-col h3{margin:0 0 8px 0;font-size:var(--fs-base);font-weight:700;color:var(--accent-dark)}
   /* 6 欄情境表：縮排版以在桌機一次看完，不必橫向捲動 */
@@ -425,7 +516,7 @@
   .po-kpi .v .u{font-size:var(--fs-base);color:var(--muted);font-weight:500;margin-left:3px}
   .po-kpi .s{font-size:var(--fs-xs);color:var(--secondary);margin-top:3px;line-height:1.4}
   .po-main-row{display:flex;gap:14px;align-items:stretch}
-  .po-chart-box{flex:1.1;min-width:0;min-height:300px;position:relative}
+  .po-chart-box{flex:1.1;min-width:0;min-height:var(--chart-h-sm);position:relative}
   .po-chart-box canvas{max-width:100%}
   .po-side{flex:1;min-width:0}
   .po-side h3{margin:0 0 8px 0;font-size:var(--fs-base);font-weight:700;color:var(--accent-dark)}
@@ -534,8 +625,8 @@
   .trend-nav .sep{color:var(--border-strong);margin:0 2px}
 
   /* Chart container */
-  .chart-box{background:#fff;border:0.5px solid var(--border);border-radius:12px;padding:14px;height:340px;position:relative;margin-top:12px}
-  .chart-box.tall{height:380px}
+  .chart-box{background:#fff;border:0.5px solid var(--border);border-radius:12px;padding:14px;height:var(--chart-h);position:relative;margin-top:12px}
+  .chart-box.tall{height:var(--chart-h-tall)}
 
   /* Loader */
   .loader-row{display:flex;flex-wrap:wrap;gap:12px;align-items:flex-end}
@@ -593,9 +684,9 @@
   /* min-width:0 不可省：flex 項目預設 min-width:auto，會被 canvas 的固有寬度撐住，
      視窗由大縮小時圖表縮不回去，整頁產生水平溢出。 */
   .prevday-overview-row .kpi-card{flex:1 1 360px;min-width:0}
-  .prevday-chart-box{flex:1 1 420px;min-width:0;min-height:280px;position:relative}
+  .prevday-chart-box{flex:1 1 420px;min-width:0;min-height:var(--chart-h-sm);position:relative}
   .prevday-chart-box canvas{max-width:100%}
-  .prevday-chart-box canvas{max-height:320px}
+  .prevday-chart-box canvas{max-height:var(--chart-h-tall)}
   /* 依事業別／依通路別 を左右併排 */
   .prevday-tables-row{display:flex;flex-wrap:wrap;gap:24px;align-items:flex-start}
   .prevday-tables-row .prevday-table-col{flex:1 1 340px;min-width:0}
@@ -753,11 +844,11 @@
 <main>
 
   <!-- ===== Tab 1: Main Dashboard ===== -->
-  <div class="tab-panel" id="panel-main">
+  <div class="tab-panel" id="panel-main" data-flow>
 
-    <div id="po-banner-slot"></div>
+    <div id="po-banner-slot" class="wide"></div>
 
-    <div class="card">
+    <div class="card wide">
       <h2>全社業績 <span class="pill" id="overall-pill">未載入</span></h2>
       <div class="overview-row">
         <div class="kpi-card year"   id="kpi-year"></div>
@@ -852,23 +943,23 @@
   </div>
 
   <!-- ===== Tab 2-13: Placeholders ===== -->
-  <div class="tab-panel" id="panel-trend"></div>
+  <div class="tab-panel" id="panel-trend" data-flow></div>
   <div class="tab-panel" id="panel-vstarget"></div>
   <div class="tab-panel" id="panel-biz-學習商品"></div>
   <div class="tab-panel" id="panel-biz-學習周邊"></div>
   <div class="tab-panel" id="panel-biz-生活周邊"></div>
   <div class="tab-panel" id="panel-biz-Mirafeel"></div>
   <div class="tab-panel" id="panel-biz-數位典藏"></div>
-  <div class="tab-panel" id="panel-ch-WEB"></div>
-  <div class="tab-panel" id="panel-ch-TM"></div>
-  <div class="tab-panel" id="panel-ch-KOL"></div>
-  <div class="tab-panel" id="panel-ch-EC"></div>
-  <div class="tab-panel" id="panel-ch-經代銷"></div>
+  <div class="tab-panel" id="panel-ch-WEB" data-flow></div>
+  <div class="tab-panel" id="panel-ch-TM" data-flow></div>
+  <div class="tab-panel" id="panel-ch-KOL" data-flow></div>
+  <div class="tab-panel" id="panel-ch-EC" data-flow></div>
+  <div class="tab-panel" id="panel-ch-經代銷" data-flow></div>
   <div class="tab-panel" id="panel-cards"></div>
   <div class="tab-panel" id="panel-weekly"></div>
   <div class="tab-panel" id="panel-aov"></div>
   <div class="tab-panel" id="panel-sku"></div>
-  <div class="tab-panel" id="panel-handpuppet"></div>
+  <div class="tab-panel" id="panel-handpuppet" data-flow></div>
   <div class="tab-panel" id="panel-kol"></div>
   <div class="tab-panel" id="panel-holiday"></div>
   <div class="tab-panel" id="panel-preorder"></div>
@@ -3841,11 +3932,11 @@ function renderBizSkuContentHTML(biz, codeSet){
   const totalAmt = Object.values(byCh).reduce((s,v)=>s+v.amt, 0);
   const totalAOV = totalQty > 0 ? Math.round(totalAmt / totalQty) : null;
 
-  let html = `<div class="chart-table-row">`;
+  let html = `<div class="chart-table-row even">`;
   // Left: monthly amount stacked bar chart (by channel)
-  html += `<div class="chart-side"><div class="chart-box tall"><canvas id="${canvasId}"></canvas></div></div>`;
-  // Right: channel breakdown table
-  html += `<div class="table-side"><div class="scroll-x"><table class="grid">
+  html += `<div class="chart-side"><div class="chart-box tall"><canvas id="${canvasId}"></canvas></div>`;
+  // 左欄下方：管道小計（6 列短表）—— 與右欄的 12 列長表配重
+  html += `<div class="scroll-x" style="margin-top:12px"><table class="grid">
     <thead><tr><th class="l1">管道</th><th class="l2">套數</th><th class="l2">金額(萬)</th><th class="l2">AOV(元)</th></tr></thead><tbody>`;
   CHANNEL_LIST.forEach(c => {
     const d = byCh[c];
@@ -3864,10 +3955,14 @@ function renderBizSkuContentHTML(biz, codeSet){
     <td>${Math.round(totalAmt/10000).toLocaleString()}</td>
     <td>${totalAOV ? totalAOV.toLocaleString() : '—'}</td>
   </tr>`;
-  html += `</tbody></table></div></div></div>`;
+  html += `</tbody></table></div></div>`;   // ← scroll-x / chart-side
 
+  // 右欄：月份 × 管道（12 列）
+  html += `<div class="table-side">`;
   // Monthly detail table (Month × channel qty)
-  html += `<details open style="margin-top:10px"><summary style="font-size:var(--fs-xs);font-weight:600;color:var(--secondary);cursor:pointer;padding:4px 0">▸ 月份 × 管道（套數）</summary>
+  // 原本放在 chart-table-row 之外、獨佔整列；圖表右側卻空著一大塊（左重右輕）。
+  // 改放進右欄接在管道小計表下面，右欄填滿、卡片也變矮。
+  html += `<details open style="margin-top:12px"><summary style="font-size:var(--fs-xs);font-weight:600;color:var(--secondary);cursor:pointer;padding:4px 0">▸ 月份 × 管道（套數）</summary>
     <div class="scroll-x" style="margin-top:8px"><table class="grid">
     <thead><tr><th class="l1">月份</th>`;
   CHANNEL_LIST.forEach(c => { html += `<th class="l2">${c}</th>`; });
@@ -3896,6 +3991,7 @@ function renderBizSkuContentHTML(biz, codeSet){
   html += `<td>${Math.round(grandQty).toLocaleString()}</td></tr>`;
   html += `</tbody></table></div></details>`;
   html += `<div class="legend" style="margin-top:6px">※ 套數為原始筆數合計。</div>`;
+  html += `</div></div>`;   // ← table-side / chart-table-row.even
 
   return html;
 }
@@ -4028,7 +4124,7 @@ function renderTrendSectionHTML(s){
     const products = getSkuProductList(biz);
     const selSet   = getBizSkuFilter(biz);
 
-    let html = `<div class="card" id="trend-${s.id}">`;
+    let html = `<div class="card wide" id="trend-${s.id}">`;
     html += `<h2>${s.title} <span class="pill">品項複選</span></h2>`;
     html += renderBizSkuFilterHTML(biz, products, selSet);
     html += `<div id="biz-sku-content-${safeBiz}">`;
@@ -4104,7 +4200,7 @@ function renderDetailTab(filterType, filterValue){
   let html = '';
 
   // Section 1: KPI
-  html += `<div class="card"><h2>${filterValue} — 達成狀況 <span class="pill">本月：${m}</span></h2>`;
+  html += `<div class="card wide"><h2>${filterValue} — 達成狀況 <span class="pill">本月：${m}</span></h2>`;
   html += `<div class="kpi-grid">`;
   html += `<div class="kpi-card year"  id="kpi-${idPrefix}-y"></div>`;
   html += `<div class="kpi-card month" id="kpi-${idPrefix}-m"></div>`;
@@ -5058,7 +5154,7 @@ function renderHandPuppetTab(){
   let html = '';
 
   // KPI
-  html += '<div class="card">';
+  html += '<div class="card wide">';
   html += `<h2>巧虎手偶 — 達成狀況 <span class="pill">${codes.size} 商品 / 本月：${m}</span></h2>`;
   html += `<div style="font-size:var(--fs-md);color:var(--secondary);margin:0 0 14px 0;line-height:1.6;padding:12px 16px;background:var(--stripe);border-radius:6px;border-left:3px solid var(--accent)">
     對象商品：巧虎手偶 <strong>${codes.size}</strong> 個製編（與在庫儀表板一致）——${HANDPUPPET_CODES.map(c=>`${c} ${HANDPUPPET_NAMES[c]}`).join('、')}。目標僅到事業×通路級別、無產品級目標，故僅顯示實績。
