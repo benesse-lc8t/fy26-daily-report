@@ -63,6 +63,16 @@ PREORDER_RULES = [
         'id': 'dianduo-tujian',
         'title': '巧虎雙語點讀圖鑑',
         'codes': ['20250FE00', '20250FXBH'],
+        # ⚠ 通路很重要：各通路把訂單寫進每日 Excel 的「時點」不同。
+        #   EC / WEB / KOL：以「訂單日」開列 —— 尚未出貨就會出現在每日明細，
+        #                   故訂單日落在預購期內者＝預購，必須排除。
+        #   TM           ：以「發貨日」開列 —— 預購單在「未發送」狀態下
+        #                   根本不會進到每日明細（已於 2026-10-01 核對確認：
+        #                   預購檔有 TM 9/29 4 套，actualRows 中 9/22 之後 0 列）。
+        #                   因此 TM 一旦出現在每日明細就代表「已出貨」＝真實營收，
+        #                   **絕對不能排除**。11 月底入庫出貨時發貨日極可能落在
+        #                   11/20~11/26（在本區間內），納入 TM 會把已出貨的營收誤殺。
+        'channels': ['WEB', 'KOL', 'EC', '經代銷'],
         'start': '2026-09-29',
         'end':   '2026-11-26',
         'recognizeMonth': None,          # ← 出貨認列後改為 '11月' 或 '12月'
@@ -78,13 +88,23 @@ PREORDER_RULES = [
 ]
 
 
-def preorder_match(code, date_str):
-    """回傳符合的預購規則；不符則 None。"""
+def preorder_match(code, date_str, channel=None):
+    """回傳符合的預購規則；不符則 None。
+
+    規則若有指定 channels，只有該些通路才算預購（見 PREORDER_RULES 內註解：
+    以發貨日開列的通路，進到每日明細時已出貨，不可排除）。
+    """
     if not code or not date_str:
         return None
     for rule in PREORDER_RULES:
-        if code in rule['codes'] and rule['start'] <= date_str <= rule['end']:
-            return rule
+        if code not in rule['codes']:
+            continue
+        if not (rule['start'] <= date_str <= rule['end']):
+            continue
+        chs = rule.get('channels')
+        if chs and channel not in chs:
+            continue
+        return rule
     return None
 
 
@@ -203,7 +223,7 @@ def main(excel_path):
                 'qty': qty, 'amt': round(amt, 2),
                 'date': dstr,
             }
-            rule = preorder_match(code, dstr)
+            rule = preorder_match(code, dstr, channel)
             if rule and not rule.get('recognizeMonth'):
                 rec['preorderId'] = rule['id']
                 preorder_rows.append(rec)          # 預購未出貨 → 不進實績

@@ -1324,6 +1324,7 @@ function applyDataJSON(data){
   STATE.midTarget = data.midTarget || null;
   STATE.preorderRows  = data.preorderRows  || [];
   STATE.preorderRules = data.preorderRules || [];
+  STATE.preorderLedger = data.preorderLedger || null;
   STATE.kolSchedule = data.kolSchedule || [];
   STATE.holidayInfo = data.holidayInfo || [];
   STATE.generatedAt = data.generatedAt;
@@ -5470,6 +5471,69 @@ function poShareOfBiz(rule, span){
   return tot > 0 ? span.amt / tot * 100 : null;
 }
 
+// ── 預購對帳 ──────────────────────────────────────────────
+// 每日實績檔與預購台帳的涵蓋範圍不同，兩邊都不完整：
+//   每日檔：EC/WEB/KOL 以訂單日開列 → 已進銷售明細、已被規則排除
+//   台帳  ：含 TM 等「未發送就不進銷售明細」的接單量
+// 差額本身就是資訊，故並列呈現而非擇一。
+function poLedger(rule){
+  const L = STATE.preorderLedger;
+  return (L && L.ruleId === rule.id) ? L : null;
+}
+
+function poReconcileHTML(rule){
+  const L = poLedger(rule);
+  if(!L) return '';
+  const daily = {};
+  for(const r of poRows(rule)) daily[r.ch] = (daily[r.ch] || 0) + (r.qty || 0);
+  const dailyAmt = {};
+  for(const r of poRows(rule)) dailyAmt[r.ch] = (dailyAmt[r.ch] || 0) + r.amt;
+  const chs = Array.from(new Set([...Object.keys(L.byChannelQty || {}), ...Object.keys(daily)]))
+    .filter(c => (L.byChannelQty?.[c] || 0) > 0 || (daily[c] || 0) > 0);
+
+  const dq = Object.values(daily).reduce((a, b) => a + b, 0);
+  const da = Object.values(dailyAmt).reduce((a, b) => a + b, 0);
+
+  let h = `<h3 style="margin-top:16px">預購對帳　<span style="font-size:12px;font-weight:500;color:var(--secondary)">台帳 ${L.sourceFile}</span></h3>`
+        + `<div class="scroll-x"><table class="grid"><thead><tr>`
+        + `<th class="l1">通路</th><th class="l1">預購台帳<br>（接單）</th>`
+        + `<th class="l1">每日檔<br>（已排除）</th><th class="l1">差</th><th class="l1">說明</th>`
+        + `</tr></thead><tbody>`;
+  for(const c of chs){
+    const lq = L.byChannelQty?.[c] || 0, dqc = daily[c] || 0, diff = lq - dqc;
+    let why = '—';
+    if(diff > 0 && c === 'TM') why = '以發貨日開列，未發送前不進每日明細';
+    else if(diff > 0) why = '台帳較新或每日檔尚未反映';
+    else if(diff < 0) why = '每日檔較新，台帳尚未更新到同一天';
+    else why = '一致 ✓';
+    const col = diff === 0 ? 'var(--good)' : 'var(--bad)';
+    h += `<tr><td class="dim">${c}</td><td>${lq.toLocaleString()}</td><td>${dqc.toLocaleString()}</td>`
+       + `<td style="color:${col};font-weight:700">${diff > 0 ? '+' : ''}${diff}</td>`
+       + `<td style="text-align:left;font-weight:500;font-size:12.5px">${why}</td></tr>`;
+  }
+  const tDiff = (L.totalQty || 0) - dq;
+  h += `<tr class="total"><td class="dim">合計（套）</td><td>${(L.totalQty || 0).toLocaleString()}</td>`
+     + `<td>${dq.toLocaleString()}</td><td style="color:${tDiff === 0 ? 'var(--good)' : 'var(--bad)'}">`
+     + `${tDiff > 0 ? '+' : ''}${tDiff}</td><td style="text-align:left">—</td></tr>`;
+  h += `<tr class="total"><td class="dim">合計（元）</td><td>${Math.round(L.totalAmt || 0).toLocaleString()}</td>`
+     + `<td>${Math.round(da).toLocaleString()}</td><td>${Math.round((L.totalAmt || 0) - da).toLocaleString()}</td>`
+     + `<td style="text-align:left">—</td></tr>`;
+  h += `</tbody></table></div>`;
+  return h;
+}
+
+function poLedgerNote(rule){
+  const L = poLedger(rule);
+  if(!L) return '';
+  const upd = L.generatedAt ? L.generatedAt.slice(0, 10) : '—';
+  return `<br>※ <b>為什麼有兩個數字</b>：「每日檔（已排除）」是真正會影響實績的部分 ——
+    EC／WEB／KOL 以<b>訂單日</b>開列，尚未出貨就會進每日明細，系統已自動排除。
+    <b>TM 以發貨日開列</b>，未發送前根本不進每日明細，所以每日檔看不到 TM 的接單量，
+    必須靠預購台帳補足。<b style="color:var(--bad)">也因此 TM 不納入自動排除規則</b> ——
+    TM 一旦出現在每日明細就代表已出貨＝真實營收，排除它會把該認列的金額誤殺。
+    台帳最後更新 ${upd}；兩邊截止日不同步時差額會暫時放大，屬正常。`;
+}
+
 function poRenderBanner(){
   const slot = document.getElementById('po-banner-slot');
   if(!slot) return;
@@ -5572,7 +5636,8 @@ function poCardHTML(rule){
   }
   h += `<tr class="total"><td class="dim">合計</td><td>${fmtAmt(act.total)}</td><td>100.0%</td></tr>
           </tbody></table></div>
-        <h3 style="margin-top:14px">預購明細（不計入實績）</h3>
+        ${poReconcileHTML(rule)}
+        <h3 style="margin-top:14px">預購明細（每日檔，不計入實績）</h3>
         <div class="scroll-x"><table class="grid">
           <thead><tr><th class="l1">日期</th><th class="l1">通路</th><th class="l1">件數</th><th class="l1">金額（元）</th></tr></thead>
           <tbody>`;
@@ -5593,7 +5658,7 @@ function poCardHTML(rule){
       直接計入等於提前認列尚未發生的收入。系統在解析階段就將 ${rule.start.slice(5).replace('-','/')}～${rule.end.slice(5).replace('-','/')}
       期間的對象製編分流到本分頁，全站其他分頁的實績一律不含這些金額。
       <b style="color:var(--bad)">出貨完成後須將認列月份寫回 <code>scripts/update_data.py</code> 的 <code>recognizeMonth</code></b>
-      （目前為未認列），屆時這些金額才會計入該月實績。<br>
+      （目前為未認列），屆時這些金額才會計入該月實績。${poLedgerNote(rule)}<br>
       ※ <b>機會損失推估</b>為參考值：以停售前 30 日（${rate ? rate.start.slice(5).replace('-','/') + '～' + rate.end.slice(5).replace('-','/') : '—'}）
       的日均 × 停售空窗天數計算，假設「若未停售則維持原銷售速度」。實際會受季節性、
       替代商品排擠、預購轉單等因素影響，<b>不可直接當作損失金額對外引用</b>。
