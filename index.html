@@ -265,61 +265,38 @@
      只套用在標示 data-flow 的分頁；需要整列的卡片加 class="card wide"。
      grid-auto-flow:row dense 讓後面的半寬卡片回填前面留下的空格。
 
-     兩個門檻，差別在「半欄放不放得下該分頁最寬的表」：
-       1520px  一般分頁（月別推移、手偶）—— 表格只有 4〜7 欄。
-       1840px  含「達成率」表的分頁（主儀表板、管道別）—— 該表有
-               10 欄（3 期間 × 3 指標 + 名稱），最窄也要約 740px，
-               半欄不足時整個分頁退回單欄，避免出現「左邊半張卡、
-               右邊整片空白」的更糟版面。 */
-  @media (min-width:1520px){
-    .tab-panel.active[data-flow]:not(:has(.ach-row)){
+     門檻 1530px＝側欄 210 + main 內距 48 + 兩欄各約 600 + 間距 16 + 餘裕。
+     最寬的「達成率」表有 10 欄，在半寬欄位裡靠三件事塞得下：
+     字級降一階、內距收緊、收起欄名的「期初／期中」前綴（.th-basis）。
+     （Windows 顯示縮放 125% 的 1920 螢幕邏輯寬度是 1536，仍在門檻之上。）*/
+  @media (min-width:1530px){
+    .tab-panel.active[data-flow]{
       display:grid;
       grid-template-columns:repeat(2,minmax(0,1fr));
       gap:var(--flow-gap);
       align-items:start;
       grid-auto-flow:row dense;
     }
-    .tab-panel.active[data-flow]:not(:has(.ach-row)) > *{min-width:0}
-    .tab-panel.active[data-flow]:not(:has(.ach-row)) > div:empty{display:none}
-    .tab-panel.active[data-flow]:not(:has(.ach-row)) > .card{margin-bottom:0;padding:18px 16px}
-    .tab-panel.active[data-flow]:not(:has(.ach-row)) > .wide{grid-column:1 / -1}
-    .tab-panel.active[data-flow]:not(:has(.ach-row)) > :not(.card){grid-column:1 / -1}
-    .tab-panel.active[data-flow]:not(:has(.ach-row)) > .card:not(.wide) .chart-table-row,
-    .tab-panel.active[data-flow]:not(:has(.ach-row)) > .card:not(.wide) .ach-row{flex-direction:column;gap:12px}
-    .tab-panel.active[data-flow]:not(:has(.ach-row)) > .card:not(.wide) .chart-table-row > *,
-    .tab-panel.active[data-flow]:not(:has(.ach-row)) > .card:not(.wide) .ach-row > *{flex:none;width:100%}
-    .tab-panel.active[data-flow]:not(:has(.ach-row)) > .card:not(.wide) .chart-side .chart-box{height:var(--chart-h)}
-    .tab-panel.active[data-flow]:not(:has(.ach-row)) > .card:not(.wide) .chart-side .chart-box.tall{height:var(--chart-h-tall)}
-    .tab-panel.active[data-flow]:not(:has(.ach-row)) > .card:not(.wide) .ach-chart .chart-box{height:var(--chart-h-sm)}
-    .tab-panel.active[data-flow]:not(:has(.ach-row)) > .card:not(.wide) table.grid,
-    .tab-panel.active[data-flow]:not(:has(.ach-row)) > .card:not(.wide) table.grid th{font-size:var(--fs-sm)}
-    .tab-panel.active[data-flow]:not(:has(.ach-row)) > .card:not(.wide) table.grid th,
-    .tab-panel.active[data-flow]:not(:has(.ach-row)) > .card:not(.wide) table.grid td{padding:6px 7px}
-  }
-  @media (min-width:1840px){
-    .tab-panel.active[data-flow]:has(.ach-row){
-      display:grid;
-      grid-template-columns:repeat(2,minmax(0,1fr));
-      gap:var(--flow-gap);
-      align-items:start;
-      grid-auto-flow:row dense;
-    }
-    .tab-panel.active[data-flow]:has(.ach-row) > *{min-width:0}
-    .tab-panel.active[data-flow]:has(.ach-row) > div:empty{display:none}
-    .tab-panel.active[data-flow]:has(.ach-row) > .card{margin-bottom:0;padding:18px 16px}
-    .tab-panel.active[data-flow]:has(.ach-row) > .wide{grid-column:1 / -1}
-    .tab-panel.active[data-flow]:has(.ach-row) > :not(.card){grid-column:1 / -1}
-    .tab-panel.active[data-flow]:has(.ach-row) > .card:not(.wide) .chart-table-row,
-    .tab-panel.active[data-flow]:has(.ach-row) > .card:not(.wide) .ach-row{flex-direction:column;gap:12px}
-    .tab-panel.active[data-flow]:has(.ach-row) > .card:not(.wide) .chart-table-row > *,
-    .tab-panel.active[data-flow]:has(.ach-row) > .card:not(.wide) .ach-row > *{flex:none;width:100%}
-    .tab-panel.active[data-flow]:has(.ach-row) > .card:not(.wide) .chart-side .chart-box{height:var(--chart-h)}
-    .tab-panel.active[data-flow]:has(.ach-row) > .card:not(.wide) .chart-side .chart-box.tall{height:var(--chart-h-tall)}
-    .tab-panel.active[data-flow]:has(.ach-row) > .card:not(.wide) .ach-chart .chart-box{height:var(--chart-h-sm)}
-    .tab-panel.active[data-flow]:has(.ach-row) > .card:not(.wide) table.grid,
-    .tab-panel.active[data-flow]:has(.ach-row) > .card:not(.wide) table.grid th{font-size:var(--fs-sm)}
-    .tab-panel.active[data-flow]:has(.ach-row) > .card:not(.wide) table.grid th,
-    .tab-panel.active[data-flow]:has(.ach-row) > .card:not(.wide) table.grid td{padding:6px 7px}
+    .tab-panel.active[data-flow] > *{min-width:0}
+    .tab-panel.active[data-flow] > div:empty{display:none}
+    .tab-panel.active[data-flow] > .card{margin-bottom:0;padding:18px 14px}
+    .tab-panel.active[data-flow] > .wide{grid-column:1 / -1}
+    .tab-panel.active[data-flow] > :not(.card){grid-column:1 / -1}
+    .tab-panel.active[data-flow] > .card:not(.wide) .chart-table-row,
+    .tab-panel.active[data-flow] > .card:not(.wide) .ach-row{flex-direction:column;gap:12px}
+    .tab-panel.active[data-flow] > .card:not(.wide) .chart-table-row > *,
+    .tab-panel.active[data-flow] > .card:not(.wide) .ach-row > *{flex:none;width:100%}
+    .tab-panel.active[data-flow] > .card:not(.wide) .chart-side .chart-box{height:var(--chart-h)}
+    .tab-panel.active[data-flow] > .card:not(.wide) .chart-side .chart-box.tall{height:var(--chart-h-tall)}
+    .tab-panel.active[data-flow] > .card:not(.wide) .ach-chart .chart-box{height:var(--chart-h-sm)}
+    .tab-panel.active[data-flow] > .card:not(.wide) table.grid,
+    .tab-panel.active[data-flow] > .card:not(.wide) table.grid th{font-size:var(--fs-sm)}
+    .tab-panel.active[data-flow] > .card:not(.wide) table.grid th,
+    .tab-panel.active[data-flow] > .card:not(.wide) table.grid td{padding:5px 5px}
+    .tab-panel.active[data-flow] > .card:not(.wide) .th-basis{display:none}
+    /* 達成率欄的寬度是由徽章撐開的（預設 min-width:66 + 左右 14 內距），
+       不是由欄名。窄欄時把徽章收緊，是把這張表塞進半欄的關鍵一步。 */
+    .tab-panel.active[data-flow] > .card:not(.wide) .rate-badge{padding:3px 7px;min-width:48px;font-size:var(--fs-sm);letter-spacing:0}
   }
 
   .placeholder{background:var(--card);border:1px dashed var(--border-strong);border-radius:12px;padding:80px 24px;text-align:center;color:var(--muted);font-size:var(--fs-md)}
@@ -487,6 +464,7 @@
   .po-banner .po-ico{font-size:var(--fs-md);line-height:1}
   .po-banner .po-txt{flex:1;min-width:0;font-size:var(--fs-base);color:#7C2D12;line-height:1.5}
   .po-banner .po-txt b{color:#9A3412}
+  .po-banner .po-sub{color:var(--secondary);font-weight:500}
   .po-banner .po-go{font-size:var(--fs-sm);font-weight:700;color:#9A3412;white-space:nowrap}
   .po-state{display:inline-block;padding:3px 12px;border-radius:14px;font-size:var(--fs-sm);font-weight:700}
   .po-state.stop{background:#FEE2E2;color:#B91C1C}
@@ -1220,6 +1198,17 @@ function isMid(){ return cmpMode() === 'mid'; }
 function targetLabel(){ const m=cmpMode(); return m==='yoy' ? '昨年實績' : (m==='mid' ? '期中目標' : '期初目標'); }
 function diffLabel(){   const m=cmpMode(); return m==='yoy' ? '昨年差'   : (m==='mid' ? '期中差'   : '期初差'); }
 function rateLabel(){   const m=cmpMode(); return m==='yoy' ? '前年比'   : (m==='mid' ? '期中達成率' : '期初達成率'); }
+// 達成率表有 10 欄（3 期間 × 3 指標 + 名稱），半寬欄位（約 570px）放不下。
+// 把「期初／期中」前綴包成 span，窄欄時用 CSS 收起成「目標／達成率」。
+// 基準名在頂部切換鈕與表下註解都看得到，不會因此搞不清楚在比哪一個基準。
+// 前年比模式（前年實績／前年比）沒有可省的前綴，維持原樣。
+function thBasisHTML(full, prefix){
+  return full.startsWith(prefix)
+    ? `<span class="th-basis">${prefix}</span>${full.slice(prefix.length)}`
+    : full;
+}
+function targetLabelTH(){ const m=cmpMode(); return m==='yoy' ? targetLabel() : thBasisHTML(targetLabel(), m==='mid'?'期中':'期初'); }
+function rateLabelTH(){   const m=cmpMode(); return m==='yoy' ? rateLabel()   : thBasisHTML(rateLabel(),   m==='mid'?'期中':'期初'); }
 
 // 任一基準的金額／套數聚合（不受目前 compareMode 影響），供 KPI 卡三基準並列使用
 function sumFrom(src, kind, biz, ch, months){
@@ -3553,7 +3542,7 @@ function renderRateTable(tableId, dimLabel, dims, dimType, fixedFilter){
   html += `<th class="l1" colspan="3">當月（${m}）</th>`;
   html += `<th class="l1" colspan="3">累計（4月〜${m}）</th></tr>`;
   html += `<tr>`;
-  for(let i=0;i<3;i++) html += `<th class="l2">${targetLabel()}</th><th class="l2">實績</th><th class="l2">${rateLabel()}</th>`;
+  for(let i=0;i<3;i++) html += `<th class="l2">${targetLabelTH()}</th><th class="l2">實績</th><th class="l2">${rateLabelTH()}</th>`;
   html += `</tr></thead><tbody>`;
 
   let yT={b:0,a:0}, mT={b:0,a:0}, cT={b:0,a:0};
@@ -5558,6 +5547,21 @@ function poRules(){ return STATE.preorderRules || []; }
 function poRows(rule){
   return (STATE.preorderRows || []).filter(r => r.preorderId === rule.id);
 }
+// 預購台帳只統計「套組」。分冊（20250FE03）也走同一條排除規則，
+// 但不在台帳裡，混進對帳表會讓 TM 的差額看起來變小、各說各話。
+// 以 ledgerCodes 把兩者分開：對帳只比套組，分冊另外列示。
+function poLedgerCodes(rule){
+  const L = poLedger(rule);
+  return (L && L.codes) || rule.ledgerCodes || ['20250FE00', '20250FXBH'];
+}
+function poRowsInLedger(rule){
+  const cs = poLedgerCodes(rule);
+  return poRows(rule).filter(r => cs.includes(r.code));
+}
+function poRowsOutsideLedger(rule){
+  const cs = poLedgerCodes(rule);
+  return poRows(rule).filter(r => !cs.includes(r.code));
+}
 function poToday(){
   // 以資料最終日為「今天」，避免瀏覽器時鐘與資料不同步
   let latest = null;
@@ -5643,10 +5647,11 @@ function poLedger(rule){
 function poReconcileHTML(rule){
   const L = poLedger(rule);
   if(!L) return '';
+  const inLedger = poRowsInLedger(rule);
   const daily = {};
-  for(const r of poRows(rule)) daily[r.ch] = (daily[r.ch] || 0) + (r.qty || 0);
+  for(const r of inLedger) daily[r.ch] = (daily[r.ch] || 0) + (r.qty || 0);
   const dailyAmt = {};
-  for(const r of poRows(rule)) dailyAmt[r.ch] = (dailyAmt[r.ch] || 0) + r.amt;
+  for(const r of inLedger) dailyAmt[r.ch] = (dailyAmt[r.ch] || 0) + r.amt;
   const chs = Array.from(new Set([...Object.keys(L.byChannelQty || {}), ...Object.keys(daily)]))
     .filter(c => (L.byChannelQty?.[c] || 0) > 0 || (daily[c] || 0) > 0);
 
@@ -5678,6 +5683,15 @@ function poReconcileHTML(rule){
      + `<td>${Math.round(da).toLocaleString()}</td><td>${Math.round((L.totalAmt || 0) - da).toLocaleString()}</td>`
      + `<td style="text-align:left">—</td></tr>`;
   h += `</tbody></table></div>`;
+  const out = poRowsOutsideLedger(rule);
+  if(out.length){
+    const oq = out.reduce((a, r) => a + (r.qty || 0), 0);
+    const oa = out.reduce((a, r) => a + r.amt, 0);
+    const codes = Array.from(new Set(out.map(r => r.code))).join('、');
+    h += `<div class="legend" style="margin-top:6px">※ 另有 <b>${oq.toLocaleString()} 件／`
+       + `${Math.round(oa).toLocaleString()} 元</b>（製編 ${codes}，分冊）亦已自實績排除，`
+       + `但<b>不在預購台帳的統計範圍內</b>（台帳只統計套組），故未列入上表對帳。</div>`;
+  }
   return h;
 }
 
@@ -5700,15 +5714,26 @@ function poRenderBanner(){
   if(!rules.length){ slot.innerHTML = ''; return; }
   const today = poToday();
   slot.innerHTML = rules.map(rule => {
-    const ph = poRows(rule);
+    const ph = poRowsInLedger(rule);
     const pq = ph.reduce((s, r) => s + (r.qty || 0), 0);
     const pa = ph.reduce((s, r) => s + r.amt, 0);
+    const ex = poRowsOutsideLedger(rule);
+    const eq = ex.reduce((s, r) => s + (r.qty || 0), 0);
+    // 橫幅的頭條數字要用「預購台帳」的接單量，不是每日檔的已排除量。
+    // TM 以發貨日開列，未發送前根本不進每日明細，所以每日檔永遠少一截
+    // （目前少 TM 的 4 套）。對外要講的是接單量，兩個數字並列才不會各說各話。
+    const L  = poLedger(rule);
+    const tq = L ? L.totalQty : pq;
+    const ta = L ? L.totalAmt : pa;
+    const gap = Math.round(tq - pq);
     const phase = poPhase(rule, today);
     const relaunch = (rule.timeline || []).find(t => t.label.includes('重新上架'));
     return `<div class="po-banner" data-po-go="1">
       <span class="po-ico">📦</span>
       <span class="po-txt"><b>${rule.title}</b> <span class="po-state ${phase.cls}">${phase.label}</span>
-        　預購累計 <b>${pq.toLocaleString()} 件／${poMoney(pa)}</b>（<b>不計入實績</b>，須待入庫出貨）${relaunch ? `　${relaunch.date.slice(5).replace('-','/')} 重新上架` : ''}</span>
+        　預購接單 <b>${tq.toLocaleString()} 套／${poMoney(ta)}</b>（<b>不計入實績</b>，須待入庫出貨）${
+        L ? `　<span class="po-sub">其中 ${pq.toLocaleString()} 件已自實績排除${gap > 0 ? `，TM ${gap} 套以發貨日開列、尚未進每日明細` : ''}${eq > 0 ? `；另分冊 ${eq.toLocaleString()} 件亦已排除` : ''}</span>` : ''
+      }${relaunch ? `　${relaunch.date.slice(5).replace('-','/')} 重新上架` : ''}</span>
       <span class="po-go">查看詳情 ›</span>
     </div>`;
   }).join('');

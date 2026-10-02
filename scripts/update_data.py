@@ -62,7 +62,7 @@ PREORDER_RULES = [
     {
         'id': 'dianduo-tujian',
         'title': '巧虎雙語點讀圖鑑',
-        'codes': ['20250FE00', '20250FXBH'],
+        'codes': ['20250FE00', '20250FXBH', '20250FE03'],
         # ⚠ 通路很重要：各通路把訂單寫進每日 Excel 的「時點」不同。
         #   EC / WEB / KOL：以「訂單日」開列 —— 尚未出貨就會出現在每日明細，
         #                   故訂單日落在預購期內者＝預購，必須排除。
@@ -73,6 +73,14 @@ PREORDER_RULES = [
         #                   **絕對不能排除**。11 月底入庫出貨時發貨日極可能落在
         #                   11/20~11/26（在本區間內），納入 TM 會把已出貨的營收誤殺。
         'channels': ['WEB', 'KOL', 'EC', '經代銷'],
+        # 分冊（20250FE03，381 元／件）另外開一組通路：使用者 2026-10-02 指示
+        # 比照排除，而它唯一一列就是 TM 9/30。分冊單價低、數量零星，
+        # 11 月誤殺的金額風險極小，故只對這個製編放行 TM；
+        # 套組（FE00／FXBH）的 TM 保護維持不變。
+        'channelsByCode': {'20250FE03': ['WEB', 'KOL', 'EC', '經代銷', 'TM']},
+        # 已人工確認過、同意排除的 TM 列截止日。晚於這天的 TM 列會觸發警報，
+        # 因為 TM 出現在每日明細＝已出貨，代表入庫出貨已經開始。
+        'tmAcknowledgedThrough': '2026-09-30',
         'start': '2026-09-29',
         'end':   '2026-11-26',
         'recognizeMonth': None,          # ← 出貨認列後改為 '11月' 或 '12月'
@@ -83,7 +91,8 @@ PREORDER_RULES = [
             {'date': '2026-12-01', 'label': '重新上架'},
         ],
         'note': '「巧虎雙語點讀圖鑑」9/21 陸續於各管道停售，9/29(二)–11/26(四) 進行預購，'
-                '12/1(二) 重新上架。預購須待 11 月底入庫後才出貨，故預購金額不計入實績。',
+                '12/1(二) 重新上架。預購須待 11 月底入庫後才出貨，故預購金額不計入實績。'
+                '分冊（20250FE03）亦比照辦理。',
     },
 ]
 
@@ -101,7 +110,7 @@ def preorder_match(code, date_str, channel=None):
             continue
         if not (rule['start'] <= date_str <= rule['end']):
             continue
-        chs = rule.get('channels')
+        chs = (rule.get('channelsByCode') or {}).get(code) or rule.get('channels')
         if chs and channel not in chs:
             continue
         return rule
@@ -243,6 +252,27 @@ def main(excel_path):
         pa = sum(r['amt'] for r in preorder_rows)
         print(f'預購（不計入實績）: {len(preorder_rows)} 列 / {pq:.0f} 件 / {pa:,.0f} 元'
               f'  最後日期 {max(r["date"] for r in preorder_rows)}')
+        # ⚠ 出貨開始的早期警報：TM 以發貨日開列，TM 列一旦被排除就代表
+        #   「已經出貨的營收被擋掉了」。套組（FE00／FXBH）的 TM 不在規則內，
+        #   所以這裡只會抓到分冊；但若未來放寬，這道警報就是最後一關。
+        #   看到它＝該去把對應規則的 recognizeMonth 設成出貨月份。
+        for rule in PREORDER_RULES:
+            if rule.get('recognizeMonth'):
+                continue
+            ack = rule.get('tmAcknowledgedThrough') or ''
+            tm = [r for r in preorder_rows
+                  if r.get('preorderId') == rule['id'] and r['ch'] == 'TM'
+                  and r['date'] > ack]
+            if tm:
+                print()
+                print('  ' + '!' * 68)
+                print(f'  !! 規則「{rule["id"]}」排除了 {len(tm)} 列**新的** TM 資料'
+                      f'（{sum(r["qty"] for r in tm):.0f} 件 / {sum(r["amt"] for r in tm):,.0f} 元）')
+                print('  !! TM 以發貨日開列 ——「出現在每日明細」＝「已經出貨」。')
+                print('  !! 若這些是已出貨的營收，請立刻把該規則的 recognizeMonth')
+                print(f'  !! 設為出貨月份（目前 None），否則這筆營收會被永久少算。')
+                print('  !! 最後日期：' + max(r['date'] for r in tm))
+                print('  ' + '!' * 68)
 
     # Build actuals aggregate
     actuals = {m: {'amount': defaultdict(lambda: defaultdict(float)),
