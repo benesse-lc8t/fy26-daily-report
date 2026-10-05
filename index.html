@@ -5564,11 +5564,14 @@ function poRowsOutsideLedger(rule){
   const cs = poLedgerCodes(rule);
   return poRows(rule).filter(r => !cs.includes(r.code));
 }
-// 預購「接單量」＝兩份資料逐通路取大。兩邊各自會落後：
-//   WEB／KOL／EC 以訂單日開列 → 每日檔天天更新，通常比台帳新
-//   TM           以發貨日開列 → 每日檔看不到，只有台帳知道
-// 取大才不會在台帳隔幾天才更新時，讓橫幅的接單量低於已排除量（28 > 20 的矛盾）。
-// 兩邊同步時逐通路取大的結果就等於台帳合計，不會虛增。
+// 預購「接單量」＝各通路取「真正看得到它的那一邊」，不是取大也不是取台帳合計：
+//   WEB／KOL／EC 以訂單日開列 → 每日實績檔就含這些單，天天更新 → **以每日檔為準**
+//   TM           以發貨日開列 → 未發送根本不進每日檔 → **只能靠台帳**
+// 為什麼不取大：台帳是人工彙總，會落後、也會填錯通路
+//（2026-10-05 實例：台帳彙總頁把 10/1 的 WEB 3 套記成 KOL，且 10/2~10/4 整段未填；
+//  但台帳自己的明細分頁與每日檔完全一致）。取大會把填錯的那一邊也吃進來。
+// 差異不隱藏 —— 對帳表照實並列兩邊，讓錯誤看得見。
+const PO_ORDER_DATE_CH = ['WEB', 'KOL', 'EC', '經代銷'];   // 以訂單日開列
 function poTaken(rule){
   const L = poLedger(rule);
   const daily = {};
@@ -5576,19 +5579,18 @@ function poTaken(rule){
     const d = daily[r.ch] || (daily[r.ch] = {qty: 0, amt: 0});
     d.qty += (r.qty || 0); d.amt += r.amt;
   }
-  if(!L) return {qty: Object.values(daily).reduce((a,b)=>a+b.qty,0),
-                 amt: Object.values(daily).reduce((a,b)=>a+b.amt,0), byCh: daily, stale: false};
-  const chs = Array.from(new Set([...Object.keys(L.byChannelQty || {}), ...Object.keys(daily)]));
-  let qty = 0, amt = 0, stale = false;
+  const chs = Array.from(new Set([...Object.keys(L?.byChannelQty || {}), ...Object.keys(daily)]));
+  let qty = 0, amt = 0, mismatch = false;
   const byCh = {};
   for(const c of chs){
-    const lq = L.byChannelQty?.[c] || 0, la = L.byChannelAmt?.[c] || 0;
-    const dq = daily[c]?.qty || 0,       da = daily[c]?.amt || 0;
-    if(dq > lq) stale = true;                 // 台帳落後於每日檔
-    byCh[c] = dq > lq ? {qty: dq, amt: da} : {qty: lq, amt: la};
+    const lq = L?.byChannelQty?.[c] || 0, la = L?.byChannelAmt?.[c] || 0;
+    const dq = daily[c]?.qty || 0,        da = daily[c]?.amt || 0;
+    // 訂單日通路以每日檔為準；TM（與其他未知通路）只有台帳看得到
+    byCh[c] = PO_ORDER_DATE_CH.includes(c) ? {qty: dq, amt: da} : {qty: lq, amt: la};
+    if(L && lq !== dq && PO_ORDER_DATE_CH.includes(c)) mismatch = true;
     qty += byCh[c].qty; amt += byCh[c].amt;
   }
-  return {qty, amt, byCh, stale};
+  return {qty, amt, byCh, mismatch};
 }
 function poToday(){
   // 以資料最終日為「今天」，避免瀏覽器時鐘與資料不同步
@@ -5688,11 +5690,13 @@ function poReconcileHTML(rule){
 
   const tk = poTaken(rule);
   let h = `<h3 style="margin-top:16px">預購對帳　<span style="font-size:var(--fs-xs);font-weight:500;color:var(--secondary)">台帳 ${L.sourceFile}　更新至 ${(L.generatedAt||'').slice(0,10) || '—'}</span></h3>`;
-  if(tk.stale){
-    h += `<div class="po-stale">⚠ <b>台帳已落後於每日檔</b>　訂單日開列的通路（WEB／KOL／EC）每日檔天天更新，`
-       + `台帳停在 ${(L.generatedAt||'').slice(0,10)}，故下表這幾列會出現負差，屬正常。`
-       + `<b>TM 只有台帳看得到</b>（以發貨日開列、未發送不進每日明細），`
-       + `所以仍需定期提供最新的預購統計 Excel，TM 的接單量才不會漏掉。</div>`;
+  if(tk.mismatch){
+    h += `<div class="po-stale">⚠ <b>台帳彙總頁與每日檔對不上</b>　`
+       + `WEB／KOL／蝦皮以<b>訂單日</b>開列，每日實績檔本來就含這些單、且天天更新，`
+       + `因此這三個通路<b>以每日檔為準</b>（上方橫幅的接單量即依此計算）。`
+       + `台帳彙總頁若落後或填錯通路，差額會顯示在下表，但不影響數字。<br>`
+       + `<b>TM 仍以台帳為準</b> —— 以發貨日開列、未發送不進每日明細，只有台帳看得到，`
+       + `所以請持續提供最新的預購統計 Excel。</div>`;
   }
   h += ``
         + `<div class="scroll-x"><table class="grid"><thead><tr>`
@@ -5702,14 +5706,14 @@ function poReconcileHTML(rule){
   for(const c of chs){
     const lq = L.byChannelQty?.[c] || 0, dqc = daily[c] || 0, diff = lq - dqc;
     let why = '—';
-    if(diff > 0 && c === 'TM') why = '以發貨日開列，未發送前不進每日明細';
-    else if(diff > 0) why = '台帳較新或每日檔尚未反映';
-    else if(diff < 0) why = '每日檔較新，台帳尚未更新到同一天';
-    else why = '一致 ✓';
+    if(diff === 0) why = '一致 ✓';
+    else if(c === 'TM') why = diff > 0 ? '<b>採台帳</b>　以發貨日開列，未發送不進每日明細'
+                                       : '每日檔已出現 TM ＝ 已出貨，請設 recognizeMonth';
+    else why = `<b>採每日檔</b>　台帳${diff > 0 ? '多計' : '落後或填錯通路'}`;
     const col = diff === 0 ? 'var(--good)' : 'var(--bad)';
     h += `<tr><td class="dim">${c}</td><td>${lq.toLocaleString()}</td><td>${dqc.toLocaleString()}</td>`
        + `<td style="color:${col};font-weight:700">${diff > 0 ? '+' : ''}${diff}</td>`
-       + `<td style="text-align:left;font-weight:500;font-size:var(--fs-xs)">${why}</td></tr>`;
+       + `<td style="text-align:left;font-weight:500;font-size:var(--fs-xs);white-space:normal;line-height:1.5">${why}</td></tr>`;
   }
   const tDiff = (L.totalQty || 0) - dq;
   h += `<tr class="total"><td class="dim">合計（套）</td><td>${(L.totalQty || 0).toLocaleString()}</td>`
