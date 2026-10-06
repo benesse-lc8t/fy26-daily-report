@@ -23,6 +23,31 @@ MONTHS = ['4月','5月','6月','7月','8月','9月','10月','11月','12月','1�
 SHEET_RE      = re.compile(r'^(\d{2})(\d{2})\s*(WEB&KOL|EC|TM|經代銷)$')
 SHEET_RE_DIGI = re.compile(r'^(\d{2})(\d{2})WEB數位典藏$')
 
+# 數位典藏分頁沒有「製編」欄，只有「訂購方案」（01／12）。
+# 使用者 2026-10-06 提供對應（出自 ERP 品號品名建置表 / 銷貨單品號主檔）：
+#   方案 01（月繳 499）  → 20250WJ01 數位典藏1個月
+#   方案 12（年繳 4,788）→ 20250WJ12 數位典藏1年
+# 有了製編，TOP20／SKU 等以製編彙總的分頁才看得到數位典藏，
+# 也才能拆「月繳 vs 年繳」。出現未知方案時會印出警告，不可默默吃掉。
+DIGI_PLAN_CODES = {
+    '01': ('20250WJ01', '數位典藏1個月'),
+    '12': ('20250WJ12', '數位典藏1年'),
+}
+
+
+def digi_plan(v):
+    """訂購方案 → (製編, 品名)；未知方案回 (None, None)。
+
+    來源可能是數字 1／12 或字串 '01'／'12'，一律正規化為兩位數字串。
+    """
+    if v is None:
+        return None, None
+    sv = str(v).strip()
+    if sv.endswith('.0'):
+        sv = sv[:-2]
+    sv = sv.zfill(2)
+    return DIGI_PLAN_CODES.get(sv, (None, None))
+
 SHEET_CONFIG = {
     'WEB&KOL': {'header_row':2, 'biz':0,'code':1,'date':2,'channel':3,'qty':4,'amt':5,
                 'channel_map':{'網站':'WEB','團購':'KOL'}},
@@ -158,6 +183,7 @@ def main(excel_path):
     wb = openpyxl.load_workbook(excel_path, data_only=True, read_only=True)
     actual_rows = []
     preorder_rows = []      # 預購（未出貨）→ 不計入實績
+    digi_unknown = {}       # 數位典藏：未知的訂購方案 → 筆數（要讓它浮出來，不可默默吃掉）
 
     for sheet_name in wb.sheetnames:
         sname = sheet_name.strip()
@@ -180,9 +206,13 @@ def main(excel_path):
                 amt = num(row[8])
                 if amt == 0: skip_zero += 1; continue
                 qty = num(row[6])
+                plan = row[4] if len(row) > 4 else None
+                code, cname = digi_plan(plan)
+                if code is None:
+                    digi_unknown[str(plan).strip()] = digi_unknown.get(str(plan).strip(), 0) + 1
                 actual_rows.append({
                     'month': month_label, 'biz': '數位典藏', 'ch': 'WEB',
-                    'code': '', 'name': '',
+                    'code': code or '', 'name': cname or '',
                     'qty': qty, 'amt': round(amt, 2),
                     'date': parse_date(row[1]),
                 })
@@ -247,6 +277,14 @@ def main(excel_path):
         print(f'  {sheet_name}: {kept} rows kept, {skip_zero} zero-amt skipped')
 
     print(f'Total: {len(actual_rows)} actualRows')
+    if digi_unknown:
+        print()
+        print('  ' + '!' * 68)
+        print(f'  !! 數位典藏出現未知的「訂購方案」：{digi_unknown}')
+        print('  !! 這些列的製編會是空的，TOP20／SKU 分頁看不到。')
+        print('  !! 請在 scripts/update_data.py 的 DIGI_PLAN_CODES 補上對應製編。')
+        print('  ' + '!' * 68)
+
     if preorder_rows:
         pq = sum(r['qty'] for r in preorder_rows)
         pa = sum(r['amt'] for r in preorder_rows)

@@ -781,8 +781,8 @@
     </select>
   </div>
   <div class="compare-toggle" id="compare-toggle" role="tablist" aria-label="比較模式">
-    <button data-mode="budget" class="active" type="button">期初目標</button>
-    <button data-mode="mid" type="button">期中目標</button>
+    <button data-mode="budget" type="button">期初目標</button>
+    <button data-mode="mid" class="active" type="button">期中目標</button>
     <button data-mode="yoy" type="button">前年比</button>
   </div>
   <div class="header-actions">
@@ -1160,7 +1160,10 @@ const STATE = {
   selectedMonth:null,
   charts:{},              // canvasId → Chart instance
   activeTab:"main",
-  compareMode:"budget",   // 'budget'（期初目標）| 'mid'（期中目標）| 'yoy'（前年實績）
+  // 預設基準＝期中目標（使用者 2026-10-06 指示）。期中目標已反映雙語圖鑑停售等
+  // 期中修正，是目前對外溝通的主要基準；期初目標改為需要時手動切換。
+  // 注意：cmpMode() 在 midTarget 未載入時會自動退回 budget，不會壞掉。
+  compareMode:"mid",      // 'budget'（期初目標）| 'mid'（期中目標）| 'yoy'（前年實績）
   fy25:null,              // {amount, qty, daily}: FY25 actuals for YoY comparison
   midTarget:null,         // {amount, qty, version, actualMonths, ...}: 期中修正目標
   prevDaySelected:null,   // Set of "YYYY-MM-DD"：「前日業績」タブで選択された日付
