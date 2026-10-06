@@ -498,18 +498,26 @@
        font-variant-numeric:tabular-nums;font-feature-settings:var(--font-num-feat)}
   .po-kpi .v .u{font-size:var(--fs-base);color:var(--muted);font-weight:500;margin-left:3px}
   .po-kpi .s{font-size:var(--fs-xs);color:var(--secondary);margin-top:3px;line-height:1.4}
-  .po-main-row{display:flex;gap:14px;align-items:stretch}
-  .po-chart-box{flex:1.1;min-width:0;min-height:var(--chart-h-sm);position:relative}
+  /* 原本是「左圖＋右邊三張表堆疊」的 flex，align-items:stretch 讓只有 6 根棒的
+     圖被右欄 700px 的高度拉長成一大片空白。改為 2×2 格線：
+     四個區塊各自高度相近，圖表高度固定，不再被鄰居牽著走。 */
+  .po-grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:16px 18px;align-items:start}
+  .po-cell{min-width:0}
+  .po-chart-box{height:var(--chart-h);min-height:0;position:relative}
   .po-chart-box canvas{max-width:100%}
-  .po-side{flex:1;min-width:0}
-  .po-side h3{margin:0 0 8px 0;font-size:var(--fs-base);font-weight:700;color:var(--accent-dark)}
-  .po-side table.grid{font-size:var(--fs-sm)}
-  .po-side table.grid th{padding:6px 8px;font-size:var(--fs-xs)}
-  .po-side table.grid td{padding:7px 8px}
+  .po-cell h3{margin:0 0 8px 0;font-size:var(--fs-base);font-weight:700;color:var(--accent-dark)}
+  .po-cell h3 .po-h3-sub{font-size:var(--fs-xs);font-weight:500;color:var(--secondary);margin-left:6px}
+  .po-cell table.grid{font-size:var(--fs-sm)}
+  .po-cell table.grid th{padding:6px 8px;font-size:var(--fs-xs)}
+  .po-cell table.grid td{padding:7px 8px}
+  /* 預購明細會一路長到 59 列，給它捲動上限，才不會把整張卡片撐爆 */
+  .po-detail-scroll{max-height:372px;overflow-y:auto;overscroll-behavior:contain;scrollbar-gutter:stable;
+                    border:0.5px solid var(--border);border-radius:8px}
+  .po-detail-scroll table.grid{border-collapse:separate;border-spacing:0}
+  .po-detail-scroll thead th{position:sticky;top:0;z-index:1}
   @media(max-width:1100px){
     .po-kpi-row{grid-template-columns:repeat(2,1fr)}
-    .po-main-row{flex-wrap:wrap}
-    .po-chart-box,.po-side{flex:1 1 100%}
+    .po-grid{grid-template-columns:1fr}
   }
   @media(max-width:640px){
     .po-kpi-row{grid-template-columns:1fr}
@@ -2271,7 +2279,7 @@ function renderPaceBanner(monthLabel, monthBudget, monthActual){
         <div class="pace-sub">經過 ${tp.elapsed} / ${tp.total} 工作日</div>
       </div>
       <div class="pace-cell">
-        <div class="pace-lbl">達成進度率</div>
+        <div class="pace-lbl">對時間進度達成率</div>
         <div class="pace-val progress-rate">${progRate == null ? "—" : progRate + '<span class="pace-unit">%</span>'}</div>
         <div class="pace-sub">當月達成率 ÷ 時間進度率</div>
       </div>
@@ -2448,7 +2456,7 @@ function renderOverallKPIs(){
     return {
       pct: actual / be * 100,
       note: `※ 上列達成率的分母是${label}<b>完整${targetLabel()}</b>（含尚未發生的天數），月中會逐日上升；`
-          + `<b>進度達成</b>的分母是已過期間的${targetLabel()} ${fmtAmt(be)} 萬`
+          + `<b>對時間進度達成率</b>的分母是已過期間的${targetLabel()} ${fmtAmt(be)} 萬`
           + (partial ? `（${partial}）` : '')
           + `，才能看出目前的速度是超前還是落後。`
           + (isMid() && STATE.midTarget && (STATE.midTarget.actualMonths||[]).length
@@ -2494,7 +2502,7 @@ function kpiCardHTML(label, sub, budget, actual, pace, bases, noData){
     ? bases.map(b => row('對' + b.label, (noData || !(b.value > 0)) ? null : actual / b.value * 100,
                          b.active ? 'rate-active' : ''))
     : [row(rateLabel(), (noData || !(budget > 0)) ? null : actual / budget * 100, 'rate-active')];
-  if(!noData && pace && pace.pct != null && isFinite(pace.pct)) cells.push(row('進度達成', pace.pct, 'rate-pace'));
+  if(!noData && pace && pace.pct != null && isFinite(pace.pct)) cells.push(row('對時間進度達成率', pace.pct, 'rate-pace'));
   const note = noData
     ? `<div class="kpi-note">※ ${sub} 尚無實績資料，達成率不予顯示。</div>`
     : ((pace && pace.note) ? `<div class="kpi-note">${pace.note}</div>` : '');
@@ -3413,7 +3421,7 @@ function renderOneCard(name, color, subLabel, bizArg, chArg, colDims, colLabel, 
       </div>
       <div class="bc-bar-row">
         <div class="bc-bar-labels">
-          <span class="bc-bar-key">時間進度達成</span>
+          <span class="bc-bar-key">對時間進度達成率</span>
           <span class="bc-bar-val ${paceClass_}">${tpPct > 0 && cumBgt > 0 ? pacePct + '%' : '-'}</span>
         </div>
         <div class="bc-bar-track"><div class="bc-bar-fill" style="width:${paceW}%;background:${paceHex}"></div></div>
@@ -3464,7 +3472,7 @@ function renderOneCard(name, color, subLabel, bizArg, chArg, colDims, colLabel, 
   html += `</tr>`;
 
   // 時間進度達成
-  html += `<tr><td style="font-size:var(--fs-base);color:var(--secondary);padding:3px 8px">進度達成</td>`;
+  html += `<tr><td style="font-size:var(--fs-base);color:var(--secondary);padding:3px 8px">對時間進度達成率</td>`;
   cols.forEach(c => { html += bcPaceCell(c.cumA, c.cumB, tpPct); });
   html += bcPaceCell(cumAct, cumBgt, tpPct);
   html += `</tr>`;
@@ -5214,7 +5222,7 @@ function renderHandPuppetTab(){
     html += '<tr>';
     html += `<td class="dim">${month}</td>`;
     html += has ? `<td>${Math.floor(d.qty).toLocaleString()}</td>` : '<td class="na">—</td>';
-    html += has ? `<td>${Math.floor(d.amt/10000).toLocaleString()}</td>` : '<td class="na">—</td>';
+    html += has ? `<td>${(d.amt/10000).toFixed(1)}</td>` : '<td class="na">—</td>';
     html += has && aov != null ? `<td>${Math.floor(aov).toLocaleString()}</td>` : '<td class="na">—</td>';
     html += '</tr>';
   }
@@ -5222,7 +5230,7 @@ function renderHandPuppetTab(){
   html += '<tr class="total">';
   html += '<td class="dim">合計</td>';
   html += `<td>${Math.floor(hpTotQ).toLocaleString()}</td>`;
-  html += `<td>${Math.floor(hpTotA/10000).toLocaleString()}</td>`;
+  html += `<td>${(hpTotA/10000).toFixed(1)}</td>`;
   html += hpTotAov != null ? `<td>${Math.floor(hpTotAov).toLocaleString()}</td>` : '<td class="na">—</td>';
   html += '</tr></tbody></table></div></div>';
   html += '</div>'; // chart-table-row
@@ -5242,7 +5250,7 @@ function renderHandPuppetTab(){
     html += '<tr>';
     html += `<td class="dim">${ch}</td>`;
     html += `<td>${Math.floor(d.qty).toLocaleString()}</td>`;
-    html += `<td>${Math.floor(d.amt/10000).toLocaleString()}</td>`;
+    html += `<td>${(d.amt/10000).toFixed(1)}</td>`;
     html += aov != null ? `<td>${Math.floor(aov).toLocaleString()}</td>` : '<td class="na">—</td>';
     html += '</tr>';
   }
@@ -5250,7 +5258,7 @@ function renderHandPuppetTab(){
   html += '<tr class="total">';
   html += '<td class="dim">合計</td>';
   html += `<td>${Math.floor(chTotQ).toLocaleString()}</td>`;
-  html += `<td>${Math.floor(chTotA/10000).toLocaleString()}</td>`;
+  html += `<td>${(chTotA/10000).toFixed(1)}</td>`;
   html += chTotAov != null ? `<td>${Math.floor(chTotAov).toLocaleString()}</td>` : '<td class="na">—</td>';
   html += '</tr></tbody></table></div></div>'; // close scroll-x, table-side
   html += '</div>'; // chart-table-row
@@ -5260,7 +5268,9 @@ function renderHandPuppetTab(){
 
   // ===== Charts =====
   // 月別チャート（棒グラフ：金額・万元）
-  const monthlyAmtArr = MONTHS.map(month => Math.floor(data.monthly[month].amt / 10000));
+  // 手偶月營業額只有 0〜9 萬，原本 Math.floor 取整數會把 0.99 萬變成 0，
+  // 10 月的長條因此完全消失。改保留 1 位小數。
+  const monthlyAmtArr = MONTHS.map(month => +(data.monthly[month].amt / 10000).toFixed(1));
   const ctxMonthly = document.getElementById("chart-hp-monthly").getContext('2d');
   STATE.charts['chart-hp-monthly'] = new Chart(ctxMonthly, {
     type: 'bar',
@@ -5288,7 +5298,7 @@ function renderHandPuppetTab(){
   });
 
   // 管道別チャート（棒グラフ：金額）
-  const chAmtArr = CHANNEL_LIST.map(ch => Math.floor(data.byChannel[ch].amt / 10000));
+  const chAmtArr = CHANNEL_LIST.map(ch => +(data.byChannel[ch].amt / 10000).toFixed(1));
   const ctxCh = document.getElementById("chart-hp-channel").getContext('2d');
   STATE.charts['chart-hp-channel'] = new Chart(ctxCh, {
     type: 'bar',
@@ -5322,7 +5332,7 @@ function handPuppetKpiCard(label, sub, classKey, qty, amt){
     <div class="kpi-card ${classKey}">
       <div class="lbl">${label} <span class="small">${sub}</span></div>
       <div class="row"><span class="k">實績套數</span><span class="v">${Math.floor(qty).toLocaleString()} <span style="font-size:var(--fs-xs);color:var(--muted);font-weight:500">套</span></span></div>
-      <div class="row"><span class="k">實績金額</span><span class="v">${Math.floor(amt/10000).toLocaleString()} <span style="font-size:var(--fs-xs);color:var(--muted);font-weight:500">萬</span></span></div>
+      <div class="row"><span class="k">實績金額</span><span class="v">${(amt/10000).toFixed(1)} <span style="font-size:var(--fs-xs);color:var(--muted);font-weight:500">萬</span></span></div>
       <div class="rate-row">
         <div class="rate-lbl">AOV (1套單價)</div>
         <div class="rate" style="color:var(--accent-dark)">${aov != null ? Math.floor(aov).toLocaleString() + ' 元' : '—'}</div>
@@ -5689,7 +5699,7 @@ function poReconcileHTML(rule){
   const da = Object.values(dailyAmt).reduce((a, b) => a + b, 0);
 
   const tk = poTaken(rule);
-  let h = `<h3 style="margin-top:16px">預購對帳　<span style="font-size:var(--fs-xs);font-weight:500;color:var(--secondary)">台帳 ${L.sourceFile}　更新至 ${(L.generatedAt||'').slice(0,10) || '—'}</span></h3>`;
+  let h = `<h3>預購對帳<span class="po-h3-sub">台帳更新至 ${(L.generatedAt||'').slice(0,10) || '—'}</span></h3>`;
   if(tk.mismatch){
     h += `<div class="po-stale">⚠ <b>台帳彙總頁與每日檔對不上</b>　`
        + `WEB／KOL／蝦皮以<b>訂單日</b>開列，每日實績檔本來就含這些單、且天天更新，`
@@ -5847,9 +5857,12 @@ function poCardHTML(rule){
       </div>
     </div>
 
-    <div class="po-main-row">
-      <div class="po-chart-box"><canvas id="po-chart-${rule.id}"></canvas></div>
-      <div class="po-side">
+    <div class="po-grid">
+      <div class="po-cell">
+        <h3>月別實績推移<span class="po-h3-sub">${stop ? stop.date.slice(5).replace('-','/') : ''} 停售，僅含停售前</span></h3>
+        <div class="po-chart-box"><canvas id="po-chart-${rule.id}"></canvas></div>
+      </div>
+      <div class="po-cell">
         <h3>停售前・通路別占比</h3>
         <div class="scroll-x"><table class="grid">
           <thead><tr><th class="l1">通路</th><th class="l1">實績（萬）</th><th class="l1">占比</th></tr></thead>
@@ -5860,9 +5873,11 @@ function poCardHTML(rule){
   }
   h += `<tr class="total"><td class="dim">合計</td><td>${fmtAmt(act.total)}</td><td>100.0%</td></tr>
           </tbody></table></div>
-        ${poReconcileHTML(rule)}
-        <h3 style="margin-top:14px">預購明細（每日檔，不計入實績）</h3>
-        <div class="scroll-x"><table class="grid">
+      </div>
+      <div class="po-cell">${poReconcileHTML(rule)}</div>
+      <div class="po-cell">
+        <h3>預購明細<span class="po-h3-sub">每日檔，不計入實績　共 ${pre.length} 列</span></h3>
+        <div class="po-detail-scroll"><table class="grid">
           <thead><tr><th class="l1">日期</th><th class="l1">通路</th><th class="l1">件數</th><th class="l1">金額（元）</th></tr></thead>
           <tbody>`;
   if(pre.length === 0){
@@ -5913,8 +5928,7 @@ function poRenderChart(rule){
       responsive: true, maintainAspectRatio: false,
       plugins: {
         legend: { display: false },
-        title: { display: true, text: `月別實績推移（${stopMonth || ''} 為停售月，僅含停售前）`,
-                 font: { size: 12, weight: '600' }, color: '#0C4A6E' },
+        title: { display: false },
         tooltip: { backgroundColor: '#0C4A6E', titleColor: '#fff', bodyColor: '#fff',
                    callbacks: { label: c => `${Number(c.parsed.y).toLocaleString()} 萬` } },
       },
