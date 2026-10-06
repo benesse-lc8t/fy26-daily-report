@@ -35,6 +35,29 @@ DIGI_PLAN_CODES = {
 }
 
 
+# ── 逐筆排除清單（測試單等確認過的錯誤資料）────────────────────────
+# 條件寫到「日期＋通路＋製編＋數量＋金額」五項全中才排除，避免誤殺真實交易。
+# 每一筆都要寫明是誰、哪一天確認的；沒有確認就不要往這裡加。
+EXCLUDED_ROWS = [
+    {
+        'reason': '測試單（使用者 2026-10-06 向資訊部門確認）',
+        'date': '2026-04-07', 'ch': 'WEB', 'code': '20250WJ12',
+        'qty': 1, 'amt': 10.0,   # 年繳正常未稅單價 4,560，此筆為 10 元
+    },
+]
+
+
+def excluded_row(rec):
+    """回傳符合的排除規則；不符則 None。五個欄位全中才算。"""
+    for e in EXCLUDED_ROWS:
+        if (rec.get('date') == e['date'] and rec.get('ch') == e['ch']
+                and (rec.get('code') or '') == e['code']
+                and abs((rec.get('qty') or 0) - e['qty']) < 1e-6
+                and abs(rec.get('amt', 0) - e['amt']) < 0.01):
+            return e
+    return None
+
+
 def digi_plan(v):
     """訂購方案 → (製編, 品名)；未知方案回 (None, None)。
 
@@ -184,6 +207,7 @@ def main(excel_path):
     actual_rows = []
     preorder_rows = []      # 預購（未出貨）→ 不計入實績
     digi_unknown = {}       # 數位典藏：未知的訂購方案 → 筆數（要讓它浮出來，不可默默吃掉）
+    excluded_hits = []      # 命中 EXCLUDED_ROWS 的列（測試單等）
 
     for sheet_name in wb.sheetnames:
         sname = sheet_name.strip()
@@ -210,12 +234,16 @@ def main(excel_path):
                 code, cname = digi_plan(plan)
                 if code is None:
                     digi_unknown[str(plan).strip()] = digi_unknown.get(str(plan).strip(), 0) + 1
-                actual_rows.append({
+                rec = {
                     'month': month_label, 'biz': '數位典藏', 'ch': 'WEB',
                     'code': code or '', 'name': cname or '',
                     'qty': qty, 'amt': round(amt, 2),
                     'date': parse_date(row[1]),
-                })
+                }
+                ex = excluded_row(rec)
+                if ex:
+                    excluded_hits.append((rec, ex)); continue
+                actual_rows.append(rec)
                 kept += 1
             print(f'  {sheet_name}: {kept} rows kept, {skip_zero} zero-amt skipped')
             continue
@@ -277,6 +305,22 @@ def main(excel_path):
         print(f'  {sheet_name}: {kept} rows kept, {skip_zero} zero-amt skipped')
 
     print(f'Total: {len(actual_rows)} actualRows')
+    if excluded_hits:
+        print()
+        print(f'逐筆排除（不計入實績）：{len(excluded_hits)} 筆')
+        for rec, e in excluded_hits:
+            print(f"  {rec['date']}  {rec['ch']:4s} {rec['code']}  "
+                  f"{rec['qty']:.0f} 件 {rec['amt']:,.0f} 元　← {e['reason']}")
+    missed = [e for e in EXCLUDED_ROWS if not any(h[1] is e for h in excluded_hits)]
+    if missed:
+        print()
+        print('  ' + '!' * 68)
+        print(f'  !! EXCLUDED_ROWS 有 {len(missed)} 筆規則沒有命中任何資料：')
+        for e in missed:
+            print(f"  !!   {e['date']} {e['ch']} {e['code']} {e['qty']}件 {e['amt']}元 —— {e['reason']}")
+        print('  !! 來源檔可能已自行修正，確認後請把該規則從 EXCLUDED_ROWS 移除。')
+        print('  ' + '!' * 68)
+
     if digi_unknown:
         print()
         print('  ' + '!' * 68)
