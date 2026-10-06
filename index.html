@@ -261,6 +261,35 @@
   .tab-panel{display:none;max-width:var(--content-max);margin-inline:auto}
   .tab-panel.active{display:block}
 
+  /* 數位典藏：方案別 × 管道 */
+  .digi-toolbar{display:flex;align-items:center;flex-wrap:wrap;gap:8px;margin:0 0 12px}
+  .digi-lbl{font-size:var(--fs-sm);font-weight:600;color:var(--secondary)}
+  .digi-btn{font-size:var(--fs-sm);font-weight:600;color:var(--accent);background:var(--subheader);
+            border:0.5px solid var(--border);border-radius:7px;padding:5px 14px;cursor:pointer;font-family:inherit}
+  .digi-btn:hover{background:var(--border)}
+  .digi-btn.active{background:var(--accent);border-color:var(--accent);color:#fff}
+  .digi-hint{font-size:var(--fs-xs);color:var(--secondary);margin-left:4px}
+  .digi-grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:16px 18px;align-items:start}
+  .digi-cell{min-width:0}
+  .digi-cell h3,.digi-h3-block{margin:0 0 8px 0;font-size:var(--fs-base);font-weight:700;color:var(--accent-dark)}
+  .digi-h3-block{margin-top:16px}
+  .digi-h3-sub{font-size:var(--fs-xs);font-weight:500;color:var(--secondary);margin-left:6px}
+  .digi-cell table.grid{font-size:var(--fs-sm)}
+  .digi-cell table.grid th{padding:6px 7px;font-size:var(--fs-xs)}
+  .digi-cell table.grid td{padding:6px 7px}
+  #digi-plan-card .digi-sub{background:var(--stripe);font-weight:700}
+  .digi-dot{display:inline-block;width:9px;height:9px;border-radius:2px;margin-right:6px;vertical-align:middle}
+  .digi-tiles{display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:10px;margin-top:12px}
+  .digi-tile{background:var(--stripe);border:0.5px solid var(--border);border-left:3px solid var(--accent);
+             border-radius:8px;padding:10px 12px}
+  .digi-tile.good{border-left-color:var(--good)}
+  .digi-tile.bad{border-left-color:var(--bad)}
+  .digi-tile .k{font-size:var(--fs-xs);color:var(--secondary);font-weight:600}
+  .digi-tile .v{font-size:var(--fs-2xl);font-weight:700;color:var(--ink);font-variant-numeric:tabular-nums;line-height:1.2}
+  .digi-tile .v .u{font-size:var(--fs-md);color:var(--muted);font-weight:500;margin-left:2px}
+  .digi-tile .s{font-size:var(--fs-xs);color:var(--secondary)}
+  @media (max-width:1100px){ .digi-grid{grid-template-columns:1fr} }
+
   /* ── 卡片流式格線（寬螢幕兩欄，右方空位由後面的卡片遞補）──────────
      只套用在標示 data-flow 的分頁；需要整列的卡片加 class="card wide"。
      grid-auto-flow:row dense 讓後面的半寬卡片回填前面留下的空格。
@@ -1164,6 +1193,7 @@ const STATE = {
   // 期中修正，是目前對外溝通的主要基準；期初目標改為需要時手動切換。
   // 注意：cmpMode() 在 midTarget 未載入時會自動退回 budget，不會壞掉。
   compareMode:"mid",      // 'budget'（期初目標）| 'mid'（期中目標）| 'yoy'（前年實績）
+  digiMetric:"amt",       // 數位典藏方案別區塊的指標：'amt'（金額）| 'qty'（件數）
   fy25:null,              // {amount, qty, daily}: FY25 actuals for YoY comparison
   midTarget:null,         // {amount, qty, version, actualMonths, ...}: 期中修正目標
   prevDaySelected:null,   // Set of "YYYY-MM-DD"：「前日業績」タブで選択された日付
@@ -4271,6 +4301,10 @@ function renderDetailTab(filterType, filterValue){
   html += `<div class="legend">※ 累計（4月〜${m}）為基準。棒：${targetLabel()} vs 實績（萬元，左軸）／折線：${rateLabel()}（%，右軸）。</div>`;
   html += `</div>`;
 
+  // Section 4: 數位典藏專屬 —— 方案別（1期／12期）× 管道
+  const isDigi = (filterType === 'biz' && filterValue === DIGI_BIZ);
+  if(isDigi) html += renderDigiPlanHTML();
+
   panel.innerHTML = html;
 
   // ===== Render dynamic content =====
@@ -4296,6 +4330,283 @@ function renderDetailTab(filterType, filterValue){
   // Breakdown
   renderRateTable(bdTableId, breakdownLabel, breakdownDims, breakdownType, filterValue);
   renderRateChart(bdChartId, breakdownDims, breakdownType, filterValue);
+
+  if(isDigi){
+    renderDigiPlanChart();
+    setupDigiPlanHandlers(panel);
+  }
+}
+
+
+/* ============================================================
+   數位典藏：方案別（1期／12期）× 管道
+   ------------------------------------------------------------
+   數位典藏是訂閱制，兩個方案的單價差 9.6 倍（未稅 475 / 4,560），
+   所以「件數」與「金額」會講出完全不同的故事：
+     件數看起來月繳佔多數，金額其實八成以上來自年繳。
+   兩個指標都要能看，故加上切換；兩個方案的通路結構也完全不同
+   （TM 幾乎只賣年繳、WEB 以月繳為主），因此一律拆到通路。
+   ============================================================ */
+const DIGI_BIZ = '數位典藏';
+const DIGI_PLANS = [
+  { code: '20250WJ01', label: '1期（月繳）',  short: '1期',  color: '#7DD3FC' },
+  { code: '20250WJ12', label: '12期（年繳）', short: '12期', color: '#0284C7' },
+];
+// 數位典藏實際出現過的通路（WEB＝官網、TM＝電銷）。以資料為準，不寫死全通路。
+function digiChannels(){
+  const s = new Set();
+  for(const r of (STATE.actualRows || [])) if(r.biz === DIGI_BIZ) s.add(r.ch);
+  return CHANNEL_LIST.filter(c => s.has(c));
+}
+function digiMetric(){ return STATE.digiMetric === 'qty' ? 'qty' : 'amt'; }
+function digiMetricLabel(){ return digiMetric() === 'qty' ? '件數' : '金額'; }
+
+// {month: {code: {ch: {qty, amt}}}}；未出現的組合回 0，呼叫端不必防呆
+function digiAgg(){
+  const out = {};
+  for(const m of MONTHS){
+    out[m] = {};
+    for(const p of DIGI_PLANS){
+      out[m][p.code] = {};
+      for(const c of CHANNEL_LIST) out[m][p.code][c] = { qty: 0, amt: 0 };
+    }
+  }
+  for(const r of (STATE.actualRows || [])){
+    if(r.biz !== DIGI_BIZ) continue;
+    const slot = out[r.month] && out[r.month][r.code] && out[r.month][r.code][r.ch];
+    if(!slot) continue;                       // 未知方案／通路：不靜默併入，留給解析階段的警告處理
+    slot.qty += (r.qty || 0);
+    slot.amt += r.amt;
+  }
+  return out;
+}
+function digiSum(agg, months, code, chs){
+  let qty = 0, amt = 0;
+  for(const m of months) for(const c of chs){
+    const v = agg[m][code][c]; qty += v.qty; amt += v.amt;
+  }
+  return { qty, amt };
+}
+function digiCell(v, metric){
+  if(metric === 'qty') return v.qty ? Math.round(v.qty).toLocaleString() : '<span class="na">—</span>';
+  return v.amt ? Math.round(v.amt).toLocaleString() : '<span class="na">—</span>';
+}
+
+function renderDigiPlanHTML(){
+  const agg  = digiAgg();
+  const chs  = digiChannels();
+  const cum  = monthsThru(STATE.selectedMonth).filter(m => hasActualData(m));
+  const met  = digiMetric();
+
+  // ── 交叉表（累計）──
+  let cross = `<div class="scroll-x"><table class="grid"><thead>
+    <tr><th class="l1" rowspan="2">方案</th>`;
+  for(const c of chs) cross += `<th class="l1" colspan="2">${c}</th>`;
+  cross += `<th class="l1" colspan="2">合計</th><th class="l1" rowspan="2">AOV<br>(元)</th>`
+         + `<th class="l1" rowspan="2">金額<br>占比</th></tr><tr>`;
+  for(let i = 0; i < chs.length + 1; i++) cross += `<th class="l2">件數</th><th class="l2">金額(元)</th>`;
+  cross += `</tr></thead><tbody>`;
+  const grand = digiSum(agg, cum, DIGI_PLANS[0].code, chs);
+  const grand2 = digiSum(agg, cum, DIGI_PLANS[1].code, chs);
+  const grandAmt = grand.amt + grand2.amt, grandQty = grand.qty + grand2.qty;
+  for(const p of DIGI_PLANS){
+    const tot = digiSum(agg, cum, p.code, chs);
+    cross += `<tr><td class="dim"><span class="digi-dot" style="background:${p.color}"></span>${p.label}</td>`;
+    for(const c of chs){
+      const v = digiSum(agg, cum, p.code, [c]);
+      cross += `<td>${v.qty ? Math.round(v.qty).toLocaleString() : '<span class="na">—</span>'}</td>`
+             + `<td>${v.amt ? Math.round(v.amt).toLocaleString() : '<span class="na">—</span>'}</td>`;
+    }
+    cross += `<td>${Math.round(tot.qty).toLocaleString()}</td><td>${Math.round(tot.amt).toLocaleString()}</td>`
+           + `<td>${tot.qty > 0 ? Math.round(tot.amt / tot.qty).toLocaleString() : '—'}</td>`
+           + `<td><b>${grandAmt > 0 ? (tot.amt / grandAmt * 100).toFixed(1) : '0.0'}%</b></td></tr>`;
+  }
+  cross += `<tr class="total"><td class="dim">合計</td>`;
+  for(const c of chs){
+    const v = { qty: 0, amt: 0 };
+    for(const p of DIGI_PLANS){ const x = digiSum(agg, cum, p.code, [c]); v.qty += x.qty; v.amt += x.amt; }
+    cross += `<td>${Math.round(v.qty).toLocaleString()}</td><td>${Math.round(v.amt).toLocaleString()}</td>`;
+  }
+  cross += `<td>${Math.round(grandQty).toLocaleString()}</td><td>${Math.round(grandAmt).toLocaleString()}</td>`
+         + `<td>${grandQty > 0 ? Math.round(grandAmt / grandQty).toLocaleString() : '—'}</td><td>100.0%</td></tr>`;
+  cross += `</tbody></table></div>`;
+
+  // ── 月別 × 方案 × 通路 明細 ──
+  let det = `<div class="scroll-x"><table class="grid"><thead><tr><th class="l1" rowspan="2">月份</th>`;
+  for(const p of DIGI_PLANS) det += `<th class="l1" colspan="${chs.length + 1}">${p.label}</th>`;
+  det += `<th class="l1" rowspan="2">合計</th><th class="l1" rowspan="2">12期<br>金額占比</th></tr><tr>`;
+  for(const p of DIGI_PLANS){
+    for(const c of chs) det += `<th class="l2">${c}</th>`;
+    det += `<th class="l2">小計</th>`;
+  }
+  det += `</tr></thead><tbody>`;
+  const colTot = {};
+  for(const p of DIGI_PLANS){ colTot[p.code] = {}; for(const c of chs) colTot[p.code][c] = { qty: 0, amt: 0 }; }
+  for(const m of MONTHS){
+    const has = hasActualData(m);
+    det += `<tr><td class="dim">${m}</td>`;
+    if(!has){
+      det += `<td class="na" colspan="${DIGI_PLANS.length * (chs.length + 1) + 2}" style="text-align:center">—</td></tr>`;
+      continue;
+    }
+    let rowTot = 0, p12 = 0;
+    for(const p of DIGI_PLANS){
+      let sub = { qty: 0, amt: 0 };
+      for(const c of chs){
+        const v = agg[m][p.code][c];
+        colTot[p.code][c].qty += v.qty; colTot[p.code][c].amt += v.amt;
+        sub.qty += v.qty; sub.amt += v.amt;
+        det += `<td>${digiCell(v, met)}</td>`;
+      }
+      det += `<td class="digi-sub">${digiCell(sub, met)}</td>`;
+      rowTot += sub[met];
+      if(p.code === DIGI_PLANS[1].code) p12 = sub.amt;
+    }
+    const rowAmt = DIGI_PLANS.reduce((s, p) => s + digiSum({ [m]: agg[m] }, [m], p.code, chs).amt, 0);
+    det += `<td class="digi-sub">${Math.round(rowTot).toLocaleString()}</td>`
+         + `<td>${rowAmt > 0 ? (p12 / rowAmt * 100).toFixed(1) + '%' : '—'}</td></tr>`;
+  }
+  det += `<tr class="total"><td class="dim">合計</td>`;
+  let gTot = 0, g12 = 0, gAll = 0;
+  for(const p of DIGI_PLANS){
+    let sub = { qty: 0, amt: 0 };
+    for(const c of chs){
+      det += `<td>${digiCell(colTot[p.code][c], met)}</td>`;
+      sub.qty += colTot[p.code][c].qty; sub.amt += colTot[p.code][c].amt;
+    }
+    det += `<td class="digi-sub">${digiCell(sub, met)}</td>`;
+    gTot += sub[met]; gAll += sub.amt;
+    if(p.code === DIGI_PLANS[1].code) g12 = sub.amt;
+  }
+  det += `<td class="digi-sub">${Math.round(gTot).toLocaleString()}</td>`
+       + `<td>${gAll > 0 ? (g12 / gAll * 100).toFixed(1) + '%' : '—'}</td></tr></tbody></table></div>`;
+
+  const unit = met === 'qty' ? '件' : '元';
+  return `<div class="card" id="digi-plan-card">
+    <h2>數位典藏 — 方案別 × 管道 <span class="pill">累計 4月〜${STATE.selectedMonth}</span></h2>
+    <div class="digi-toolbar">
+      <span class="digi-lbl">指標：</span>
+      <button type="button" class="digi-btn${met === 'amt' ? ' active' : ''}" data-digi-metric="amt">金額</button>
+      <button type="button" class="digi-btn${met === 'qty' ? ' active' : ''}" data-digi-metric="qty">件數</button>
+      <span class="digi-hint">兩方案單價差 9.6 倍（未稅 475 / 4,560 元），件數與金額的結論會相反，請兩個都看。</span>
+    </div>
+    <div class="digi-grid">
+      <div class="digi-cell">
+        <h3>月別推移<span class="digi-h3-sub">依方案堆疊・${digiMetricLabel()}（${unit}）</span></h3>
+        <div class="chart-box" style="height:var(--chart-h);margin-top:0"><canvas id="digi-plan-chart"></canvas></div>
+      </div>
+      <div class="digi-cell">
+        <h3>方案 × 管道<span class="digi-h3-sub">累計 4月〜${STATE.selectedMonth}</span></h3>
+        ${cross}
+        ${digiInsightHTML(agg, chs, cum)}
+      </div>
+    </div>
+    <h3 class="digi-h3-block">月別 × 方案 × 管道<span class="digi-h3-sub">${digiMetricLabel()}（${unit}）</span></h3>
+    ${det}
+    <div class="legend">
+      ※ 方案來源：每日實績檔「WEB數位典藏」分頁的<b>訂購方案</b>（01→1期／12→12期），
+      解析時轉為製編 <code>20250WJ01</code>／<code>20250WJ12</code>；TM 分頁本來就帶製編。<br>
+      ※ <b>件數與金額要分開看</b>：12 期單價是 1 期的 9.6 倍，所以「件數多」不等於「貢獻大」。
+      最右欄的「12期金額占比」是觀察訂閱結構的主要指標 —— 它下滑代表營收品質在惡化，
+      即使總件數沒變。
+    </div>
+  </div>`;
+}
+
+// 交叉表看得出來、但不會自己跳出來的三件事。純計算，不寫死任何數字。
+function digiInsightHTML(agg, chs, cum){
+  if(!cum.length) return '';
+  const p1 = DIGI_PLANS[0].code, p12 = DIGI_PLANS[1].code;
+  const tiles = [];
+
+  // ① 各通路的方案結構（以金額計）
+  for(const c of chs){
+    const a1 = digiSum(agg, cum, p1, [c]).amt;
+    const a12 = digiSum(agg, cum, p12, [c]).amt;
+    const t = a1 + a12;
+    if(t <= 0) continue;
+    const r12 = a12 / t * 100;
+    const lead = r12 >= 50 ? { k: '12期（年繳）', v: r12 } : { k: '1期（月繳）', v: 100 - r12 };
+    tiles.push(`<div class="digi-tile"><div class="k">${c} 的方案結構</div>
+      <div class="v">${lead.v.toFixed(0)}<span class="u">%</span></div>
+      <div class="s">金額來自 <b>${lead.k}</b></div></div>`);
+  }
+
+  // ② 12 期金額占比：累計 vs 最新有資料月（結構有沒有在變）
+  const last = cum[cum.length - 1];
+  const cAll = digiSum(agg, cum, p1, chs).amt + digiSum(agg, cum, p12, chs).amt;
+  const c12  = digiSum(agg, cum, p12, chs).amt;
+  const lAll = digiSum(agg, [last], p1, chs).amt + digiSum(agg, [last], p12, chs).amt;
+  const l12  = digiSum(agg, [last], p12, chs).amt;
+  if(cAll > 0 && lAll > 0){
+    const cr = c12 / cAll * 100, lr = l12 / lAll * 100, dd = lr - cr;
+    tiles.push(`<div class="digi-tile${dd < -3 ? ' bad' : (dd > 3 ? ' good' : '')}">
+      <div class="k">12期金額占比・${last}</div>
+      <div class="v">${lr.toFixed(0)}<span class="u">%</span></div>
+      <div class="s">累計 ${cr.toFixed(0)}%　<b>${dd >= 0 ? '+' : ''}${dd.toFixed(1)}pt</b></div></div>`);
+  }
+  return `<div class="digi-tiles">${tiles.join('')}</div>`;
+}
+
+function renderDigiPlanChart(){
+  const cv = document.getElementById('digi-plan-chart');
+  if(!cv || typeof Chart === 'undefined') return;
+  destroyChart('digi-plan-chart');
+  const agg = digiAgg(), chs = digiChannels(), met = digiMetric();
+  const labels = MONTHS.filter(m => hasActualData(m));
+  const datasets = DIGI_PLANS.map(p => ({
+    label: p.label,
+    data: labels.map(m => {
+      const v = digiSum({ [m]: agg[m] }, [m], p.code, chs);
+      return met === 'qty' ? Math.round(v.qty) : Math.round(v.amt);
+    }),
+    backgroundColor: p.color, borderColor: p.color, borderWidth: 1, borderRadius: 3,
+  }));
+  const unit = met === 'qty' ? '件' : '元';
+  STATE.charts['digi-plan-chart'] = new Chart(cv.getContext('2d'), {
+    type: 'bar',
+    data: { labels, datasets },
+    options: {
+      responsive: true, maintainAspectRatio: false,
+      interaction: { mode: 'index', intersect: false },
+      plugins: {
+        legend: { position: 'top', labels: { font: { size: 11, weight: '600' }, color: '#0C4A6E', boxWidth: 14, padding: 14 } },
+        tooltip: {
+          backgroundColor: '#0C4A6E', titleColor: '#fff', bodyColor: '#fff', borderColor: '#0284C7', borderWidth: 1,
+          callbacks: {
+            label: c => `${c.dataset.label}: ${(+c.parsed.y).toLocaleString()} ${unit}`,
+            footer: items => {
+              const t = items.reduce((s, i) => s + i.parsed.y, 0);
+              const p12 = items.find(i => i.dataset.label.startsWith('12期'));
+              return `合計 ${t.toLocaleString()} ${unit}`
+                   + (met === 'amt' && t > 0 && p12 ? `　12期占比 ${(p12.parsed.y / t * 100).toFixed(1)}%` : '');
+            },
+          },
+        },
+      },
+      scales: {
+        y: { stacked: true, beginAtZero: true,
+             title: { display: true, text: met === 'qty' ? '件數' : '金額（元）', font: { size: 11, weight: '600' }, color: '#0369A1' },
+             ticks: { font: { size: 11 }, color: '#0369A1', callback: v => (+v).toLocaleString() },
+             grid: { color: '#F0F9FF' } },
+        x: { stacked: true, ticks: { font: { size: 11, weight: '600' }, color: '#0C4A6E' }, grid: { display: false } },
+      },
+    },
+  });
+}
+
+function setupDigiPlanHandlers(panel){
+  panel.querySelectorAll('[data-digi-metric]').forEach(b => {
+    b.onclick = () => {
+      STATE.digiMetric = b.dataset.digiMetric;
+      const card = panel.querySelector('#digi-plan-card');
+      if(!card) return;
+      destroyChart('digi-plan-chart');
+      card.outerHTML = renderDigiPlanHTML();
+      renderDigiPlanChart();
+      setupDigiPlanHandlers(panel);
+    };
+  });
 }
 
 /* ============================================================
