@@ -261,7 +261,7 @@
   .tab-panel{display:none;max-width:var(--content-max);margin-inline:auto}
   .tab-panel.active{display:block}
 
-  /* 數位典藏：方案別 × 管道 */
+  /* 結構分析區塊（數位典藏 方案別×管道、TM 推案結構三指標 共用這組 .digi-* 版面） */
   .digi-toolbar{display:flex;align-items:center;flex-wrap:wrap;gap:8px;margin:0 0 12px}
   .digi-lbl{font-size:var(--fs-sm);font-weight:600;color:var(--secondary)}
   .digi-btn{font-size:var(--fs-sm);font-weight:600;color:var(--accent);background:var(--subheader);
@@ -289,6 +289,17 @@
   .digi-tile .v .u{font-size:var(--fs-md);color:var(--muted);font-weight:500;margin-left:2px}
   .digi-tile .s{font-size:var(--fs-xs);color:var(--secondary)}
   @media (max-width:1100px){ .digi-grid{grid-template-columns:1fr} }
+  /* TM 推案結構三指標專屬 */
+  .tm-sel{padding:5px 12px;border:1px solid var(--border);border-radius:6px;background:var(--card);
+          font-size:var(--fs-sm);font-weight:600;cursor:pointer;font-family:inherit;color:var(--ink);min-width:110px}
+  .tm-th{font-weight:500;color:var(--muted)}
+  .tm-mid{font-size:var(--fs-xs);font-weight:500;color:var(--warn)}
+  table.grid td.tm-ok{color:var(--good);font-weight:700}
+  table.grid td.tm-ng{color:var(--bad);font-weight:700}
+  table.grid td.tm-bundle-cell{text-align:left;font-size:var(--fs-xs);white-space:normal;line-height:1.45}
+  .tm-na{color:var(--muted);font-weight:400}
+  #tm-kpi-card .digi-tile .s b{color:var(--ink)}
+  #tm-kpi-card .digi-tiles{grid-template-columns:1fr;gap:12px;margin-top:0}
 
   /* ── 卡片流式格線（寬螢幕兩欄，右方空位由後面的卡片遞補）──────────
      只套用在標示 data-flow 的分頁；需要整列的卡片加 class="card wide"。
@@ -1194,6 +1205,7 @@ const STATE = {
   // 注意：cmpMode() 在 midTarget 未載入時會自動退回 budget，不會壞掉。
   compareMode:"mid",      // 'budget'（期初目標）| 'mid'（期中目標）| 'yoy'（前年實績）
   digiMetric:"amt",       // 數位典藏方案別區塊的指標：'amt'（金額）| 'qty'（件數）
+  tmBiz:"學習商品",        // TM 推案結構三指標的事業別（TM 的主戰場是學習商品）
   fy25:null,              // {amount, qty, daily}: FY25 actuals for YoY comparison
   midTarget:null,         // {amount, qty, version, actualMonths, ...}: 期中修正目標
   prevDaySelected:null,   // Set of "YYYY-MM-DD"：「前日業績」タブで選択された日付
@@ -4305,6 +4317,10 @@ function renderDetailTab(filterType, filterValue){
   const isDigi = (filterType === 'biz' && filterValue === DIGI_BIZ);
   if(isDigi) html += renderDigiPlanHTML();
 
+  // Section 5: TM 專屬 —— 推案結構三指標（高單價件數／合購檔期／基礎盤單價）
+  const isTm = (filterType === 'ch' && filterValue === TM_CH);
+  if(isTm) html += renderTmKpiHTML();
+
   panel.innerHTML = html;
 
   // ===== Render dynamic content =====
@@ -4334,6 +4350,10 @@ function renderDetailTab(filterType, filterValue){
   if(isDigi){
     renderDigiPlanChart();
     setupDigiPlanHandlers(panel);
+  }
+  if(isTm){
+    renderTmKpiChart();
+    setupTmKpiHandlers(panel);
   }
 }
 
@@ -4607,6 +4627,249 @@ function setupDigiPlanHandlers(panel){
       setupDigiPlanHandlers(panel);
     };
   });
+}
+
+/* ============================================================
+   TM 推案結構三指標
+   ------------------------------------------------------------
+   TM 是全通路單價最高的通路（FY26 累計 3,336 元 vs WEB 2,999），
+   但 4〜9 月單價從 3,539 掉到 3,077（−13%）。逐品項拆解後發現：
+     · 幾乎所有品項的單價全年固定不變 —— 不是降價
+     · 剔除高單價品後的單價幾乎是水平線（2,766〜2,939）
+     · 全部變動都來自「高單價品賣掉幾件」，尤其是合購檔期有沒有在跑
+   所以日常要追的不是整體單價（它會被商品退場影響而失真），
+   而是下面這三個指標。
+   ============================================================ */
+const TM_CH = 'TM';
+const TM_HI_FACTOR = 1.35;   // 高單價門檻 = 該範圍 FY26 累計 AOV × 1.35
+const TM_BIZ_CANDIDATES = ['學習商品','學習周邊','生活周邊','Mirafeel','數位典藏'];
+
+function tmBiz(){ return STATE.tmBiz || '學習商品'; }
+
+function tmRows(biz){
+  return (STATE.actualRows || []).filter(r =>
+    r.ch === TM_CH && (biz === 'all' ? true : r.biz === biz));
+}
+
+// 合購＝跨品項組合。名稱含「合購」，或去掉括號內容後仍有「+」。
+// （括號內的「共11冊+1卡牌遊戲」不算，那是單一商品的內容物說明）
+function tmIsBundle(name){
+  if(!name) return false;
+  if(name.indexOf('合購') >= 0) return true;
+  return name.replace(/[（(][^）)]*[）)]/g, '').indexOf('+') >= 0;
+}
+function tmProdName(code){
+  const p = (STATE.master && STATE.master.products) ? STATE.master.products[code] : null;
+  return (p && p.name) || code;
+}
+
+// 門檻固定為全年一條線（不逐月浮動），月與月之間才可比。
+function tmThreshold(rows){
+  let q = 0, a = 0;
+  for(const r of rows){ q += (r.qty || 0); a += (r.amt || 0); }
+  if(!q) return 0;
+  return Math.round(a / q * TM_HI_FACTOR / 100) * 100;
+}
+
+// 每月：件數／高單價件數・金額／合購金額／剔除高單價後 AOV
+function tmMonthStats(rows, th, month){
+  const per = {};
+  for(const r of rows){
+    if(r.month !== month) continue;
+    const c = r.code || '(無製編)';
+    const p = per[c] || (per[c] = { qty: 0, amt: 0 });
+    p.qty += (r.qty || 0); p.amt += (r.amt || 0);
+  }
+  const o = { qty:0, amt:0, hiQty:0, hiAmt:0, loQty:0, loAmt:0, bundleAmt:0, bundles:[], hiCodes:[] };
+  for(const c in per){
+    const q = per[c].qty, a = per[c].amt;
+    if(!q) continue;
+    o.qty += q; o.amt += a;
+    if(th > 0 && a / q >= th){ o.hiQty += q; o.hiAmt += a; o.hiCodes.push(c); }
+    else { o.loQty += q; o.loAmt += a; }
+    if(tmIsBundle(tmProdName(c))){ o.bundleAmt += a; o.bundles.push(c); }
+  }
+  o.aov     = o.qty ? o.amt / o.qty : null;
+  o.loAov   = o.loQty ? o.loAmt / o.loQty : null;   // 基礎盤單價
+  o.hiShare = o.amt ? o.hiAmt / o.amt : 0;
+  return o;
+}
+
+// 當月已過工作天（跟 getTimeProgress 同一套邏輯，用於月中的公平比較）
+function tmElapsedWD(month){
+  const tp = getTimeProgress(month);
+  return (tp && tp.elapsed) ? tp.elapsed : 0;
+}
+
+function tmMonths(rows){
+  return MONTHS.filter(m => hasActualData(m) && rows.some(r => r.month === m));
+}
+
+function renderTmKpiHTML(){
+  const biz  = tmBiz();
+  const rows = tmRows(biz);
+  if(!rows.length) return '';
+  const th     = tmThreshold(rows);
+  const months = tmMonths(rows);
+  if(!months.length) return '';
+
+  const cur  = months[months.length - 1];
+  const prev = months.length > 1 ? months[months.length - 2] : null;
+  const S = {}; for(const m of months) S[m] = tmMonthStats(rows, th, m);
+  const c = S[cur], p = prev ? S[prev] : null;
+
+  const tpC = getTimeProgress(cur);
+  const partial = (tpC && tpC.elapsed < tpC.total) ? tpC : null;
+  const wdC = tmElapsedWD(cur) || 1;
+  const wdP = prev ? (tmElapsedWD(prev) || 1) : 1;
+
+  // 合購連續斷檔月數（往回數到最近一個有合購的月）
+  let gap = 0;
+  for(let i = months.length - 1; i >= 0; i--){ if(S[months[i]].bundleAmt > 0) break; gap++; }
+
+  const dir = (v, good) => (v == null || v === 0) ? '' : (((v > 0) === good) ? ' good' : ' bad');
+  const pct = (a, b) => (b ? (a / b - 1) * 100 : null);
+
+  // ① 高單價品件數：月中用「工作日日均」比，才不會拿半個月比整個月
+  const cRate = c.hiQty / wdC, pRate = p ? p.hiQty / wdP : null;
+  const d1 = (pRate != null) ? pct(cRate, pRate) : null;
+  const t1 = `<div class="digi-tile${dir(d1, true)}">
+    <div class="k">① 高單價品件數 <span class="tm-th">單價 ≥ ${th.toLocaleString()} 元</span></div>
+    <div class="v">${Math.round(c.hiQty).toLocaleString()}<span class="u">件</span></div>
+    <div class="s">${c.qty ? `占全體 ${(c.hiQty / c.qty * 100).toFixed(0)}%` : ''}${
+      partial ? `・日均 ${cRate.toFixed(1)} 件` : ''}${
+      d1 != null ? `　${prev}比 <b>${d1 >= 0 ? '+' : ''}${d1.toFixed(0)}%</b>${partial ? '（日均）' : ''}` : ''}</div></div>`;
+
+  // ② 合購檔期營收：斷檔月數比金額更有說服力
+  const t2 = `<div class="digi-tile${c.bundleAmt > 0 ? ' good' : (gap >= 2 ? ' bad' : '')}">
+    <div class="k">② 合購檔期營收</div>
+    <div class="v">${(c.bundleAmt / 10000).toFixed(1)}<span class="u">萬</span></div>
+    <div class="s">${c.bundleAmt > 0
+      ? c.bundles.map(x => tmProdName(x)).join('、')
+      : `<b>已連續 ${gap} 個月無合購檔期</b>`}</div></div>`;
+
+  // ③ 剔除高單價後單價：基礎盤。它鬆動才是真的體質問題
+  const d3 = (p && p.loAov && c.loAov) ? pct(c.loAov, p.loAov) : null;
+  const t3 = `<div class="digi-tile${dir(d3, true)}">
+    <div class="k">③ 剔除高單價後單價 <span class="tm-th">基礎盤</span></div>
+    <div class="v">${c.loAov ? Math.round(c.loAov).toLocaleString() : '—'}<span class="u">元</span></div>
+    <div class="s">${d3 != null
+      ? `${prev} ${Math.round(p.loAov).toLocaleString()} 元　<b>${d3 >= 0 ? '+' : ''}${d3.toFixed(1)}%</b>`
+      : '基礎盤＝扣掉高單價品後的單價'}</div></div>`;
+
+  // ── 月別明細 ──
+  let tbl = `<div class="scroll-x"><table class="grid" id="tm-kpi-table"><thead><tr>
+    <th class="l1">月份</th><th class="l1">件數</th>
+    <th class="l1">高單價<br>件數</th><th class="l1">高單價<br>金額(萬)</th><th class="l1">高單價<br>占金額</th>
+    <th class="l1">合購<br>金額(萬)</th><th class="l1">剔除高單價後<br>單價(元)</th><th class="l1">整體<br>單價(元)</th>
+    <th class="l1">合購檔期品項</th></tr></thead><tbody>`;
+  for(const m of months){
+    const s = S[m];
+    const tp = getTimeProgress(m);
+    const mid = (tp && tp.elapsed < tp.total) ? ` <span class="tm-mid">月中 ${tp.elapsed}/${tp.total}</span>` : '';
+    tbl += `<tr><td class="dim">${m}${mid}</td>`
+         + `<td>${Math.round(s.qty).toLocaleString()}</td>`
+         + `<td>${Math.round(s.hiQty).toLocaleString()}</td>`
+         + `<td>${(s.hiAmt / 10000).toFixed(1)}</td>`
+         + `<td class="${s.hiShare >= 0.35 ? 'tm-ok' : (s.hiShare < 0.25 ? 'tm-ng' : '')}">${(s.hiShare * 100).toFixed(1)}%</td>`
+         + (s.bundleAmt > 0 ? `<td>${(s.bundleAmt / 10000).toFixed(1)}</td>` : `<td class="na">—</td>`)
+         + `<td>${s.loAov ? Math.round(s.loAov).toLocaleString() : '—'}</td>`
+         + `<td>${s.aov ? Math.round(s.aov).toLocaleString() : '—'}</td>`
+         + `<td class="tm-bundle-cell">${
+             s.bundles.length ? s.bundles.map(x => tmProdName(x)).join('、') : '<span class="tm-na">無檔期</span>'}</td></tr>`;
+  }
+  tbl += `</tbody></table></div>`;
+
+  const bizOpts = TM_BIZ_CANDIDATES
+    .filter(b => (STATE.actualRows || []).some(r => r.ch === TM_CH && r.biz === b))
+    .map(b => `<option value="${b}"${b === biz ? ' selected' : ''}>${b}</option>`).join('');
+
+  return `<div class="card wide" id="tm-kpi-card">
+    <h2>TM 推案結構三指標 <span class="pill">${biz}</span></h2>
+    <div class="digi-toolbar">
+      <span class="digi-lbl">事業別：</span>
+      <select id="tm-biz-sel" class="tm-sel">${bizOpts}</select>
+      <span class="digi-hint">TM 的單價變動幾乎全部來自「高單價品賣掉幾件」，不是降價。只看整體單價會被商品退場影響而失真，故改追這三個指標。</span>
+    </div>
+    <div class="digi-grid">
+      <div class="digi-cell">
+        <h3>月別：高單價品 vs 其他<span class="digi-h3-sub">金額（萬元）・堆疊</span></h3>
+        <div class="chart-box" style="height:var(--chart-h)"><canvas id="tm-kpi-chart"></canvas></div>
+      </div>
+      <div class="digi-cell">
+        <h3>${cur} 現況<span class="digi-h3-sub">${partial ? `月中，已過 ${partial.elapsed}/${partial.total} 工作日` : '已結算'}</span></h3>
+        <div class="digi-tiles tm-tiles">${t1}${t2}${t3}</div>
+      </div>
+    </div>
+    <h3 class="digi-h3-block">月別明細<span class="digi-h3-sub">${biz} × TM</span></h3>
+    ${tbl}
+    <div class="legend">
+      ※ <b>高單價門檻 ${th.toLocaleString()} 元</b>＝${biz}×TM 的 FY26 累計單價 ×1.35，四捨五入至百位，<b>全年固定一條線</b>（不逐月浮動），月與月之間才可比。
+      分類依<b>該月實際單價</b>，所以中途調價的品項會在調價當月自動換邊（例：和巧虎一起說英語套組進階版 8 月起由 4,286 降為 2,887）。<br>
+      ※ <b>合購</b>＝名稱含「合購」或去掉括號後仍有「+」的跨品項組合；右欄列出當月實際抓到的品項，分類對不對一眼可確認。<br>
+      ※ 月中的月份，指標①的前月比用<b>工作日日均</b>換算，避免拿半個月比整個月。
+    </div>
+  </div>`;
+}
+
+function renderTmKpiChart(){
+  const cv = document.getElementById('tm-kpi-chart');
+  if(!cv || typeof Chart === 'undefined') return;
+  destroyChart('tm-kpi-chart');
+  const rows = tmRows(tmBiz());
+  if(!rows.length) return;
+  const th = tmThreshold(rows);
+  const labels = tmMonths(rows);
+  const S = labels.map(m => tmMonthStats(rows, th, m));
+  STATE.charts['tm-kpi-chart'] = new Chart(cv.getContext('2d'), {
+    type: 'bar',
+    data: { labels, datasets: [
+      { label: `高單價品（單價 ≥ ${th.toLocaleString()} 元）`, data: S.map(s => Math.round(s.hiAmt)),
+        backgroundColor: '#0284C7', borderColor: '#0284C7', borderWidth: 1, borderRadius: 3 },
+      { label: '其他品項（基礎盤）', data: S.map(s => Math.round(s.loAmt)),
+        backgroundColor: '#A5DEF2', borderColor: '#A5DEF2', borderWidth: 1, borderRadius: 3 },
+    ]},
+    options: {
+      responsive: true, maintainAspectRatio: false,
+      interaction: { mode: 'index', intersect: false },
+      plugins: {
+        legend: { position: 'top', labels: { font: { size: 11, weight: '600' }, color: '#0C4A6E', boxWidth: 14, padding: 14 } },
+        tooltip: {
+          backgroundColor: '#0C4A6E', titleColor: '#fff', bodyColor: '#fff', borderColor: '#0284C7', borderWidth: 1,
+          callbacks: {
+            label: c => `${c.dataset.label}: ${(+c.parsed.y).toLocaleString()} 元`,
+            footer: items => {
+              const t = items.reduce((s, i) => s + i.parsed.y, 0);
+              const hi = items.find(i => i.datasetIndex === 0);
+              return `合計 ${t.toLocaleString()} 元`
+                   + ((t > 0 && hi) ? `　高單價占 ${(hi.parsed.y / t * 100).toFixed(1)}%` : '');
+            },
+          },
+        },
+      },
+      scales: {
+        y: { stacked: true, beginAtZero: true,
+             title: { display: true, text: '金額（萬元）', font: { size: 11, weight: '600' }, color: '#0369A1' },
+             ticks: { font: { size: 11 }, color: '#0369A1', callback: v => (+v / 10000).toLocaleString() },
+             grid: { color: '#F0F9FF' } },
+        x: { stacked: true, ticks: { font: { size: 11, weight: '600' }, color: '#0C4A6E' }, grid: { display: false } },
+      },
+    },
+  });
+}
+
+function setupTmKpiHandlers(panel){
+  const sel = panel.querySelector('#tm-biz-sel');
+  if(!sel) return;
+  sel.onchange = e => {
+    STATE.tmBiz = e.target.value;
+    const card = panel.querySelector('#tm-kpi-card');
+    if(!card) return;
+    destroyChart('tm-kpi-chart');
+    card.outerHTML = renderTmKpiHTML();
+    renderTmKpiChart();
+    setupTmKpiHandlers(panel);
+  };
 }
 
 /* ============================================================
