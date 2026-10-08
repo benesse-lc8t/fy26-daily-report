@@ -290,8 +290,6 @@
   .digi-tile .s{font-size:var(--fs-xs);color:var(--secondary)}
   @media (max-width:1100px){ .digi-grid{grid-template-columns:1fr} }
   /* TM 推案結構三指標專屬 */
-  .tm-sel{padding:5px 12px;border:1px solid var(--border);border-radius:6px;background:var(--card);
-          font-size:var(--fs-sm);font-weight:600;cursor:pointer;font-family:inherit;color:var(--ink);min-width:110px}
   .tm-th{font-weight:500;color:var(--muted)}
   .tm-mid{font-size:var(--fs-xs);font-weight:500;color:var(--warn)}
   table.grid td.tm-ok{color:var(--good);font-weight:700}
@@ -1205,7 +1203,6 @@ const STATE = {
   // 注意：cmpMode() 在 midTarget 未載入時會自動退回 budget，不會壞掉。
   compareMode:"mid",      // 'budget'（期初目標）| 'mid'（期中目標）| 'yoy'（前年實績）
   digiMetric:"amt",       // 數位典藏方案別區塊的指標：'amt'（金額）| 'qty'（件數）
-  tmBiz:"學習商品",        // TM 推案結構三指標的事業別（TM 的主戰場是學習商品）
   fy25:null,              // {amount, qty, daily}: FY25 actuals for YoY comparison
   midTarget:null,         // {amount, qty, version, actualMonths, ...}: 期中修正目標
   prevDaySelected:null,   // Set of "YYYY-MM-DD"：「前日業績」タブで選択された日付
@@ -4351,10 +4348,7 @@ function renderDetailTab(filterType, filterValue){
     renderDigiPlanChart();
     setupDigiPlanHandlers(panel);
   }
-  if(isTm){
-    renderTmKpiChart();
-    setupTmKpiHandlers(panel);
-  }
+  if(isTm) renderTmKpiChart();
 }
 
 
@@ -4630,7 +4624,7 @@ function setupDigiPlanHandlers(panel){
 }
 
 /* ============================================================
-   TM 推案結構三指標
+   TM 推案結構三指標（**僅適用「學習商品 × TM」，不可擴充到其他事業**）
    ------------------------------------------------------------
    TM 是全通路單價最高的通路（FY26 累計 3,336 元 vs WEB 2,999），
    但 4〜9 月單價從 3,539 掉到 3,077（−13%）。逐品項拆解後發現：
@@ -4639,20 +4633,32 @@ function setupDigiPlanHandlers(panel){
      · 全部變動都來自「高單價品賣掉幾件」，尤其是合購檔期有沒有在跑
    所以日常要追的不是整體單價（它會被商品退場影響而失真），
    而是下面這三個指標。
+
+   ⚠ 為什麼鎖定學習商品（2026-10-08 定案，曾做過事業別下拉、實測後移除）：
+     這三個指標的前提是「多品項 × 價格分散 × 有合購檔期」，只有學習商品成立。
+       · 數位典藏：只有 2 個 SKU（475／4,560）且全年定價不變，門檻 5,900
+         **數學上永遠不可達** → 高單價件數恆為 0、③ 與整體單價永遠同一個數字。
+         訂閱制沒有合購，② 恆為「—」。三個指標同時失效。
+       · Mirafeel：最高單價 1,800 < 門檻 1,900，同樣永遠不可達。
+       · 學習周邊：門檻可達，但 tmIsBundle() 的「+」規則會把
+         「巧虎手偶+說明信」「Pixsee巧虎偶+主機」這類**商品本名**誤判成合購檔期
+         （誤判 443 件／55.2 萬／占該事業 TM 金額 82.9%）。
+       · 生活周邊：全年 26.7 萬、無任何合購，量太小不具意義。
+     學習商品占 TM 金額 81%，本來就是電銷主戰場；其餘事業的 TM 視角請看
+     該事業自己的分頁（數位典藏已有 1期／12期 × 管道的專屬分析）。
    ============================================================ */
-const TM_CH = 'TM';
-const TM_HI_FACTOR = 1.35;   // 高單價門檻 = 該範圍 FY26 累計 AOV × 1.35
-const TM_BIZ_CANDIDATES = ['學習商品','學習周邊','生活周邊','Mirafeel','數位典藏'];
+const TM_CH  = 'TM';
+const TM_BIZ = '學習商品';   // 固定。理由見上方，**不要改成可切換**
+const TM_HI_FACTOR = 1.35;   // 高單價門檻 = 學習商品×TM 的 FY26 累計 AOV × 1.35
 
-function tmBiz(){ return STATE.tmBiz || '學習商品'; }
-
-function tmRows(biz){
-  return (STATE.actualRows || []).filter(r =>
-    r.ch === TM_CH && (biz === 'all' ? true : r.biz === biz));
+function tmRows(){
+  return (STATE.actualRows || []).filter(r => r.ch === TM_CH && r.biz === TM_BIZ);
 }
 
-// 合購＝跨品項組合。名稱含「合購」，或去掉括號內容後仍有「+」。
+// 合購＝跨品項檔期組合。名稱含「合購」，或去掉括號內容後仍有「+」。
 // （括號內的「共11冊+1卡牌遊戲」不算，那是單一商品的內容物說明）
+// ⚠ 這條規則**只在學習商品正確**：學習商品的「+」一定是檔期組合，
+//   但學習周邊有「巧虎手偶+說明信」這種商品本名會誤判，故本卡鎖定學習商品。
 function tmIsBundle(name){
   if(!name) return false;
   if(name.indexOf('合購') >= 0) return true;
@@ -4706,8 +4712,7 @@ function tmMonths(rows){
 }
 
 function renderTmKpiHTML(){
-  const biz  = tmBiz();
-  const rows = tmRows(biz);
+  const rows = tmRows();
   if(!rows.length) return '';
   const th     = tmThreshold(rows);
   const months = tmMonths(rows);
@@ -4780,16 +4785,11 @@ function renderTmKpiHTML(){
   }
   tbl += `</tbody></table></div>`;
 
-  const bizOpts = TM_BIZ_CANDIDATES
-    .filter(b => (STATE.actualRows || []).some(r => r.ch === TM_CH && r.biz === b))
-    .map(b => `<option value="${b}"${b === biz ? ' selected' : ''}>${b}</option>`).join('');
-
   return `<div class="card wide" id="tm-kpi-card">
-    <h2>TM 推案結構三指標 <span class="pill">${biz}</span></h2>
+    <h2>TM 推案結構三指標 <span class="pill">${TM_BIZ}</span></h2>
     <div class="digi-toolbar">
-      <span class="digi-lbl">事業別：</span>
-      <select id="tm-biz-sel" class="tm-sel">${bizOpts}</select>
-      <span class="digi-hint">TM 的單價變動幾乎全部來自「高單價品賣掉幾件」，不是降價。只看整體單價會被商品退場影響而失真，故改追這三個指標。</span>
+      <span class="digi-hint">TM 的單價變動幾乎全部來自「高單價品賣掉幾件」，不是降價。只看整體單價會被商品退場影響而失真，故改追這三個指標。
+        <b>本卡僅限學習商品</b>（占 TM 金額 81%）—— 其餘事業要嘛只有 1〜2 個固定價位、門檻不可達，要嘛沒有合購檔期，三個指標不成立。</span>
     </div>
     <div class="digi-grid">
       <div class="digi-cell">
@@ -4801,10 +4801,10 @@ function renderTmKpiHTML(){
         <div class="digi-tiles tm-tiles">${t1}${t2}${t3}</div>
       </div>
     </div>
-    <h3 class="digi-h3-block">月別明細<span class="digi-h3-sub">${biz} × TM</span></h3>
+    <h3 class="digi-h3-block">月別明細<span class="digi-h3-sub">${TM_BIZ} × TM</span></h3>
     ${tbl}
     <div class="legend">
-      ※ <b>高單價門檻 ${th.toLocaleString()} 元</b>＝${biz}×TM 的 FY26 累計單價 ×1.35，四捨五入至百位，<b>全年固定一條線</b>（不逐月浮動），月與月之間才可比。
+      ※ <b>高單價門檻 ${th.toLocaleString()} 元</b>＝${TM_BIZ}×TM 的 FY26 累計單價 ×1.35，四捨五入至百位，<b>全年固定一條線</b>（不逐月浮動），月與月之間才可比。
       分類依<b>該月實際單價</b>，所以中途調價的品項會在調價當月自動換邊（例：和巧虎一起說英語套組進階版 8 月起由 4,286 降為 2,887）。<br>
       ※ <b>合購</b>＝名稱含「合購」或去掉括號後仍有「+」的跨品項組合；右欄列出當月實際抓到的品項，分類對不對一眼可確認。<br>
       ※ 月中的月份，指標①的前月比用<b>工作日日均</b>換算，避免拿半個月比整個月。
@@ -4816,7 +4816,7 @@ function renderTmKpiChart(){
   const cv = document.getElementById('tm-kpi-chart');
   if(!cv || typeof Chart === 'undefined') return;
   destroyChart('tm-kpi-chart');
-  const rows = tmRows(tmBiz());
+  const rows = tmRows();
   if(!rows.length) return;
   const th = tmThreshold(rows);
   const labels = tmMonths(rows);
@@ -4856,20 +4856,6 @@ function renderTmKpiChart(){
       },
     },
   });
-}
-
-function setupTmKpiHandlers(panel){
-  const sel = panel.querySelector('#tm-biz-sel');
-  if(!sel) return;
-  sel.onchange = e => {
-    STATE.tmBiz = e.target.value;
-    const card = panel.querySelector('#tm-kpi-card');
-    if(!card) return;
-    destroyChart('tm-kpi-chart');
-    card.outerHTML = renderTmKpiHTML();
-    renderTmKpiChart();
-    setupTmKpiHandlers(panel);
-  };
 }
 
 /* ============================================================
