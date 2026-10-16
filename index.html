@@ -2412,6 +2412,15 @@ function fmtAmt(n){
   if(!isFinite(n)) return "—";
   return Math.round(n/10000).toLocaleString();
 }
+// 小額用：單日 × 單一管道／事業的金額常常不到 1 萬，fmtAmt() 取整到萬會變成 0，
+// 數字和圖表都會「憑空消失」（2026-10-16 使用者回報 EC 10/15 有實績卻看不到）。
+// 10 萬以下顯示到小數第一位，10 萬以上維持整數，避免長位數擠壞版面。
+function fmtAmtFine(n){
+  if(!isFinite(n)) return "—";
+  const w = n / 10000;
+  if(w === 0) return "0";
+  return Math.abs(w) < 10 ? w.toFixed(1) : Math.round(w).toLocaleString();
+}
 function fmtRate(b, a){
   if(b<=0) return a>0 ? "—" : "—";
   return (a/b*100).toFixed(1)+"%";
@@ -2882,8 +2891,8 @@ function renderPrevDaySummary(){
 
   kpiEl.innerHTML = `
     <div class="lbl">選定期間績效 <span class="small">${selected[0]} ～ ${selected[selected.length-1]}（共 ${selected.length} 天，含 ${wdCount} 個工作天）</span></div>
-    <div class="row"><span class="k">預估${targetLabel()}</span><span class="v">${fmtAmt(totalTarget)} ${unit}</span></div>
-    <div class="row"><span class="k">實績</span><span class="v">${fmtAmt(totalAmt)} ${unit}</span></div>
+    <div class="row"><span class="k">預估${targetLabel()}</span><span class="v">${fmtAmtFine(totalTarget)} ${unit}</span></div>
+    <div class="row"><span class="k">實績</span><span class="v">${fmtAmtFine(totalAmt)} ${unit}</span></div>
     <div class="rate-row dual">${pdBases.map(pdRow).join('')}</div>
     <div class="kpi-note">※ 「預估${targetLabel()}」＝所選日期中的工作天數 ÷ 當月總工作天數 × 當月${targetLabel()}。
        下方拆解表與直條圖依目前選中的基準（${targetLabel()}）計算。</div>
@@ -2911,9 +2920,9 @@ function renderPrevDayBreakdownTable(el, dimLabel, dims, dimType, aggMap, select
       : estimateTargetForDates(otherFilter, d, selectedDates);
     const actual = aggMap[d] ? aggMap[d].amt : 0;
     tT += target; tA += actual;
-    html += `<tr><td class="dim">${d}</td><td>${fmtAmt(target)}</td><td>${fmtAmt(actual)}</td>${rateCellHTML(target, actual)}</tr>`;
+    html += `<tr><td class="dim">${d}</td><td>${fmtAmtFine(target)}</td><td>${fmtAmtFine(actual)}</td>${rateCellHTML(target, actual)}</tr>`;
   }
-  html += `<tr class="total"><td class="dim">合計</td><td>${fmtAmt(tT)}</td><td>${fmtAmt(tA)}</td>${rateCellHTML(tT, tA)}</tr>`;
+  html += `<tr class="total"><td class="dim">合計</td><td>${fmtAmtFine(tT)}</td><td>${fmtAmtFine(tA)}</td>${rateCellHTML(tT, tA)}</tr>`;
   html += `</tbody>`;
   el.innerHTML = html;
 }
@@ -2933,11 +2942,14 @@ function renderPrevDayChart(effBiz, effCh, byBizCh){
     return;
   }
 
+  // データは「元」のまま持つ。以前は Math.round(amt/10000) で萬に丸めていたため、
+  // 1 萬未満の管道（例：2026-10-15 の EC 6,216 円）が全セグメント 0 になり、
+  // 棒が1本まるごと消えていた。軸と tooltip の側で萬に換算する。
   const datasets = segments.map((seg, i) => ({
     label: seg,
     data: bars.map(bar => {
       const amt = stackBy === 'ch' ? (byBizCh[seg] ? byBizCh[seg][bar] : 0) : (byBizCh[bar] ? byBizCh[bar][seg] : 0);
-      return Math.round((amt || 0) / 10000);
+      return Math.round(amt || 0);
     }),
     backgroundColor: colors[i % colors.length],
     stack: 'total',
@@ -2952,16 +2964,27 @@ function renderPrevDayChart(effBiz, effCh, byBizCh){
       indexAxis: 'y',
       responsive: true,
       maintainAspectRatio: false,
+      interaction: { mode: 'index', intersect: false },
       scales: {
-        x: { stacked: true, beginAtZero: true, title: { display:true, text:'萬元' } },
-        y: { stacked: true },
+        x: { stacked: true, beginAtZero: true,
+             title: { display:true, text:'萬元', font:{ size:11, weight:'600' }, color:'#0369A1' },
+             ticks: { font:{ size:11 }, color:'#0369A1',
+                      callback: v => { const w = v/10000; return Math.abs(w) < 10 ? w.toFixed(1) : w.toLocaleString(); } },
+             grid: { color:'#F0F9FF' } },
+        y: { stacked: true, ticks: { font:{ size:11, weight:'600' }, color:'#0C4A6E' }, grid: { display:false } },
       },
       plugins: {
-        legend: { position: 'bottom', labels: { boxWidth: 12, font: { size: 11 } } },
+        legend: { position: 'bottom', labels: { boxWidth: 12, font: { size: 11 }, color:'#0C4A6E' } },
         tooltip: {
-          backgroundColor:'#0C4A6E', titleColor:'#fff', bodyColor:'#fff',
+          backgroundColor:'#0C4A6E', titleColor:'#fff', bodyColor:'#fff', borderColor:'#0284C7', borderWidth:1,
+          filter: (c)=> Number(c.raw) !== 0,
           callbacks: {
-            label: (c)=> `${c.dataset.label}：${Number(c.raw).toLocaleString()} 萬`,
+            // 萬で丸めず「元」で見せる。小額でも 0 にならないので実績の有無が判別できる。
+            label: (c)=> `${c.dataset.label}：${Number(c.raw).toLocaleString()} 元`,
+            footer: (items)=> {
+              const t = items.reduce((s,i)=> s + Number(i.raw||0), 0);
+              return `合計 ${t.toLocaleString()} 元（${(t/10000).toFixed(2)} 萬）`;
+            },
           },
         },
       },
