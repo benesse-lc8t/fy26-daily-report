@@ -38,6 +38,27 @@ git push origin <目前分支>:main      # 一定要推到 main 才會部署
 5. **缺品名製編** —— 有新製編時請使用者提供商品主檔，再跑 `update_master.py`
 6. **kolSchedule** —— 檔數與內容是否如預期（無 KOL 檔期表更新時應完全一致）
 
+## 送檔前自檢：`check_source.py`（跑在使用者筆電）
+
+```bash
+python scripts/check_source.py            # 讀 daily_run.local.json 的 master_xlsx
+python scripts/check_source.py "D:\...\FY26商售實績明細(claude).xlsx"
+python scripts/check_source.py --date 2026-10-20   # 指定期望日期（預設＝昨天）
+```
+或直接雙擊 `scripts/check_source.bat`。相依：`pip install openpyxl`
+（Windows 若想要彩色輸出，另可 `pip install colorama`，沒裝也能跑）。
+
+**解決什麼**：RefreshAll 有時跑不完，某些分頁會停在前一天。
+這種缺漏**不會報錯、數字也看起來合理**，推上儀表板後會變成「某天業績崩盤」的假象。
+2026-10-19／20／21 連續三天踩到（前兩次是 `2610WEB&KOL`、第三次是 `2610WEB數位典藏`），
+每次都要重跑重傳，來回 10〜20 分鐘。本腳本在送檔前 5 秒內擋下來。
+
+檢查四個當月分頁（`<YYMM>WEB&KOL` / `EC` / `TM` / `WEB數位典藏`）的最後日期是否都 ≥ 期望日。
+回傳碼：0＝全過、1＝有分頁沒跟上、2＝設定或檔案問題（可供 daily_run.py 串接）。
+
+**為什麼最常是 `WEB&KOL`**：它是四個分頁裡列數最多的（約 700 列 vs 其他 27〜280 列），
+資料來源也最複雜（網站＋KOL 兩個管道合併），RefreshAll 時最容易被切掉。
+
 ## 修改 HTML／JS／CSS 後必跑
 ```bash
 python3 scripts/validate_html.py       # 11 項靜態檢查，全過才可 commit
