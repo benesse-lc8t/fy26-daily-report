@@ -2421,6 +2421,12 @@ function fmtAmtFine(n){
   if(w === 0) return "0";
   return Math.abs(w) < 10 ? w.toFixed(1) : Math.round(w).toLocaleString();
 }
+// Chart.js 畫在 canvas 上，不認得 CSS 變數：傳 'var(--border)' 會被當成無效色、畫成黑色
+// （2026-10-22 KOL 每日圖的「灰柱」實際是黑柱）。傳給圖表的顏色一律先用這個解析成色碼。
+function cssVar(name, fallback){
+  const v = getComputedStyle(document.documentElement).getPropertyValue(name).trim();
+  return v || fallback;
+}
 function fmtRate(b, a){
   if(b<=0) return a>0 ? "—" : "—";
   return (a/b*100).toFixed(1)+"%";
@@ -5949,6 +5955,18 @@ function kolAttribute(camp){
   return { amt, qty, cnt };
 }
 
+// 檔期狀態以「實績最後日期」判定，不用今天：資料只到昨天，今天開始的檔期也還沒有數字。
+// 未開始的檔期若顯示「0」會被誤讀成漏算（2026-10-22 小棉花／宥見寧笑）。
+function kolDays(a, b){
+  return Math.round((new Date(b+'T00:00:00Z') - new Date(a+'T00:00:00Z'))/86400000) + 1;
+}
+function kolStatus(camp, lastIso){
+  const days = kolDays(camp.start, camp.end);
+  if(!lastIso || camp.start > lastIso) return { key:'pending', days, elapsed:0 };
+  if(camp.end > lastIso) return { key:'live', days, elapsed:kolDays(camp.start, lastIso) };
+  return { key:'done', days, elapsed:days };
+}
+
 function renderKolTab(){
   const panel = document.getElementById("panel-kol");
   destroyCharts();
@@ -5960,7 +5978,13 @@ function renderKolTab(){
   }
 
   // 各檔期の業績を集計
-  const camps = sched.map(c => ({ ...c, perf: kolAttribute(c) }));
+  let lastIso = '';
+  for(const r of (STATE.actualRows || [])){
+    const iso = dateToISO(r.date);
+    if(iso && iso > lastIso) lastIso = iso;
+  }
+  const lastLbl = lastIso ? lastIso.slice(5).replace('-','/') : '—';
+  const camps = sched.map(c => ({ ...c, perf: kolAttribute(c), st: kolStatus(c, lastIso) }));
 
   // 時間軸範囲：最早開始月の1日 〜 最遅終了月の末日
   const allStart = camps.map(c => c.start).sort()[0];
@@ -6001,13 +6025,13 @@ function renderKolTab(){
   html += `<div class="kpi-card month"><div class="lbl">歸屬業績合計 <span class="small">檔期期間內</span></div>
     <div class="row"><span class="k">KOL通路</span><span class="v">${fmtAmt(totAmt)} <span style="font-size:var(--fs-xs);color:var(--muted);font-weight:500">萬</span></span></div></div>`;
   html += `<div class="kpi-card cum"><div class="lbl">最強檔期 <span class="small">${best.start.slice(5).replace('-','/')}〜${best.end.slice(5).replace('-','/')}</span></div>
-    <div class="row"><span class="k">${best.kol.length>10?best.kol.slice(0,10)+'…':best.kol}</span><span class="v">${fmtAmt(best.perf.amt)} <span style="font-size:var(--fs-xs);color:var(--muted);font-weight:500">萬</span></span></div></div>`;
+    <div class="row"><span class="k">${best.kol.length>10?best.kol.slice(0,10)+'…':best.kol}</span><span class="v">${fmtAmtFine(best.perf.amt)} <span style="font-size:var(--fs-xs);color:var(--muted);font-weight:500">萬</span></span></div></div>`;
   html += '</div></div>';
 
   // ===== 甘特圖時間軸 =====
   const NAMEW = 168;
   html += '<div class="card"><h2>KOL 檔期時間軸（甘特圖）</h2>';
-  html += `<div style="font-size:var(--fs-xs);color:var(--muted);margin-bottom:10px">色塊＝檔期期間，長度＝天數，數字＝該檔期歸屬 KOL 通路業績（萬）。顏色代表事業別。</div>`;
+  html += `<div style="font-size:var(--fs-xs);color:var(--muted);margin-bottom:10px">色塊＝檔期期間，長度＝天數，數字＝該檔期歸屬 KOL 通路業績（萬）。顏色代表事業別。虛線框＝尚未開始（實績至 ${lastLbl}）。</div>`;
   html += `<div style="position:relative;overflow-x:auto">`;
   html += `<div style="min-width:720px;position:relative">`;
   // gridline overlay
@@ -6031,13 +6055,22 @@ function renderKolTab(){
     const width = Math.max(pct(c.end) + dayPct - left, dayPct);
     const color = kolBizColor(c.biz);
     const nameShort = c.kol.length > 14 ? c.kol.slice(0,14) + '…' : c.kol;
-    const amtLbl = fmtAmt(c.perf.amt);
+    const pending = c.st.key === 'pending';
+    const amtLbl = fmtAmtFine(c.perf.amt);
+    const tip = pending ? `${c.start.slice(5).replace('-','/')} 開始` : `${amtLbl}萬${c.st.key === 'live' ? '（進行中）' : ''}`;
+    // 未開始・進行中は棒の外側に注記（棒の内側に収まらない幅のことが多い）。右端に近い棒は左側に出す
+    const note = pending ? tip : (c.st.key === 'live' ? '進行中' : '');
+    const noteRight = left + width < 85;
     html += `<div style="display:flex;align-items:center;height:30px;border-bottom:1px solid #F1F5F9">`;
     html += `<div style="width:${NAMEW}px;flex-shrink:0;font-size:var(--fs-xs);color:#334155;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;padding-right:8px" title="${c.kol}（${c.biz}）">
       <span style="display:inline-block;width:8px;height:8px;border-radius:2px;background:${color};margin-right:5px;vertical-align:middle"></span>${nameShort}</div>`;
     html += `<div style="flex:1;position:relative;height:100%">`;
-    html += `<div style="position:absolute;left:${left}%;width:${width}%;top:6px;height:18px;background:${color};border-radius:3px;display:flex;align-items:center;justify-content:flex-end;min-width:2px" title="${c.kol}｜${c.biz}｜${c.start}〜${c.end}｜${amtLbl}萬">
-      <span style="font-size:var(--fs-xs);font-weight:700;color:#fff;padding:0 5px;white-space:nowrap">${amtLbl}</span></div>`;
+    html += `<div style="position:absolute;left:${left}%;width:${width}%;top:6px;height:18px;box-sizing:border-box;${pending ? `border:1.5px dashed ${color};background:transparent` : `background:${color}`};border-radius:3px;display:flex;align-items:center;justify-content:flex-end;min-width:2px" title="${c.kol}｜${c.biz}｜${c.start}〜${c.end}｜${tip}">
+      ${pending ? '' : `<span style="font-size:var(--fs-xs);font-weight:700;color:#fff;padding:0 5px;white-space:nowrap">${amtLbl}</span>`}</div>`;
+    if(note){
+      const pos = noteRight ? `left:calc(${left + width}% + 4px)` : `right:calc(${100 - left}% + 4px)`;
+      html += `<span style="position:absolute;${pos};top:7px;font-size:var(--fs-xs);color:var(--muted);white-space:nowrap">${note}</span>`;
+    }
     html += `</div></div>`;
   }
   html += `</div></div>`; // min-width, overflow
@@ -6061,21 +6094,27 @@ function renderKolTab(){
   html += '<thead><tr><th class="l1">KOL</th><th class="l2">事業別</th><th class="l2">檔期</th><th class="l2">天數</th><th class="l2">歸屬業績(萬)</th><th class="l2">日均(萬)</th><th class="l2">筆數</th></tr></thead><tbody>';
   const byPerf = camps.slice().sort((a,b)=> b.perf.amt - a.perf.amt);
   for(const c of byPerf){
-    const days = Math.round((new Date(c.end+'T00:00:00Z') - new Date(c.start+'T00:00:00Z'))/86400000) + 1;
-    const daily = days > 0 ? c.perf.amt/days : 0;
+    const { key, days, elapsed } = c.st;
+    // 進行中は「已過天數」で割る（全期間で割ると日均が過小になる）
+    const daily = elapsed > 0 ? c.perf.amt/elapsed : 0;
     const nm = c.kol.length > 22 ? c.kol.slice(0,22)+'…' : c.kol;
+    const tag = key === 'live' ? ` <span style="font-size:var(--fs-xs);color:var(--accent);font-weight:600">進行中</span>` : '';
     html += `<tr>`;
-    html += `<td class="dim" title="${c.kol}">${nm}</td>`;
+    html += `<td class="dim" title="${c.kol}">${nm}${tag}</td>`;
     html += `<td><span style="display:inline-block;width:8px;height:8px;border-radius:2px;background:${kolBizColor(c.biz)};margin-right:5px;vertical-align:middle"></span>${c.biz||'—'}</td>`;
     html += `<td>${c.start.slice(5).replace('-','/')}〜${c.end.slice(5).replace('-','/')}</td>`;
-    html += `<td>${days}</td>`;
-    html += `<td>${fmtAmt(c.perf.amt)}</td>`;
-    html += `<td>${daily/10000 >= 0.05 ? (daily/10000).toFixed(1) : Math.round(daily/10000)}</td>`;
-    html += `<td>${c.perf.cnt}</td>`;
+    html += `<td>${key === 'live' ? `${elapsed}/${days}` : days}</td>`;
+    if(key === 'pending'){
+      html += `<td style="color:var(--muted)">未開始</td><td>—</td><td>—</td>`;
+    } else {
+      html += `<td>${fmtAmtFine(c.perf.amt)}</td>`;
+      html += `<td>${(daily/10000).toFixed(1)}</td>`;
+      html += `<td>${c.perf.cnt}</td>`;
+    }
     html += `</tr>`;
   }
   html += '</tbody></table></div>';
-  html += `<div class="legend">※ 歸屬業績＝檔期起訖日內、該事業別的 KOL 通路實績合計。日均＝歸屬業績 ÷ 檔期天數。</div>`;
+  html += `<div class="legend">※ 歸屬業績＝檔期起訖日內、該事業別的 KOL 通路實績合計。日均＝歸屬業績 ÷ 檔期天數；進行中的檔期以已過天數計算（天數欄顯示「已過／全期」）。實績資料至 ${lastLbl}，起日在此之後的檔期標示為「未開始」。</div>`;
   html += '</div>';
 
   panel.innerHTML = html;
@@ -6094,13 +6133,14 @@ function renderKolTab(){
     const first = dailyDates[0], last = dailyDates[dailyDates.length-1];
     // first〜last の連続日を生成
     const labels = [], vals = [], colors = [];
+    const offColor = cssVar('--border', '#D6E6F2');
     let d = new Date(first+'T00:00:00Z'), lastD = new Date(last+'T00:00:00Z');
     while(d.getTime() <= lastD.getTime()){
       const iso = dateToISO(d);
       const inCamp = camps.some(c => iso >= c.start && iso <= c.end);
       labels.push(`${d.getUTCMonth()+1}/${d.getUTCDate()}`);
       vals.push(+((dailyMap[iso]||0)/10000).toFixed(2));
-      colors.push(inCamp ? '#0284C7' : 'var(--border)');
+      colors.push(inCamp ? '#0284C7' : offColor);
       d = new Date(d.getTime() + 86400000);
     }
     const ctx = document.getElementById("chart-kol-daily").getContext('2d');
