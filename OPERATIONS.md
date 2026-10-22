@@ -19,6 +19,19 @@
 - `data.json` 讀取已加 `?_=<timestamp>` 快取破除，一般重整即最新。
 
 ## 每日流程（使用者上傳最新 FY26 Excel 後）
+
+**本機版（2026-10-22 起）一律用 `scripts/daily_update.py`**，下面的手動步驟僅供理解或除錯：
+```bash
+python -X utf8 scripts/daily_update.py prepare   # 自檢→備份→兩支 ETL→六項必查→validate_html；不 commit
+python -X utf8 scripts/daily_update.py publish   # commit→push main→等部署→比對線上 data.json
+python -X utf8 scripts/daily_update.py hold      # 來源檔不完整：存到 local/hold，main 還原
+```
+prepare 回傳碼：0 可發布／1 有停止條件（回溯單筆 ±2 萬或單日 ±5 萬、前月彙總變動、無日期列異常、
+新缺品名製編、`!!!!` 警報、不應變動的鍵變了、validate 失敗）／2 錯誤／3 無變動。
+來源檔先複製到暫存再讀（Excel 鎖檔也讀得到已存檔版本）。路徑寫在 `scripts/daily_run.local.json`。
+commit 訊息只寫筆數與日期（repo 公開，推估與缺口不進 repo）。
+
+手動步驟：
 ```bash
 cp data.json /tmp/prev.json                        # 先留一份供比對
 python3 scripts/update_data.py <上傳的 FY26 Excel 路徑>

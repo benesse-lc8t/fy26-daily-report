@@ -108,6 +108,12 @@ pip install openpyxl msoffcrypto-tool pywin32
 綠燈就直接往下做，紅燈就告訴她哪個分頁要重跑。
 
 ### 指令
+2026-10-22 起改用一支腳本（細節見 `OPERATIONS.md`「每日流程」）：
+```bash
+python -X utf8 scripts/daily_update.py prepare    # exit 0 才 publish
+python -X utf8 scripts/daily_update.py publish
+```
+以下是拆開的手動版：
 ```bash
 python scripts/check_source.py "<實績檔完整路徑>"          # 先自檢，exit 0 才往下
 cp data.json /tmp/prev.json                                 # 留底供比對
@@ -191,7 +197,7 @@ TM 以**發貨日**開列，預購未出貨不進每日明細，所以台帳 TM 
 | 3 | 四個製編正式品名與事業歸屬 | 使用者 → 製作部門 | `20244C901`／`20244C910`／`20250FF01`／`20260FXAC`，目前暫掛「（品名待補）／學習周邊」 |
 | 4 | 預購出貨後設 `recognizeMonth` | **你**，約 11 月底 | 143 套／約 33 萬要認列到正確月份，**要主動提醒使用者** |
 | 5 | **數位典藏是否納入「全社」** | **等使用者決定** | 目前 `BIZ_LIST_TOTAL` 排除它（當初是 β 版）。現在 FY26 累計 85 萬、有正式期中目標，前提可能過時 |
-| 6 | 補完 `daily_run.py`（一鍵到底） | 評估中 | 目前缺：完整性檢查、`update_preorder_ledger.py`、`validate_html.py` |
+| ~~6~~ | ~~補完 `daily_run.py`（一鍵到底）~~ | — | **2026-10-22 改以 `scripts/daily_update.py` 完成**（RefreshAll 之後的全部步驟）。`daily_run.py` 的蝦皮解密與 RefreshAll 自動化仍是骨架，待評估 |
 | 7 | 兩個 Excel 檔 git-tracked 且公開 | 未決 | `FY25商售實績明細.xlsx`、`FY26商售實績明細(claude).xlsx` 會隨 GitHub Pages 公開，已多次提醒 |
 
 ---
