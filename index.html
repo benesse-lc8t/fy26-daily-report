@@ -2427,6 +2427,11 @@ function cssVar(name, fallback){
   const v = getComputedStyle(document.documentElement).getPropertyValue(name).trim();
   return v || fallback;
 }
+// 色表裡混有 'var(--muted)' 這類字串時，交給圖表前先轉成色碼
+function chartColor(c, fallback){
+  const m = /^var\((--[\w-]+)\)$/.exec(c || '');
+  return m ? cssVar(m[1], fallback || '#276C9B') : c;
+}
 function fmtRate(b, a){
   if(b<=0) return a>0 ? "—" : "—";
   return (a/b*100).toFixed(1)+"%";
@@ -2957,7 +2962,7 @@ function renderPrevDayChart(effBiz, effCh, byBizCh){
       const amt = stackBy === 'ch' ? (byBizCh[seg] ? byBizCh[seg][bar] : 0) : (byBizCh[bar] ? byBizCh[bar][seg] : 0);
       return Math.round(amt || 0);
     }),
-    backgroundColor: colors[i % colors.length],
+    backgroundColor: chartColor(colors[i % colors.length]),
     stack: 'total',
     borderRadius: 3,
   }));
@@ -3079,11 +3084,17 @@ function fcstMultiplier(monthLabel, biz, ch){
   return { mult, head, tail, tailDays, lastDay, dim, complete: lastDay >= dim };
 }
 
+// 不納入月末倍率的月份：月末（22 日以後）有結構性事件、倍率失真，拿來當「保守」不是合理的下限。
+// 2026-10-22 使用者決定排除 9 月：9/22 起點讀圖鑑停售＋9/25〜28 中秋四天連假都落在月末，
+// 倍率只有 0.49x（其餘月份 0.85〜1.41x），10 月的保守推估會被壓到 74%。
+const FCST_EXCLUDE_MONTHS = { '9月': '點讀圖鑑 9/21 停售與中秋四天連假都落在月末' };
+
 // 当月より前の「完結した月」の倍率一覧（同じフィルタ条件で算出）
 function fcstHistory(monthLabel, biz, ch){
   const out = [];
   for(const m of MONTHS){
     if(m === monthLabel) break;
+    if(FCST_EXCLUDE_MONTHS[m]) continue;
     const r = fcstMultiplier(m, biz, ch);
     if(r && r.complete && r.mult != null && isFinite(r.mult)) out.push({ month:m, mult:r.mult });
   }
@@ -3250,7 +3261,10 @@ function fcstNoteHTML(d){
   const histTxt = d.hist.length
     ? d.hist.map(x=>`${x.month} ${x.mult.toFixed(2)}x`).join('、')
     : '無';
-  let n = `※ <b>月末倍率</b> ＝（22日～月末的日均）÷（1～21日的日均）。已完結月份倍率：${histTxt}。`
+  const cur = MONTHS.indexOf(d.month);
+  const excluded = Object.entries(FCST_EXCLUDE_MONTHS).filter(([m]) => MONTHS.indexOf(m) < cur);
+  const exTxt = excluded.length ? `（不納入：${excluded.map(([m, why]) => `${m}，${why}`).join('；')}）` : '';
+  let n = `※ <b>月末倍率</b> ＝（22日～月末的日均）÷（1～21日的日均）。已完結月份倍率：${histTxt}${exTxt}。`
         + `<b>預估全月</b> ＝ 目前累積 ＋（1～21日日均 × 倍率）× 剩餘天數；已發生的日子採實際值，只對未到來的天數套用情境，`
         + `比「近 N 日速率 × 剩餘天數」的單純外推更貼近月底衝刺型態。`;
   if(d.lastDay <= 21){
@@ -3275,7 +3289,7 @@ function fcstRenderChart(d){
   const datasets = [
     { label:'累積實績', data:actual, borderColor:'#0284C7', backgroundColor:'rgba(2,132,199,.10)',
       borderWidth:3, tension:.2, pointRadius:0, fill:true, spanGaps:false, order:1 },
-    { label:`累積${targetLabel()}進度`, data:bgtLine, borderColor:'var(--muted)', borderWidth:2,
+    { label:`累積${targetLabel()}進度`, data:bgtLine, borderColor:cssVar('--muted', '#276C9B'), borderWidth:2,
       borderDash:[2,3], tension:.1, pointRadius:0, fill:false, order:5 },
   ];
   // 各情境の予測カーブ（最終実績日から月末まで）
@@ -4121,7 +4135,7 @@ function renderBizSkuChartWith(biz, codeSet, root){
   const datasets = CHANNEL_LIST.map(ch => ({
     label: ch,
     data: MONTHS.map(m => Math.round(monthly[m].byChannel[ch].qty)),
-    backgroundColor: BIZ_SKU_CH_COLORS[ch] || 'var(--muted)',
+    backgroundColor: chartColor(BIZ_SKU_CH_COLORS[ch] || 'var(--muted)'),
     stack: 'total',
     borderRadius: 2,
   }));
@@ -5083,9 +5097,9 @@ function renderWeeklyContent(){
   if(yoy){
     datasets.push({
       label:'前年同週銷售', data: dataPrev.map(d => Math.floor(d.total/10000)),
-      borderColor:'var(--muted)', backgroundColor:'rgba(148,163,184,.10)',
+      borderColor:cssVar('--muted', '#276C9B'), backgroundColor:'rgba(148,163,184,.10)',
       borderWidth:2, borderDash:[6,4], pointRadius:3,
-      pointBackgroundColor:'var(--muted)', pointBorderColor:'#fff', pointBorderWidth:1,
+      pointBackgroundColor:cssVar('--muted', '#276C9B'), pointBorderColor:'#fff', pointBorderWidth:1,
       tension:0.25, fill:false,
     });
   }
