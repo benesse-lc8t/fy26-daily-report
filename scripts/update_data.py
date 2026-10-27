@@ -87,13 +87,13 @@ WEEKDAY_CH = ['一', '二', '三', '四', '五', '六', '日']  # Mon..Sun
 
 # 停班停課（颱風假等，非國定假日；手動維護，每次更新自動併入）
 # refs：各日期各自對應之佐證新聞連結，供事後查證停班停課正確性（一日一則）
+# nonWorking=True：這天不算工作天（併入 data.json 的 holidays；平日要另外在 WORKING_DAYS_OVERRIDE 扣掉）。
+# 2026-10-27 使用者指示：颱風停班停課要更正上班天數，7 月巴威颱風也一併追溯扣除。
 EXTRA_SUSPENSIONS = [
-    {'date': '2026-07-10', 'name': '巴威颱風・台北市停班停課', 'category': '停班停課',
+    {'date': '2026-07-10', 'name': '巴威颱風・台北市停班停課', 'category': '停班停課', 'nonWorking': True,
      'refs': ['https://news.pts.org.tw/article/816893']},
-    {'date': '2026-07-11', 'name': '巴威颱風・台北市停班停課', 'category': '停班停課',
+    {'date': '2026-07-11', 'name': '巴威颱風・台北市停班停課', 'category': '停班停課', 'nonWorking': True,
      'refs': ['https://news.pts.org.tw/article/817086']},
-    # nonWorking=True：這天不算工作天（併入 data.json 的 holidays；平日要另外在 WORKING_DAYS_OVERRIDE 扣掉）。
-    # 2026-10-27 使用者指示：颱風停班停課要更正上班天數。7 月巴威颱風當時只登錄、未扣工作天。
     {'date': '2026-10-23', 'name': '薔琵颱風・台北市停班停課', 'category': '停班停課', 'nonWorking': True,
      'refs': ['https://tw.news.yahoo.com/10-23%E5%8F%B0%E5%8C%97%E5%B8%82%E6%94%BE%E9%A2%B1%E9%A2%A8%E5%81%87-%E8%96%94%E7%90%B5%E9%A2%B1%E9%A2%A8%E4%BE%86%E8%A5%B2-%E5%85%A8%E5%8F%B0%E6%9C%80%E6%96%B0%E5%81%9C%E7%8F%AD%E5%81%9C%E8%AA%B2%E5%90%8D%E5%96%AE-%E6%AC%A1%E7%9C%8B-141340998.html']},
     {'date': '2026-10-24', 'name': '薔琵颱風・台北市停班停課', 'category': '停班停課', 'nonWorking': True,
@@ -103,6 +103,7 @@ EXTRA_SUSPENSIONS = [
 # 工作天數的人工更正（data.json 的 workingDays 是 2026-05 依 Excel「年度工作天」上傳的固定值，每日更新不會重算）。
 # 停班停課落在平日時，在這裡寫入更正後的天數；每次更新都會套用（重複執行結果相同）。
 WORKING_DAYS_OVERRIDE = {
+    '2026/07': 22,   # 原 23 天，扣 7/10（五）巴威颱風停班停課（2026-10-27 追溯）
     '2026/10': 19,   # 原 20 天，扣 10/23（五）薔琵颱風停班停課
 }
 
