@@ -16,23 +16,35 @@ check_source.py — 送檔前的「來源檔完整性自檢」（在使用者 Wi
      指定檔案：python check_source.py "D:\\path\\FY26商售實績明細(claude).xlsx"
      指定日期：python check_source.py --date 2026-10-20
 
+檢查內容（當月四個分頁）
+  · 最後日期：WEB&KOL／EC／WEB數位典藏 要到期望日；TM（電銷）週末與國定假日不上班，
+    只要到「期望日當天或之前的最後一個工作日」（工作日＝週一〜五、且不在 data.json 的 holidays）
+  · 中間缺日（月初〜期望日）：WEB&KOL、EC 任何一天 0 列；TM 任何工作日 0 列；
+    WEB數位典藏一天只有 1〜2 筆，0 列也列出，但可能是真的沒業績，請人工確認
+  · 使用者確認過「真的沒資料」的日子記在 check_source_confirmed.json（日期 → 分頁），不擋
+    （2026-10-27 起：連假後 TM 10/25〜26 被誤判落後，而 TM 10/23 的 0 列反而看不到）
+
 預設行為
   · 未指定檔案時，讀 daily_run.local.json 的 master_xlsx
-  · 未指定日期時，期望值＝「昨天」（週一則期望上週五，因為週末也有 WEB／EC 的單，
-    所以實際上仍用昨天；見 expected_date 說明）
-  · 回傳碼 0＝全部通過、1＝有分頁沒跟上、2＝設定或檔案問題
+  · 未指定日期時，期望值＝「昨天」
+  · 回傳碼 0＝全部通過、1＝有分頁沒跟上或有 0 列的日子（需要人看）、2＝設定或檔案問題
 
 相依套件
   pip install openpyxl
 """
 
-import sys, os, json, datetime, collections, argparse
+import sys, os, json, datetime, collections, argparse, unicodedata
 
 HERE = os.path.dirname(os.path.abspath(__file__))
 CONFIG = os.path.join(HERE, 'daily_run.local.json')
+CONFIRMED = os.path.join(HERE, 'check_source_confirmed.json')
+DATA_JSON = os.path.join(os.path.dirname(HERE), 'data.json')
 
 # 每日實績檔裡「當月」會用到的分頁字首（月份字首在執行時動態組出來）
 SHEET_SUFFIXES = ['WEB&KOL', 'EC', 'TM', 'WEB數位典藏']
+WORKDAY_ONLY = {'TM'}             # 只在工作日有資料
+MAYBE_ZERO = {'WEB數位典藏'}       # 0 列可能是真的沒業績
+WEEKDAY = '一二三四五六日'
 
 GREEN = '\033[92m'; RED = '\033[91m'; YEL = '\033[93m'; OFF = '\033[0m'
 if os.name == 'nt':
@@ -63,8 +75,54 @@ def fy_month_prefix(d):
     return '%02d%02d' % (d.year % 100, d.month)
 
 
+def pad(s, w=22):
+    """中文字佔兩格，補空白對齊。"""
+    n = sum(2 if unicodedata.east_asian_width(c) in 'WF' else 1 for c in s)
+    return s + ' ' * max(0, w - n)
+
+
+def fmt_days(days):
+    """[2026-10-23, ...] → '10/23（五）、...'"""
+    return '、'.join(f'{d.month}/{d.day}（{WEEKDAY[d.weekday()]}）' for d in days)
+
+
+def is_workday(d, holidays):
+    return d.weekday() < 5 and d not in holidays
+
+
+def last_workday(d, holidays):
+    while not is_workday(d, holidays):
+        d -= datetime.timedelta(days=1)
+    return d
+
+
+def load_holidays():
+    with open(DATA_JSON, encoding='utf-8') as f:
+        hol = json.load(f).get('holidays')
+    if not isinstance(hol, list):
+        raise ValueError('data.json 沒有 holidays 清單')
+    return {d for d in map(parse_date, hol) if d}
+
+
+def load_confirmed():
+    """{"YYYY-MM-DD": ["TM", ...]} → {date: {'TM', ...}}；底線開頭的鍵是說明。檔案不存在＝空清單。"""
+    if not os.path.exists(CONFIRMED):
+        return {}
+    with open(CONFIRMED, encoding='utf-8') as f:
+        raw = json.load(f)
+    out = {}
+    for k, v in raw.items():
+        if k.startswith('_'):
+            continue
+        d = parse_date(k)
+        if d is None or not isinstance(v, list) or not set(v) <= set(SHEET_SUFFIXES):
+            raise ValueError(f'格式不對：{k!r}: {v!r}（分頁只能是 {"／".join(SHEET_SUFFIXES)}）')
+        out[d] = set(v)
+    return out
+
+
 def sheet_last_date(ws):
-    """回傳 (總列數, 最後日期, {日期: 列數})。找不到日期欄時回 (0, None, {})。"""
+    """回傳 (總列數, 最後日期, {日期: 列數})；有日期欄但沒有資料時回 (0, None, {})。找不到日期欄時回 None。"""
     rows = list(ws.iter_rows(values_only=True))
     hdr = None
     for i, r in enumerate(rows[:8]):
@@ -72,7 +130,7 @@ def sheet_last_date(ws):
             hdr = i
             break
     if hdr is None:
-        return 0, None, {}
+        return None
     j = next(k for k, x in enumerate(rows[hdr]) if isinstance(x, str) and '日期' in x)
     per = collections.Counter()
     for r in rows[hdr + 1:]:
@@ -104,17 +162,35 @@ def main():
         print(f'{RED}找不到實績檔：{path}{OFF}')
         return 2
 
+    # ── 假日與確認清單 ──
+    try:
+        holidays = load_holidays()
+    except (OSError, ValueError) as e:
+        print(f'{RED}讀不到 {DATA_JSON} 的 holidays：{e}{OFF}')
+        return 2
+    try:
+        confirmed = load_confirmed()
+    except (OSError, ValueError) as e:
+        print(f'{RED}確認清單 {os.path.basename(CONFIRMED)} 讀不進來：{e}{OFF}')
+        return 2
+
     # ── 期望日期 ──
     if args.date:
         want = parse_date(args.date)
+        if want is None:
+            print(f'{RED}--date 格式不對：{args.date}（要 YYYY-MM-DD）{OFF}')
+            return 2
     else:
         want = datetime.date.today() - datetime.timedelta(days=1)
     prefix = fy_month_prefix(want)
+    month_start = want.replace(day=1)
+    want_tm = last_workday(want, holidays)
 
     mtime = datetime.datetime.fromtimestamp(os.path.getmtime(path))
     print(f'檔案：{os.path.basename(path)}')
     print(f'存檔時間：{mtime:%Y-%m-%d %H:%M}')
-    print(f'期望最後日期：{want}（{prefix} 分頁）')
+    print(f'期望最後日期：{want}（{prefix} 分頁）；TM 只看工作日 → {want_tm}')
+    print(f'缺日檢查：{month_start}〜期望日，0 列的日子都列出（確認清單上的不擋）')
     print('-' * 66)
 
     import openpyxl
@@ -124,39 +200,68 @@ def main():
         s = sn.strip()
         if not s.startswith(prefix):
             continue
-        n, mx, per = sheet_last_date(wb[sn])
-        found[s] = (n, mx, per)
+        found[s] = sheet_last_date(wb[sn])
 
-    ok = True
-    missing_sheets = []
+    rerun, ask, bad, missing_sheets = [], [], [], []
     for suf in SHEET_SUFFIXES:
         name = prefix + suf
+        want_s = want_tm if suf in WORKDAY_ONLY else want
+        if want_s < month_start:
+            print(f'{GREEN}✓ {pad(name)} 本月還沒有工作日，不檢查{OFF}')
+            continue
         hit = next((k for k in found if k.replace(' ', '') == name.replace(' ', '')), None)
         if hit is None:
-            print(f'{YEL}？ {name:<22} 找不到這個分頁{OFF}')
+            print(f'{YEL}？ {pad(name)} 找不到這個分頁{OFF}')
             missing_sheets.append(name)
             continue
+        if found[hit] is None:
+            print(f'{RED}✗ {pad(hit)} 讀不到日期欄{OFF}')
+            bad.append(hit)
+            continue
         n, mx, per = found[hit]
-        if mx is None:
-            print(f'{RED}✗ {hit:<22} 讀不到日期欄{OFF}')
-            ok = False
-        elif mx >= want:
-            print(f'{GREEN}✓ {hit:<22} 列數 {n:>5}　最後 {mx}　當日 {per.get(want, 0)} 列{OFF}')
+
+        days = [month_start + datetime.timedelta(days=i) for i in range((want_s - month_start).days + 1)]
+        if suf in WORKDAY_ONLY:
+            days = [d for d in days if is_workday(d, holidays)]
+        zero = [d for d in days if not per.get(d)]
+        ok_zero = [d for d in zero if suf in confirmed.get(d, ())]
+        tail = [d for d in zero if d not in ok_zero and (mx is None or d > mx)]
+        holes = [d for d in zero if d not in ok_zero and mx is not None and d < mx]
+
+        if not tail:
+            due = f'當日 {per.get(want, 0)} 列' if want_s == want else f'期望 {want_s}（最後一個工作日）'
+            mark = f'{RED}✗' if holes else f'{GREEN}✓'
+            print(f'{mark} {pad(hit)} 列數 {n:>5}　最後 {mx or "—"}　{due}{OFF}')
+        elif suf in MAYBE_ZERO:
+            print(f'{RED}✗ {pad(hit)} 列數 {n:>5}　最後 {mx or "—"}　{fmt_days(tail)} 0 列 ← 可能是真的沒業績，請人工確認{OFF}')
+            ask.append(hit)
+        elif mx is None:
+            print(f'{RED}✗ {pad(hit)} 本月還沒有任何資料 ← 請重跑這個分頁{OFF}')
+            rerun.append(hit)
         else:
-            lag = (want - mx).days
-            print(f'{RED}✗ {hit:<22} 列數 {n:>5}　最後 {mx}　落後 {lag} 天 ← 請重跑這個分頁{OFF}')
-            ok = False
+            print(f'{RED}✗ {pad(hit)} 列數 {n:>5}　最後 {mx}　落後 {(want_s - mx).days} 天 ← 請重跑這個分頁{OFF}')
+            rerun.append(hit)
+        if holes:
+            note = '可能是真的沒業績，請人工確認' if suf in MAYBE_ZERO else '請確認是沒刷到還是真的沒資料'
+            print(f'{RED}    ✗ 中間 0 列：{fmt_days(holes)} ← {note}{OFF}')
+            if hit not in ask:
+                ask.append(hit)
+        if ok_zero:
+            print(f'    · 已確認無資料：{fmt_days(ok_zero)}')
     wb.close()
 
     print('-' * 66)
-    if ok and not missing_sheets:
-        print(f'{GREEN}全部分頁都到 {want}，可以送出。{OFF}')
+    if not (rerun or ask or bad or missing_sheets):
+        print(f'{GREEN}全部分頁都到期望日、本月沒有未確認的缺日，可以送出。{OFF}')
         return 0
-    if missing_sheets and ok:
+    if missing_sheets:
         print(f'{YEL}有分頁找不到（可能是分頁名稱改了），請人工確認。{OFF}')
-        return 1
-    print(f'{RED}有分頁沒跟上。請在 Excel 重跑 RefreshAll（或對該分頁的樞紐表按右鍵→重新整理），{OFF}')
-    print(f'{RED}存檔後再執行一次本檢查。{OFF}')
+    if rerun or bad:
+        print(f'{RED}有分頁沒跟上。請在 Excel 重跑 RefreshAll（或對該分頁的樞紐表按右鍵→重新整理），{OFF}')
+        print(f'{RED}存檔後再執行一次本檢查。{OFF}')
+    if ask:
+        print(f'{RED}有 0 列的日子（{"、".join(ask)}）。沒刷到就在 Excel 重跑；{OFF}')
+        print(f'{RED}確認是真的沒資料，就把日期與分頁加進 scripts/{os.path.basename(CONFIRMED)} 後再跑一次。{OFF}')
     return 1
 
 
