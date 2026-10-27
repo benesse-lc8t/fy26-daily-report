@@ -6630,12 +6630,16 @@ function renderHolidayTab(){
     }
     html += `<td class="dim" style="white-space:nowrap">${sus ? '🌀 ' : ''}${fmt(e.date)}</td>`;
     html += `<td style="text-align:center">${e.weekday}</td>`;
-    html += `<td style="text-align:left">${e.name || '—'}${refsHtml}</td>`;
+    // nonWorking：已自工作天數扣除（時間進度、預估目標、每平日都依此計算）
+    const nwTag = e.nonWorking
+      ? ' <span style="display:inline-block;padding:1px 8px;border-radius:10px;background:#FEF3C7;color:#92400E;font-size:var(--fs-xs);font-weight:700;white-space:nowrap">不計工作天</span>'
+      : '';
+    html += `<td style="text-align:left">${e.name || '—'}${nwTag}${refsHtml}</td>`;
     html += `<td style="text-align:center">${badge}</td>`;
     html += `</tr>`;
   }
   html += '</tbody></table></div>';
-  html += `<div class="legend" style="margin-top:8px">※ 期間為 FY26 會計年度（2026/4/1〜2027/3/31）。停班停課日為台北市政府公告之停止上班上課日。</div>`;
+  html += `<div class="legend" style="margin-top:8px">※ 期間為 FY26 會計年度（2026/4/1〜2027/3/31）。停班停課日為台北市政府公告之停止上班上課日。標示「不計工作天」者已自該月工作天數扣除，對時間進度達成率、預估目標、每平日產出等全站計算皆依此。</div>`;
   html += '</div>';
   panel.innerHTML = html;
 }
