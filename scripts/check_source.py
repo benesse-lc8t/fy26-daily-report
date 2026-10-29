@@ -16,7 +16,7 @@ check_source.py — 送檔前的「來源檔完整性自檢」（在使用者 Wi
      指定檔案：python check_source.py "D:\\path\\FY26商售實績明細(claude).xlsx"
      指定日期：python check_source.py --date 2026-10-20
 
-檢查內容（當月四個分頁）
+檢查內容（當月四個分頁；每月 1〜7 日再加上個月的四個分頁，要到上個月月底）
   · 最後日期：WEB&KOL／EC／WEB數位典藏 要到期望日；TM（電銷）週末與國定假日不上班，
     只要到「期望日當天或之前的最後一個工作日」（工作日＝週一〜五、且不在 data.json 的 holidays）
   · 中間缺日（月初〜期望日）：WEB&KOL、EC 任何一天 0 列；TM 任何工作日 0 列；
@@ -182,15 +182,20 @@ def main():
             return 2
     else:
         want = datetime.date.today() - datetime.timedelta(days=1)
-    prefix = fy_month_prefix(want)
     month_start = want.replace(day=1)
-    want_tm = last_workday(want, holidays)
+    # 檢查對象：當月；月初第一週再加上上個月（月底最後幾天要等換月後才會進來，
+    # 例：11/2 早上 2610 分頁要到 10/31、TM 到 10/30。2026-10-29 換月準備）
+    targets = [(fy_month_prefix(want), month_start, want, last_workday(want, holidays))]
+    if want.day <= 7:
+        pend = month_start - datetime.timedelta(days=1)
+        targets.append((fy_month_prefix(pend), pend.replace(day=1), pend, last_workday(pend, holidays)))
 
     mtime = datetime.datetime.fromtimestamp(os.path.getmtime(path))
     print(f'檔案：{os.path.basename(path)}')
     print(f'存檔時間：{mtime:%Y-%m-%d %H:%M}')
-    print(f'期望最後日期：{want}（{prefix} 分頁）；TM 只看工作日 → {want_tm}')
-    print(f'缺日檢查：{month_start}〜期望日，0 列的日子都列出（確認清單上的不擋）')
+    for prefix, start, w, wt in targets:
+        print(f'期望最後日期：{w}（{prefix} 分頁）；TM 只看工作日 → {wt}')
+    print(f'缺日檢查：各月月初〜期望日，0 列的日子都列出（確認清單上的不擋）')
     print('-' * 66)
 
     import openpyxl
@@ -198,56 +203,57 @@ def main():
     found = {}
     for sn in wb.sheetnames:
         s = sn.strip()
-        if not s.startswith(prefix):
+        if not any(s.startswith(t[0]) for t in targets):
             continue
         found[s] = sheet_last_date(wb[sn])
 
     rerun, ask, bad, missing_sheets = [], [], [], []
-    for suf in SHEET_SUFFIXES:
-        name = prefix + suf
-        want_s = want_tm if suf in WORKDAY_ONLY else want
-        if want_s < month_start:
-            print(f'{GREEN}✓ {pad(name)} 本月還沒有工作日，不檢查{OFF}')
-            continue
-        hit = next((k for k in found if k.replace(' ', '') == name.replace(' ', '')), None)
-        if hit is None:
-            print(f'{YEL}？ {pad(name)} 找不到這個分頁{OFF}')
-            missing_sheets.append(name)
-            continue
-        if found[hit] is None:
-            print(f'{RED}✗ {pad(hit)} 讀不到日期欄{OFF}')
-            bad.append(hit)
-            continue
-        n, mx, per = found[hit]
+    for prefix, month_start, want, want_tm in targets:
+        for suf in SHEET_SUFFIXES:
+            name = prefix + suf
+            want_s = want_tm if suf in WORKDAY_ONLY else want
+            if want_s < month_start:
+                print(f'{GREEN}✓ {pad(name)} 本月還沒有工作日，不檢查{OFF}')
+                continue
+            hit = next((k for k in found if k.replace(' ', '') == name.replace(' ', '')), None)
+            if hit is None:
+                print(f'{YEL}？ {pad(name)} 找不到這個分頁{OFF}')
+                missing_sheets.append(name)
+                continue
+            if found[hit] is None:
+                print(f'{RED}✗ {pad(hit)} 讀不到日期欄{OFF}')
+                bad.append(hit)
+                continue
+            n, mx, per = found[hit]
 
-        days = [month_start + datetime.timedelta(days=i) for i in range((want_s - month_start).days + 1)]
-        if suf in WORKDAY_ONLY:
-            days = [d for d in days if is_workday(d, holidays)]
-        zero = [d for d in days if not per.get(d)]
-        ok_zero = [d for d in zero if suf in confirmed.get(d, ())]
-        tail = [d for d in zero if d not in ok_zero and (mx is None or d > mx)]
-        holes = [d for d in zero if d not in ok_zero and mx is not None and d < mx]
+            days = [month_start + datetime.timedelta(days=i) for i in range((want_s - month_start).days + 1)]
+            if suf in WORKDAY_ONLY:
+                days = [d for d in days if is_workday(d, holidays)]
+            zero = [d for d in days if not per.get(d)]
+            ok_zero = [d for d in zero if suf in confirmed.get(d, ())]
+            tail = [d for d in zero if d not in ok_zero and (mx is None or d > mx)]
+            holes = [d for d in zero if d not in ok_zero and mx is not None and d < mx]
 
-        if not tail:
-            due = f'當日 {per.get(want, 0)} 列' if want_s == want else f'期望 {want_s}（最後一個工作日）'
-            mark = f'{RED}✗' if holes else f'{GREEN}✓'
-            print(f'{mark} {pad(hit)} 列數 {n:>5}　最後 {mx or "—"}　{due}{OFF}')
-        elif suf in MAYBE_ZERO:
-            print(f'{RED}✗ {pad(hit)} 列數 {n:>5}　最後 {mx or "—"}　{fmt_days(tail)} 0 列 ← 可能是真的沒業績，請人工確認{OFF}')
-            ask.append(hit)
-        elif mx is None:
-            print(f'{RED}✗ {pad(hit)} 本月還沒有任何資料 ← 請重跑這個分頁{OFF}')
-            rerun.append(hit)
-        else:
-            print(f'{RED}✗ {pad(hit)} 列數 {n:>5}　最後 {mx}　落後 {(want_s - mx).days} 天 ← 請重跑這個分頁{OFF}')
-            rerun.append(hit)
-        if holes:
-            note = '可能是真的沒業績，請人工確認' if suf in MAYBE_ZERO else '請確認是沒刷到還是真的沒資料'
-            print(f'{RED}    ✗ 中間 0 列：{fmt_days(holes)} ← {note}{OFF}')
-            if hit not in ask:
+            if not tail:
+                due = f'當日 {per.get(want, 0)} 列' if want_s == want else f'期望 {want_s}（最後一個工作日）'
+                mark = f'{RED}✗' if holes else f'{GREEN}✓'
+                print(f'{mark} {pad(hit)} 列數 {n:>5}　最後 {mx or "—"}　{due}{OFF}')
+            elif suf in MAYBE_ZERO:
+                print(f'{RED}✗ {pad(hit)} 列數 {n:>5}　最後 {mx or "—"}　{fmt_days(tail)} 0 列 ← 可能是真的沒業績，請人工確認{OFF}')
                 ask.append(hit)
-        if ok_zero:
-            print(f'    · 已確認無資料：{fmt_days(ok_zero)}')
+            elif mx is None:
+                print(f'{RED}✗ {pad(hit)} 本月還沒有任何資料 ← 請重跑這個分頁{OFF}')
+                rerun.append(hit)
+            else:
+                print(f'{RED}✗ {pad(hit)} 列數 {n:>5}　最後 {mx}　落後 {(want_s - mx).days} 天 ← 請重跑這個分頁{OFF}')
+                rerun.append(hit)
+            if holes:
+                note = '可能是真的沒業績，請人工確認' if suf in MAYBE_ZERO else '請確認是沒刷到還是真的沒資料'
+                print(f'{RED}    ✗ 中間 0 列：{fmt_days(holes)} ← {note}{OFF}')
+                if hit not in ask:
+                    ask.append(hit)
+            if ok_zero:
+                print(f'    · 已確認無資料：{fmt_days(ok_zero)}')
     wb.close()
 
     print('-' * 66)

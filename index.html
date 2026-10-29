@@ -2454,9 +2454,13 @@ function rateCellHTML(b, a){
 /* ---------- Month selector ---------- */
 function initMonthSelector(){
   const sel = document.getElementById("month-select");
-  // 默認：依今天的實際月份（例如現在是6月就預設6月）
+  // 默認：依今天的實際月份（例如現在是6月就預設6月）。
+  // 月初空窗期（新月份還沒有任何工作日的實績，例：11/2 早上資料只到 11/1 週日）先顯示上個月的結算，
+  // 等新月份第一個工作日的資料進來再切過去（2026-10-29 換月準備）。
   const nowMonth = `${new Date().getMonth()+1}月`;
-  const defaultMonth = MONTHS.includes(nowMonth) ? nowMonth : "4月";
+  let defaultMonth = MONTHS.includes(nowMonth) ? nowMonth : "4月";
+  const mi = MONTHS.indexOf(defaultMonth), tp = getTimeProgress(defaultMonth);
+  if(mi > 0 && (!tp || tp.elapsed === 0) && hasActualData(MONTHS[mi-1])) defaultMonth = MONTHS[mi-1];
   STATE.selectedMonth = STATE.selectedMonth || defaultMonth;
   sel.innerHTML = MONTHS.map(m=>`<option value="${m}" ${m===STATE.selectedMonth?"selected":""}>${m}</option>`).join("");
   sel.disabled = false;
@@ -3120,6 +3124,10 @@ function fcstProject(cum, lastDay, dim, head21, mult){
 
 const FCST_SCN_COLORS = { low:'#B91C1C', base:'#7C3AED', high:'#15803D', live:'#C2410C' };
 
+// 月初前幾個工作日不推估：例如 11/2 早上只有 11/1（週日）一天，用一天外推整個月的預估與缺口沒有意義。
+// 第 FCST_MIN_WD 個工作日的資料進來才顯示月末預估（2026-10-29 換月準備）。
+const FCST_MIN_WD = 3;
+
 function fcstBuild(){
   const month = STATE.fcstMonth || STATE.selectedMonth;
   const biz = fcstBizArg(), ch = fcstChArg();
@@ -3139,15 +3147,17 @@ function fcstBuild(){
   const hm = hist.map(h=>h.mult);
   const live = fcstMultiplier(month, biz, ch);
 
+  const tp = getTimeProgress(month);
+  const tooEarly = lastDay < dim && tp && tp.elapsed < FCST_MIN_WD ? { elapsed: tp.elapsed } : null;
   const scenarios = [];
-  if(hm.length){
+  if(hm.length && !tooEarly){
     const lo = Math.min(...hm), md = fcstMedian(hm), hi = Math.max(...hm);
     const loM = hist.find(h=>h.mult === lo).month, hiM = hist.find(h=>h.mult === hi).month;
     scenarios.push({ key:'low',  name:`保守（${loM}型）`, mult:lo, color:FCST_SCN_COLORS.low });
     scenarios.push({ key:'base', name:`基準（歷史中位）`, mult:md, color:FCST_SCN_COLORS.base });
     scenarios.push({ key:'high', name:`樂觀（${hiM}型）`, mult:hi, color:FCST_SCN_COLORS.high });
   }
-  if(live && live.mult != null && isFinite(live.mult)){
+  if(live && live.mult != null && isFinite(live.mult) && !tooEarly){
     scenarios.push({ key:'live', name:'本月實測', mult:live.mult, color:FCST_SCN_COLORS.live });
   }
   for(const sc of scenarios){
@@ -3182,7 +3192,7 @@ function fcstBuild(){
   }
 
   return { month, dim, lastDay, cum, head21, budget, undated, rows,
-           scenarios, main, hist, live, totalWD, empty:false };
+           scenarios, main, hist, live, totalWD, tooEarly, empty:false };
 }
 
 function fcstKpiHTML(d){
@@ -3200,7 +3210,8 @@ function fcstKpiHTML(d){
     <div class="fcst-kpi est">
       <div class="k">月末預估${d.main ? `（${d.main.name}）` : ''}</div>
       <div class="v">${est!=null?fmtAmt(est):'—'}<span class="u">萬</span></div>
-      <div class="s">${d.main?`月末倍率 ${d.main.mult.toFixed(2)}x · 剩餘 ${Math.max(d.dim-d.lastDay,0)} 天 × 日均 ${fmtAmt(d.main.dayRate)} 萬`:'資料不足，無法推估'}</div>
+      <div class="s">${d.main?`月末倍率 ${d.main.mult.toFixed(2)}x · 剩餘 ${Math.max(d.dim-d.lastDay,0)} 天 × 日均 ${fmtAmt(d.main.dayRate)} 萬`
+                     :(d.tooEarly?`月初（已過 ${d.tooEarly.elapsed} 個工作日），第 ${FCST_MIN_WD} 個工作日起推估`:'資料不足，無法推估')}</div>
     </div>
     <div class="fcst-kpi rate">
       <div class="k">預估達成率</div>
@@ -3215,6 +3226,10 @@ function fcstKpiHTML(d){
 }
 
 function fcstScenarioTableHTML(d){
+  if(d.tooEarly){
+    return `<div class="fcst-empty">月初資料不足（已過 ${d.tooEarly.elapsed} 個工作日）。只用一兩天外推整個月誤差太大，`
+         + `第 ${FCST_MIN_WD} 個工作日的資料進來後才顯示月末推估。</div>`;
+  }
   if(!d.scenarios.length){
     return '<div class="fcst-empty">尚無已完結月份可供推算月末倍率（需至少一個完整月份的實績）。</div>';
   }
