@@ -6608,7 +6608,7 @@ const PRODUCT_STATUS = [
 function poStatusHTML(){
   let h = '<div class="card"><h2>其他商品狀態</h2><div class="scroll-x"><table class="grid">';
   h += '<thead><tr><th class="l1">商品</th><th class="l2" style="text-align:left">狀態</th></tr></thead><tbody>';
-  for(const s of PRODUCT_STATUS) h += `<tr><td class="dim">${s.title}</td><td style="text-align:left">${s.note}</td></tr>`;
+  for(const s of PRODUCT_STATUS) h += `<tr><td class="dim">${s.title}</td><td style="text-align:left;white-space:normal">${s.note}</td></tr>`;
   return h + '</tbody></table></div></div>';
 }
 
