@@ -5819,7 +5819,8 @@ function renderHandPuppetTab(){
   html += '<div class="card wide">';
   html += `<h2>巧虎手偶 — 達成狀況 <span class="pill">${codes.size} 商品 / 本月：${m}</span></h2>`;
   html += `<div style="font-size:var(--fs-md);color:var(--secondary);margin:0 0 14px 0;line-height:1.6;padding:12px 16px;background:var(--stripe);border-radius:6px;border-left:3px solid var(--accent)">
-    對象商品：巧虎手偶 <strong>${codes.size}</strong> 個製編（與在庫儀表板一致）——${HANDPUPPET_CODES.map(c=>`${c} ${HANDPUPPET_NAMES[c]}`).join('、')}。目標僅到事業×通路級別、無產品級目標，故僅顯示實績。
+    對象商品：巧虎手偶 <strong>${codes.size}</strong> 個製編（與在庫儀表板一致）——${HANDPUPPET_CODES.map(c=>`${c} ${HANDPUPPET_NAMES[c]}`).join('、')}。目標僅到事業×通路級別、無產品級目標，故僅顯示實績。<br>
+    <strong>銷售狀態：</strong>${PRODUCT_STATUS.find(s => s.id === 'handpuppet').note}
   </div>`;
   html += '<div class="kpi-grid">';
   html += handPuppetKpiCard('FY26 年間', '全年（4月〜3月）', 'year', yearQty, yearAmt);
@@ -6596,16 +6597,27 @@ function poRenderChart(rule){
   });
 }
 
+// 其他商品的銷售狀態（使用者 2026-11-03 提供）。只是說明文字，不影響實績計算，
+// 所以不放 PREORDER_RULES（那邊的商品會在解析階段從實績分流出去）。
+const PRODUCT_STATUS = [
+  { id: 'handpuppet', title: '巧虎手偶',
+    note: '銷售至 2026/10/8，待新手偶 2611 月入庫後再上架。預計 11/4 入庫、11/5 上架販售、11/6 開始出貨。期中目標在 2610 月未放入。' },
+  { id: 'mop', title: '拖把小精靈',
+    note: '目前各管道所設定的庫存賣完，即該管道停售，該商品也就停售了，不另行公告。' },
+];
+function poStatusHTML(){
+  let h = '<div class="card"><h2>其他商品狀態</h2><div class="scroll-x"><table class="grid">';
+  h += '<thead><tr><th class="l1">商品</th><th class="l2" style="text-align:left">狀態</th></tr></thead><tbody>';
+  for(const s of PRODUCT_STATUS) h += `<tr><td class="dim">${s.title}</td><td style="text-align:left">${s.note}</td></tr>`;
+  return h + '</tbody></table></div></div>';
+}
+
 function renderPreorderTab(){
   const panel = document.getElementById('panel-preorder');
   if(!panel) return;
   destroyCharts();
   const rules = poRules();
-  if(!rules.length){
-    panel.innerHTML = '<div class="placeholder">目前沒有停售／預購中的商品。</div>';
-    return;
-  }
-  panel.innerHTML = rules.map(poCardHTML).join('');
+  panel.innerHTML = poStatusHTML() + rules.map(poCardHTML).join('');
   rules.forEach(poRenderChart);
 }
 

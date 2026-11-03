@@ -110,6 +110,9 @@ PLAYWRIGHT_BROWSERS_PATH=/opt/pw-browsers node <e2e腳本>
 分流到 `data.json` 的 `preorderRows`，**不進 actualRows / actuals**，儀表板另有
 「停售／預購」分頁追蹤，主儀表板頂部有提醒條。
 
+只是說明文字、不影響實績計算的商品狀態（巧虎手偶、拖把小精靈）寫在 `index.html` 的
+**`PRODUCT_STATUS`**，顯示在「停售／預購」與「手偶」分頁，不要放進 `PREORDER_RULES`。
+
 目前規則：**巧虎雙語點讀圖鑑**（`20250FE00`、`20250FXBH`）
 9/21 各管道停售 → 9/29～11/26 預購 → 12/1 重新上架。
 預購須待 11 月底入庫後出貨，故不計入實績。
