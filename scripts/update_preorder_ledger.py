@@ -44,8 +44,9 @@ CH_MAP = {'WEB': 'WEB', 'KOL': 'KOL', '蝦皮': 'EC', 'TM': 'TM'}
 CH_ORDER = ['WEB', 'KOL', '蝦皮', 'TM']
 
 
-def find_header(ws, max_scan=20, max_col=24):
-    """找標題列，回傳 (列號, 套數欄 index dict, 金額欄 index dict)。"""
+def find_header(ws, max_scan=80, max_col=24):
+    """找標題列，回傳 (列號, 套數欄 index dict, 金額欄 index dict)。
+    2026-11-03 她把每日明細往下移（標題列 11 → 33），掃描範圍放寬；每日表約 60 列，不會誤判。"""
     for r, row in enumerate(ws.iter_rows(max_row=max_scan, max_col=max_col, values_only=True), 1):
         vals = [str(v).strip() if v is not None else '' for v in row]
         hits = [i for i, v in enumerate(vals) if v == 'WEB']
