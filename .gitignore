@@ -23,3 +23,6 @@ _蝦皮_解密.xlsx
 # Python bytecode（update_kol.py import update_master 後產生）
 __pycache__/
 *.py[cod]
+
+# 發布用資料夾（由 scripts/build_site.py 產生）
+_site/
