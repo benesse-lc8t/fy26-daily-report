@@ -21,7 +21,7 @@ prepare 不會 commit 也不會 push。回傳碼：
 只放筆數、日期與差異明細，不放推估或缺口：commit 訊息由它產生，而 repo 是公開的。
 """
 
-import os, sys, json, shutil, subprocess, argparse, datetime, tempfile, collections, time, urllib.request
+import atexit, os, sys, json, shutil, subprocess, argparse, datetime, tempfile, collections, time, urllib.request
 
 HERE = os.path.dirname(os.path.abspath(__file__))
 REPO = os.path.dirname(HERE)
@@ -63,6 +63,13 @@ def load_json(p):
 
 def md(iso):
     return f'{int(iso[5:7])}/{int(iso[8:10])}' if iso else '—'
+
+
+def remove_source_copies(src_dir):
+    """來源檔副本只給這次執行用，結束就移除，不留在暫存資料夾。"""
+    shutil.rmtree(src_dir, ignore_errors=True)
+    if os.path.exists(src_dir):
+        print(f'⚠ 來源檔副本沒有移除，請手動處理：{src_dir}')
 
 
 def lock_safe_copy(src, dst_dir):
@@ -224,6 +231,7 @@ def cmd_prepare(a):
     stamp = datetime.datetime.now().strftime('%Y%m%d_%H%M%S')
     work = os.path.join(WORK_ROOT, stamp); src_dir = os.path.join(work, 'src')
     os.makedirs(src_dir, exist_ok=True)
+    atexit.register(remove_source_copies, src_dir)
     s = {'status': None, 'stops': [], 'warnings': [], 'workDir': work, 'expectedDate': want,
          'sources': {}, 'headBefore': git('rev-parse', '--short', 'HEAD')[1].strip()}
 
