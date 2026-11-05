@@ -30,7 +30,6 @@ CONFIG = os.path.join(HERE, 'daily_run.local.json')
 WORK_ROOT = os.path.join(tempfile.gettempdir(), 'fy26_daily')
 LATEST = os.path.join(WORK_ROOT, 'latest.json')
 
-GH_API = 'https://api.github.com/repos/benesse-lc8t/fy26-daily-report/actions/runs?per_page=10'
 LIVE_DATA = 'https://benesse-lc8t.github.io/fy26-daily-report/data.json'
 
 MONTHS = ['4月', '5月', '6月', '7月', '8月', '9月', '10月', '11月', '12月', '1月', '2月', '3月']
@@ -354,6 +353,23 @@ def commit_message(s):
     return head + '\n\n' + '\n'.join(body) + '\n\n' + TRAILER + '\n'
 
 
+def wait_for_live(local, timeout=300, interval=10):
+    """等線上 data.json 變成本機這份。直接比對線上內容，不用 GitHub API（共用 IP 時未認證額度常被用完）。"""
+    deadline = time.time() + timeout; state = 'pending'
+    while time.time() < deadline:
+        try:
+            with urllib.request.urlopen(f'{LIVE_DATA}?_={int(time.time())}', timeout=30) as f:
+                live = json.load(f)
+            if live.get('generatedAt') == local.get('generatedAt') and len(live['actualRows']) == len(local['actualRows']):
+                print(f"線上 data.json：generatedAt {live.get('generatedAt')}　{len(live['actualRows']):,} 筆　與本機一致")
+                return True, 'completed success'
+            state = f"線上仍是舊資料 {live.get('generatedAt')}"
+        except Exception as e:  # 網路暫時失敗就再等
+            state = f'線上 data.json 讀取失敗：{e}'
+        time.sleep(interval)
+    return False, state
+
+
 def cmd_publish(a):
     s, path = latest_summary(a.summary)
     if s['status'] != 'ok' and not a.force:
@@ -375,32 +391,8 @@ def cmd_publish(a):
         print('✗ push 失敗：\n' + out); return 2
     print('push 完成，等待部署…')
 
-    local = load_json(DATA_JSON)
-    deadline = time.time() + 300; state = 'pending'
-    while time.time() < deadline:
-        try:
-            with urllib.request.urlopen(GH_API, timeout=20) as f:
-                runs = json.load(f)['workflow_runs']
-            hit = [r for r in runs if r['head_sha'] == sha and r['name'] == 'Deploy to GitHub Pages']
-            if hit:
-                state = f"{hit[0]['status']} {hit[0]['conclusion']}"
-                if hit[0]['status'] == 'completed':
-                    break
-        except Exception as e:  # 網路暫時失敗就再等
-            state = f'查詢失敗 {e}'
-        time.sleep(10)
+    ok, state = wait_for_live(load_json(DATA_JSON))
     print(f'部署：{state}')
-    ok = state == 'completed success'
-    if ok:
-        time.sleep(5)
-        try:
-            with urllib.request.urlopen(f'{LIVE_DATA}?_={int(time.time())}', timeout=30) as f:
-                live = json.load(f)
-            same = live.get('generatedAt') == local.get('generatedAt') and len(live['actualRows']) == len(local['actualRows'])
-            print(f"線上 data.json：generatedAt {live.get('generatedAt')}　{len(live['actualRows']):,} 筆　{'與本機一致' if same else '與本機不一致！'}")
-            ok = same
-        except Exception as e:
-            print(f'線上 data.json 讀取失敗：{e}'); ok = False
     s.update({'published': {'sha': sha[:7], 'deploy': state, 'liveVerified': ok}})
     with open(path, 'w', encoding='utf-8') as f:
         json.dump(s, f, ensure_ascii=False, indent=1)
