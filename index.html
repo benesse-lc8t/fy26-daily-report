@@ -5733,19 +5733,21 @@ function renderAovChart(biz, ch){
 /* ============================================================
    Tab: 巧虎手偶（商品名包含「手偶」的商品集合）
    ============================================================ */
-// 巧虎手偶＝在庫儀表板指定的 3 個製編（不用模糊名稱比對，避免把「套組+手偶」組合包算進來）
-const HANDPUPPET_CODES = ['2018AC812', '20240FJ00', '20250FXAM'];
+// 巧虎手偶＝在庫儀表板指定的 3 個製編，加上 2026-11-05 上架的新手偶製編（使用者 2026-11-06 確認）。
+// 不用模糊名稱比對，避免把「套組+手偶」組合包算進來
+const HANDPUPPET_CODES = ['2018AC812', '20240FJ00', '20250FXAM', '20260FXAB'];
 const HANDPUPPET_NAMES = {
   '2018AC812': '巧虎手偶',
   '20240FJ00': '互動遊戲組',
   '20250FXAM': '巧虎手偶+說明信',
+  '20260FXAB': '巧虎手偶（新製編）',
 };
 function getHandPuppetCodes(){
   return new Set(HANDPUPPET_CODES);
 }
 
 const PUPPET_BUNDLE_PRICE = 190; // 套組中手偶部分的固定未稅單價
-const PUPPET_PURE_CODE = '20250FXAM'; // 純手偶商品：使用實際未稅金額
+const PUPPET_PURE_CODES = new Set(['20250FXAM', '20260FXAB']); // 純手偶商品：使用實際未稅金額
 
 function aggregateHandPuppet(codes){
   const data = {
@@ -5761,7 +5763,7 @@ function aggregateHandPuppet(codes){
     if(!codes.has(r.code)) continue;
     if(!MONTHS.includes(r.month)) continue;
     // 純手偶商品用實際未稅金額；套組內的手偶部分固定190元（未稅）
-    const puppetAmt = r.code === PUPPET_PURE_CODE ? r.amt : r.qty * PUPPET_BUNDLE_PRICE;
+    const puppetAmt = PUPPET_PURE_CODES.has(r.code) ? r.amt : r.qty * PUPPET_BUNDLE_PRICE;
     data.monthly[r.month].qty += r.qty;
     data.monthly[r.month].amt += puppetAmt;
     if(CHANNEL_LIST.includes(r.ch)){
@@ -5819,7 +5821,7 @@ function renderHandPuppetTab(){
   html += '<div class="card wide">';
   html += `<h2>巧虎手偶 — 達成狀況 <span class="pill">${codes.size} 商品 / 本月：${m}</span></h2>`;
   html += `<div style="font-size:var(--fs-md);color:var(--secondary);margin:0 0 14px 0;line-height:1.6;padding:12px 16px;background:var(--stripe);border-radius:6px;border-left:3px solid var(--accent)">
-    對象商品：巧虎手偶 <strong>${codes.size}</strong> 個製編（與在庫儀表板一致）——${HANDPUPPET_CODES.map(c=>`${c} ${HANDPUPPET_NAMES[c]}`).join('、')}。目標僅到事業×通路級別、無產品級目標，故僅顯示實績。<br>
+    對象商品：巧虎手偶 <strong>${codes.size}</strong> 個製編（在庫儀表板的 3 個，加上 11/5 上架的新製編）——${HANDPUPPET_CODES.map(c=>`${c} ${HANDPUPPET_NAMES[c]}`).join('、')}。目標僅到事業×通路級別、無產品級目標，故僅顯示實績。<br>
     <strong>銷售狀態：</strong>${PRODUCT_STATUS.find(s => s.id === 'handpuppet').note}
   </div>`;
   html += '<div class="kpi-grid">';
@@ -6601,7 +6603,7 @@ function poRenderChart(rule){
 // 所以不放 PREORDER_RULES（那邊的商品會在解析階段從實績分流出去）。
 const PRODUCT_STATUS = [
   { id: 'handpuppet', title: '巧虎手偶',
-    note: '銷售至 2026/10/8，待新手偶 2611 月入庫後再上架。預計 11/4 入庫、11/5 上架販售、11/6 開始出貨。期中目標 2610 月未放入，2611 月有放入。' },
+    note: '舊手偶銷售至 2026/10/8。新手偶（製編 20260FXAB）2026/11/5 上架販售。期中目標 2610 月未放入，2611 月有放入。' },
   { id: 'mop', title: '拖把小精靈',
     note: '目前各管道所設定的庫存賣完，即該管道停售，該商品也就停售了，不另行公告。' },
 ];
