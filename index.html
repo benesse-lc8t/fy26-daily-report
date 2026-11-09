@@ -2543,6 +2543,14 @@ function renderOverallKPIs(){
       yearBudget, yearActual, null, mkBases(MONTHS));
   document.getElementById("kpi-month").innerHTML = kpiCardHTML("當月", m,
       monthBudget, monthActual, mkPace([m], monthActual, '當月'), mkBases([m]), !hasActualData(m));
+  // 預購認列是一次性的金額：當月卡片另外列出不含時的達成率（使用者 2026-11-05：11 月要分開看含與不含圖鑑）
+  const recog = isYoY() ? 0 : poRecognizedAmt(m);
+  if(recog > 0){
+    const ex = monthActual - recog;
+    document.getElementById("kpi-month").insertAdjacentHTML('beforeend',
+      `<div class="kpi-note">※ 實績含點讀圖鑑預購認列 <b>${fmtAmt(recog)} 萬</b>（以出貨日認列）。`
+      + `不含時實績 ${fmtAmt(ex)} 萬，對${targetLabel()} ${monthBudget > 0 ? (ex / monthBudget * 100).toFixed(1) + '%' : '—'}。</div>`);
+  }
   document.getElementById("kpi-cum").innerHTML   = kpiCardHTML("累計", `4月〜${m}（${cumMonths.length}個月）`,
       cumBudget, cumActual,
       mkPace(cumMonths, cumActual, `${cumMonths.length}個月`), mkBases(cumMonths));
@@ -3058,18 +3066,25 @@ function fcstDailyMap(monthLabel, biz, ch){
   const bizes = new Set(biz === 'all' ? BIZ_LIST_TOTAL : [biz]);
   const chs   = new Set(ch  === 'all' ? CHANNEL_LIST   : [ch]);
   const map = {};
-  let dated = 0, undated = 0;
+  let dated = 0, undated = 0, recog = 0;
+  const recogMap = {};
   for(const r of (STATE.actualRows || [])){
     if(r.month !== monthLabel) continue;
     if(!bizes.has(r.biz) || !chs.has(r.ch)) continue;
     const amt = r.amt || 0;
     const iso = dateToISO(r.date);
+    // 預購認列是一次性的金額：計入累積，但不拿來算日均與月末倍率
+    if(r.preorderId){
+      recog += amt;
+      if(iso){ const dd = parseInt(iso.slice(8,10), 10); recogMap[dd] = (recogMap[dd] || 0) + amt; }
+      continue;
+    }
     if(!iso){ undated += amt; continue; }
     const dd = parseInt(iso.slice(8,10), 10);
     map[dd] = (map[dd] || 0) + amt;
     dated += amt;
   }
-  return { map, dated, undated };
+  return { map, dated, undated, recog, recogMap };
 }
 
 // 月末倍率：head=1〜21日、tail=22日〜最終日
@@ -3132,15 +3147,16 @@ function fcstBuild(){
   const month = STATE.fcstMonth || STATE.selectedMonth;
   const biz = fcstBizArg(), ch = fcstChArg();
   const dim = daysInFyMonth(month);
-  const { map, dated, undated } = fcstDailyMap(month, biz, ch);
+  const { map, dated, undated, recog, recogMap } = fcstDailyMap(month, biz, ch);
   const days = Object.keys(map).map(Number);
   if(days.length === 0) return { month, dim, empty:true };
 
   const lastDay = Math.max(...days);
-  const cum = dated + undated;                       // 無日期列も月合計に含める
+  const base = dated + undated;                      // 無日期列も月合計に含める（推估的基礎，不含預購認列）
+  const cum = base + recog;                          // 目前累積：含預購認列
   let head21 = 0;
   for(const k of Object.keys(map)) if(+k <= 21) head21 += map[k];
-  if(lastDay < 21 && lastDay > 0) head21 = (cum / lastDay) * 21;   // 推定値
+  if(lastDay < 21 && lastDay > 0) head21 = (base / lastDay) * 21;   // 推定値
 
   const budget = bgt(biz, ch, month);
   const hist = fcstHistory(month, biz, ch);
@@ -3161,8 +3177,8 @@ function fcstBuild(){
     scenarios.push({ key:'live', name:'本月實測', mult:live.mult, color:FCST_SCN_COLORS.live });
   }
   for(const sc of scenarios){
-    sc.est      = fcstProject(cum, lastDay, dim, head21, sc.mult);
-    sc.dayRate  = (lastDay >= 21) ? (head21/21)*sc.mult : (cum/Math.max(lastDay,1))*sc.mult;
+    sc.est      = fcstProject(base, lastDay, dim, head21, sc.mult) + recog;
+    sc.dayRate  = (lastDay >= 21) ? (head21/21)*sc.mult : (base/Math.max(lastDay,1))*sc.mult;
     sc.rate     = budget > 0 ? sc.est / budget * 100 : null;
     sc.gap      = sc.est - budget;
   }
@@ -3175,7 +3191,7 @@ function fcstBuild(){
   for(let dd = 1; dd <= dim; dd++){
     const amt = map[dd] || 0;
     const has = dd <= lastDay;
-    if(has) run += amt;
+    if(has) run += amt + (recogMap[dd] || 0);
     const y = fyYearOf(month), mo = parseInt(month,10);
     const dObj = new Date(Date.UTC(y, mo-1, dd));
     const iso  = dateToISO(dObj);
@@ -3191,7 +3207,7 @@ function fcstBuild(){
     r.bgtCum = (budget > 0 && totalWD) ? budget * (wdRun / totalWD) : null;
   }
 
-  return { month, dim, lastDay, cum, head21, budget, undated, rows,
+  return { month, dim, lastDay, cum, recog, head21, budget, undated, rows,
            scenarios, main, hist, live, totalWD, tooEarly, empty:false };
 }
 
@@ -3205,7 +3221,7 @@ function fcstKpiHTML(d){
     <div class="fcst-kpi">
       <div class="k">目前累積</div>
       <div class="v">${fmtAmt(d.cum)}<span class="u">萬</span></div>
-      <div class="s">至 ${d.month}${d.lastDay}日（${d.dim} 天中第 ${d.lastDay} 天）${rate!=null?`· 達成 ${rate.toFixed(1)}%`:''}</div>
+      <div class="s">至 ${d.month}${d.lastDay}日（${d.dim} 天中第 ${d.lastDay} 天）${rate!=null?`· 達成 ${rate.toFixed(1)}%`:''}${d.recog > 0 ? `<br>含點讀圖鑑預購認列 ${fmtAmt(d.recog)} 萬（不計入日均）` : ''}</div>
     </div>
     <div class="fcst-kpi est">
       <div class="k">月末預估${d.main ? `（${d.main.name}）` : ''}</div>
@@ -5979,6 +5995,7 @@ function kolAttribute(camp){
   let amt = 0, qty = 0, cnt = 0;
   for(const r of (STATE.actualRows || [])){
     if(r.ch !== 'KOL') continue;
+    if(r.preorderId) continue;   // 預購認列掛在出貨日，不是檔期當天賣的
     if(r.biz !== camp.biz) continue;
     const iso = dateToISO(r.date);
     if(!iso || iso < camp.start || iso > camp.end) continue;
@@ -6156,6 +6173,7 @@ function renderKolTab(){
   const dailyMap = {};
   for(const r of (STATE.actualRows || [])){
     if(r.ch !== 'KOL') continue;
+    if(r.preorderId) continue;
     const iso = dateToISO(r.date);
     if(!iso) continue;
     dailyMap[iso] = (dailyMap[iso] || 0) + r.amt;
@@ -6215,7 +6233,21 @@ function poMoney(v){
 }
 function poRules(){ return STATE.preorderRules || []; }
 function poRows(rule){
-  return (STATE.preorderRows || []).filter(r => r.preorderId === rule.id);
+  // 認列後的預購列移到 actualRows（date＝出貨日、orderDate＝訂單日）；這個分頁照訂單日追蹤，所以換回訂單日
+  const recognized = (STATE.actualRows || []).filter(r => r.preorderId === rule.id)
+    .map(r => ({ ...r, date: r.orderDate || r.date, month: r.orderMonth || r.month, recognized: true }));
+  return (STATE.preorderRows || []).filter(r => r.preorderId === rule.id).concat(recognized);
+}
+function poIsRecognized(rule){
+  return !!rule.recognizeMonth && (STATE.actualRows || []).some(r => r.preorderId === rule.id);
+}
+// 指定月份實績中的預購認列金額（全社口徑，不含數位典藏）
+function poRecognizedAmt(month){
+  const bizes = new Set(BIZ_LIST_TOTAL), chs = new Set(CHANNEL_LIST);
+  let s = 0;
+  for(const r of (STATE.actualRows || []))
+    if(r.preorderId && r.month === month && bizes.has(r.biz) && chs.has(r.ch)) s += r.amt || 0;
+  return s;
 }
 // 預購台帳只統計「套組」。分冊（20250FE03）也走同一條排除規則，
 // 但不在台帳裡，混進對帳表會讓 TM 的差額看起來變小、各說各話。
@@ -6291,6 +6323,7 @@ function poActuals(rule){
   let total = 0, qty = 0, lastDate = null;
   for(const r of (STATE.actualRows || [])){
     if(!codes.has(r.code)) continue;
+    if(r.preorderId) continue;   // 預購認列另外列示，不算在一般銷售
     const iso = dateToISO(r.date);
     byMonth[r.month] = (byMonth[r.month] || 0) + r.amt;
     byCh[r.ch]       = (byCh[r.ch] || 0) + r.amt;
@@ -6439,8 +6472,10 @@ function poRenderBanner(){
     return `<div class="po-banner" data-po-go="1">
       <span class="po-ico">📦</span>
       <span class="po-txt"><b>${rule.title}</b> <span class="po-state ${phase.cls}">${phase.label}</span>
-        　預購接單 <b>${tq.toLocaleString()} 套／${poMoney(ta)}</b>（<b>不計入實績</b>，須待入庫出貨）${
-        L ? `　<span class="po-sub">其中 ${pq.toLocaleString()} 件已自實績排除${gap > 0 ? `，TM ${gap} 套以發貨日開列、尚未進每日明細` : ''}${eq > 0 ? `；另分冊 ${eq.toLocaleString()} 件亦已排除` : ''}</span>` : ''
+        　預購接單 <b>${tq.toLocaleString()} 套／${poMoney(ta)}</b>（${poIsRecognized(rule)
+          ? `<b>已計入${rule.recognizeMonth}實績</b>，以出貨日 ${(rule.recognizeDate || '').slice(5).replace('-','/')} 認列`
+          : '<b>不計入實績</b>，須待入庫出貨'}）${
+        L ? `　<span class="po-sub">其中 ${pq.toLocaleString()} 件${poIsRecognized(rule) ? '在每日檔' : '已自實績排除'}${gap > 0 ? `，TM ${gap} 套以發貨日開列、尚未進每日明細` : ''}${eq > 0 ? `；另分冊 ${eq.toLocaleString()} 件${poIsRecognized(rule) ? '' : '亦已排除'}` : ''}</span>` : ''
       }${relaunch ? `　${relaunch.date.slice(5).replace('-','/')} 重新上架` : ''}</span>
       <span class="po-go">查看詳情 ›</span>
     </div>`;
@@ -6499,7 +6534,7 @@ function poCardHTML(rule){
         <div class="s">${act.qty.toLocaleString()} 件${share != null ? `　停售前 30 日占學習商品 <b>${share.toFixed(1)}%</b>` : ''}</div>
       </div>
       <div class="po-kpi warn">
-        <div class="k">預購累計（不計入實績）</div>
+        <div class="k">預購累計（${poIsRecognized(rule) ? `已計入${rule.recognizeMonth}實績` : '不計入實績'}）</div>
         <div class="v">${preQ.toLocaleString()}<span class="u">件</span></div>
         <div class="s">${poMoney(preA)}　預購期第 ${preElapsed}/${preTotal} 天</div>
       </div>
@@ -6534,7 +6569,7 @@ function poCardHTML(rule){
       </div>
       <div class="po-cell">${poReconcileHTML(rule)}</div>
       <div class="po-cell">
-        <h3>預購明細<span class="po-h3-sub">每日檔，不計入實績　共 ${pre.length} 列</span></h3>
+        <h3>預購明細<span class="po-h3-sub">每日檔，${poIsRecognized(rule) ? '已認列（日期為訂單日）' : '不計入實績'}　共 ${pre.length} 列</span></h3>
         <div class="po-detail-scroll"><table class="grid">
           <thead><tr><th class="l1">日期</th><th class="l1">通路</th><th class="l1">件數</th><th class="l1">金額（元）</th></tr></thead>
           <tbody>`;
@@ -6551,11 +6586,15 @@ function poCardHTML(rule){
       </div>
     </div>
     <div class="legend">
-      ※ <b>預購金額不計入實績</b>：來源 Excel 會把預購單掛在訂單日，但商品須待 11 月底入庫後才出貨，
-      直接計入等於提前認列尚未發生的收入。系統在解析階段就將 ${rule.start.slice(5).replace('-','/')}～${rule.end.slice(5).replace('-','/')}
-      期間的對象製編分流到本分頁，全站其他分頁的實績一律不含這些金額。
-      <b style="color:var(--bad)">出貨完成後須將認列月份寫回 <code>scripts/update_data.py</code> 的 <code>recognizeMonth</code></b>
-      （目前為未認列），屆時這些金額才會計入該月實績。${poLedgerNote(rule)}<br>
+      ${poIsRecognized(rule)
+        ? `※ <b>預購金額已認列</b>：${rule.start.slice(5).replace('-','/')}～${rule.end.slice(5).replace('-','/')} 的預購單已以出貨日
+           ${(rule.recognizeDate || '').slice(5).replace('-','/')} 計入${rule.recognizeMonth}實績（本表仍以訂單日顯示）。
+           月末推估把這筆當作一次性金額，不拿來算日均；當月 KPI 卡另列不含預購的達成率。${poLedgerNote(rule)}<br>`
+        : `※ <b>預購金額不計入實績</b>：來源 Excel 會把預購單掛在訂單日，但商品須待入庫後才出貨，
+           直接計入等於提前認列尚未發生的收入。系統在解析階段就將 ${rule.start.slice(5).replace('-','/')}～${rule.end.slice(5).replace('-','/')}
+           期間的對象製編分流到本分頁，全站其他分頁的實績一律不含這些金額。
+           <b style="color:var(--bad)">出貨完成後須將認列月份寫回 <code>scripts/update_data.py</code> 的 <code>recognizeMonth</code></b>
+           （目前為未認列），屆時這些金額才會以出貨日計入該月實績。${poLedgerNote(rule)}<br>`}
       ※ <b>機會損失推估</b>為參考值：以停售前 30 日（${rate ? rate.start.slice(5).replace('-','/') + '～' + rate.end.slice(5).replace('-','/') : '—'}）
       的日均 × 停售空窗天數計算，假設「若未停售則維持原銷售速度」。實際會受季節性、
       替代商品排擠、預購轉單等因素影響，<b>不可直接當作損失金額對外引用</b>。

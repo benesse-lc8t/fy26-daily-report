@@ -143,7 +143,10 @@ PREORDER_RULES = [
         'tmAcknowledgedThrough': '2026-09-30',
         'start': '2026-09-29',
         'end':   '2026-11-12',       # 業連 737738753：原 11/26，提前截止
-        'recognizeMonth': None,          # ← 出貨認列後改為 '11月' 或 '12月'
+        'recognizeMonth': None,          # ← 出貨認列後改為 '11月'（使用者 2026-11-05 決定認列在 11 月）
+        # 認列後這些列的 date 改成出貨日（原訂單日留在 orderDate）。
+        # 使用者 2026-11-09 決定：11/16 出貨，11/16 的資料進來時打開，全部算在 11/16。
+        'recognizeDate': '2026-11-16',
         'timeline': [
             {'date': '2026-09-21', 'label': '陸續於各管道停售'},
             {'date': '2026-09-29', 'label': '開始預購'},
@@ -308,13 +311,36 @@ def main(excel_path):
                 preorder_rows.append(rec)          # 預購未出貨 → 不進實績
                 continue
             if rule and rule.get('recognizeMonth'):
-                rec['preorderId'] = rule['id']     # 已出貨 → 改以認列月計入實績
-                rec['orderMonth'] = rec['month']
+                rec['preorderId'] = rule['id']     # 已出貨 → 改以認列月、認列日計入實績
+                rec['orderMonth'] = rec['month']   # 原本的訂單月、訂單日留著，預購分頁仍用它們
+                rec['orderDate'] = rec['date']
                 rec['month'] = rule['recognizeMonth']
+                rec['date'] = rule.get('recognizeDate') or rec['date']
             actual_rows.append(rec)
             kept += 1
 
         print(f'  {sheet_name}: {kept} rows kept, {skip_zero} zero-amt skipped')
+
+    # 認列日的資料還沒進來就先不認列：否則實績最後日期會跳到認列日，
+    # 前日、時間進度、檔期狀態都會以為那天已經過了。
+    last_real = max((r['date'] for r in actual_rows if r.get('date') and not r.get('preorderId')), default='')
+    for rule in PREORDER_RULES:
+        rd = rule.get('recognizeDate')
+        if not rule.get('recognizeMonth') or (rd and last_real >= rd):
+            continue
+        back = [r for r in actual_rows if r.get('preorderId') == rule['id']]
+        if not back:
+            continue
+        actual_rows = [r for r in actual_rows if r.get('preorderId') != rule['id']]
+        for r in back:
+            r['month'] = r.pop('orderMonth')
+            r['date'] = r.pop('orderDate')
+            preorder_rows.append(r)
+        print()
+        print('  ' + '!' * 68)
+        print(f'  !! 規則「{rule["id"]}」已設 recognizeMonth，但資料只到 {last_real}，'
+              f'還沒到認列日 {rd}：{len(back)} 列先不認列')
+        print('  ' + '!' * 68)
 
     print(f'Total: {len(actual_rows)} actualRows')
     if excluded_hits:
@@ -366,6 +392,19 @@ def main(excel_path):
                 print('  !! 若這些是已出貨的營收，請立刻把該規則的 recognizeMonth')
                 print(f'  !! 設為出貨月份（目前 None），否則這筆營收會被永久少算。')
                 print('  !! 最後日期：' + max(r['date'] for r in tm))
+                print('  ' + '!' * 68)
+        # 認列日的資料已經進來，認列卻還沒打開：提醒確認出貨後設定 recognizeMonth
+        for rule in PREORDER_RULES:
+            rd = rule.get('recognizeDate')
+            if rule.get('recognizeMonth') or not rd or last_real < rd:
+                continue
+            n = sum(1 for r in preorder_rows if r.get('preorderId') == rule['id'])
+            if n:
+                print()
+                print('  ' + '!' * 68)
+                print(f'  !! 規則「{rule["id"]}」的認列日 {rd} 已有資料（最後 {last_real}），'
+                      f'仍有 {n} 列預購未認列')
+                print('  !! 確認已出貨後，把 recognizeMonth 設為認列月份再重跑')
                 print('  ' + '!' * 68)
 
     # Build actuals aggregate
