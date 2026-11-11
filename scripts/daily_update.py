@@ -124,6 +124,27 @@ def missing_codes(d):
     return sorted({r['code'] for r in d['actualRows'] if r['code'] and r['code'] not in pr})
 
 
+# Provisional names for codes that are not in the product master yet: publish
+# with the business category from the actual rows and a "to be filled" name,
+# then list them in the report (decided 2026-11-11). update_master.py replaces
+# them once the master or NAME_OVERRIDES has the real name.
+BIZ_MASTER = {'學習商品': ('學習', '學習'), '學習周邊': ('周邊商品', '學習周邊'), '生活周邊': ('周邊商品', '生活周邊'),
+              'Mirafeel': ('Mirafeel', 'Mirafeel'), '數位典藏': ('數位典藏', '數位典藏'), '舞台劇': ('舞台劇', '舞台劇')}
+
+
+def add_provisional_names(prev, new):
+    added = []
+    for code in sorted(set(missing_codes(new)) - set(missing_codes(prev))):
+        rows = [r for r in new['actualRows'] if r.get('code') == code]
+        biz = collections.Counter(r['biz'] for r in rows).most_common(1)[0][0]
+        major, minor = BIZ_MASTER.get(biz, (biz, biz))
+        new['master']['products'][code] = {'name': f'{code}（品名待補）', 'bizMajor': major, 'bizMinor': minor, 'category': ''}
+        added.append({'code': code, 'biz': biz, 'ch': '、'.join(sorted({r['ch'] for r in rows})),
+                      'qty': sum(r['qty'] for r in rows), 'amt': round(sum(r['amt'] for r in rows)),
+                      'first': min((r['date'] for r in rows if r.get('date')), default='')})
+    return added
+
+
 def six_checks(prev, new):
     stops, items = [], {}
     pl, nl = last_date(prev), last_date(new)
@@ -266,6 +287,10 @@ def cmd_prepare(a):
             s['stops'].append(f'{script} 印出 !!!! 警報（見 warnings）')
 
     prev, new = load_json(prev_path), load_json(DATA_JSON)
+    s['provisional'] = add_provisional_names(prev, new)
+    if s['provisional']:
+        with open(DATA_JSON, 'w', encoding='utf-8') as f:
+            json.dump(new, f, ensure_ascii=False, separators=(',', ':'))
     s['checks'], stops = six_checks(prev, new)
     s['stops'].extend(stops)
 
@@ -321,6 +346,8 @@ def print_summary(s):
         print(f"3 前月彙總：{'未變' if not c['3_prior']['changed'] else c['3_prior']['changed']}")
         print(f"4 無日期列：{c['4_nodate']['count']} 筆 {c['4_nodate']['detail']}")
         print(f"5 缺品名製編：{len(c['5_missing']['new'])} 個，新出現 {c['5_missing']['fresh'] or '無'}")
+        for x in s.get('provisional') or []:
+            print(f"  ⚠ 新製編 {x['code']} 先用「待補」品名上線（{x['ch']} {x['biz']} {x['qty']:g} 件 {x['amt']:,} 元，{x['first']} 起）→ 回報時請她問品名")
         print(f"6 不應變動的鍵：{'全部未變' if not c['6_keys']['changed'] else c['6_keys']['changed']}")
         p = c['preorder']
         print(f"預購 每日檔排除 {p['dailyTotal'][0]:g} → {p['dailyTotal'][1]:g} 件；台帳 {p['ledgerQty'][0]} → {p['ledgerQty'][1]} 套（最後 {p['ledgerLast']}）")
