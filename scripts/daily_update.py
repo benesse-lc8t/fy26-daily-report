@@ -208,7 +208,16 @@ def six_checks(prev, new):
         stops.append(f'新的缺品名製編：{fresh}（請使用者提供商品主檔後跑 update_master.py）')
 
     # 6 kolSchedule 與其他鍵
-    changed_keys = [k for k in UNCHANGED_KEYS if prev.get(k) != new.get(k)]
+    def without_provisional(d):
+        # Provisional names added by add_provisional_names() are expected changes to master.
+        if not isinstance(d, dict) or 'products' not in d:
+            return d
+        prods = {c: v for c, v in d['products'].items()
+                 if c in (prev.get('master') or {}).get('products', {}) or not str(v.get('name', '')).endswith('（品名待補）')}
+        return {**d, 'products': prods}
+    changed_keys = [k for k in UNCHANGED_KEYS
+                    if (without_provisional(prev.get(k)) if k == 'master' else prev.get(k))
+                    != (without_provisional(new.get(k)) if k == 'master' else new.get(k))]
     items['6_keys'] = {'changed': changed_keys}
     if changed_keys:
         stops.append(f'不應變動的鍵有變動：{changed_keys}')
