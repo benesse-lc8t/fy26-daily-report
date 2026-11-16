@@ -215,9 +215,18 @@ def six_checks(prev, new):
         prods = {c: v for c, v in d['products'].items()
                  if c in (prev.get('master') or {}).get('products', {}) or not str(v.get('name', '')).endswith('（品名待補）')}
         return {**d, 'products': prods}
+    def without_recognize(x):
+        # Switching recognizeMonth on is planned (preorder recognition at shipping); it is reported, not a stop.
+        if isinstance(x, dict):
+            return {k: without_recognize(v) for k, v in x.items() if k != 'recognizeMonth'}
+        if isinstance(x, list):
+            return [without_recognize(v) for v in x]
+        return x
+    norm = {'master': without_provisional, 'preorderRules': without_recognize}
     changed_keys = [k for k in UNCHANGED_KEYS
-                    if (without_provisional(prev.get(k)) if k == 'master' else prev.get(k))
-                    != (without_provisional(new.get(k)) if k == 'master' else new.get(k))]
+                    if norm.get(k, lambda v: v)(prev.get(k)) != norm.get(k, lambda v: v)(new.get(k))]
+    if prev.get('preorderRules') != new.get('preorderRules') and 'preorderRules' not in changed_keys:
+        items['recognizeSwitched'] = True
     items['6_keys'] = {'changed': changed_keys}
     if changed_keys:
         stops.append(f'不應變動的鍵有變動：{changed_keys}')
@@ -358,6 +367,8 @@ def print_summary(s):
         for x in s.get('provisional') or []:
             print(f"  ⚠ 新製編 {x['code']} 先用「待補」品名上線（{x['ch']} {x['biz']} {x['qty']:g} 件 {x['amt']:,} 元，{x['first']} 起）→ 回報時請她問品名")
         print(f"6 不應變動的鍵：{'全部未變' if not c['6_keys']['changed'] else c['6_keys']['changed']}")
+        if c.get('recognizeSwitched'):
+            print('  ⚠ 預購認列已打開（recognizeMonth）：預購列改計入實績，回報時寫明認列金額')
         p = c['preorder']
         print(f"預購 每日檔排除 {p['dailyTotal'][0]:g} → {p['dailyTotal'][1]:g} 件；台帳 {p['ledgerQty'][0]} → {p['ledgerQty'][1]} 套（最後 {p['ledgerLast']}）")
         for x in p['dailyDiff']:
