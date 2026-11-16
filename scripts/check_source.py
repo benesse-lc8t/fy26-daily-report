@@ -260,6 +260,11 @@ def main():
     if not (rerun or ask or bad or missing_sheets):
         print(f'{GREEN}全部分頁都到期望日、本月沒有未確認的缺日，可以送出。{OFF}')
         return 0
+    # Zero-row days on sheets outside the company total (digital archive) only warn (decided 2026-11-16).
+    ask_hard = [h for h in ask if not any(h.replace(' ', '').endswith(s) for s in MAYBE_ZERO)]
+    if not (rerun or bad or missing_sheets or ask_hard):
+        print(f'{YEL}⚠ {"、".join(ask)} 有 0 列的日子：不算在全社業績，先不擋；回報時列出來。{OFF}')
+        return 0
     if missing_sheets:
         print(f'{YEL}有分頁找不到（可能是分頁名稱改了），請人工確認。{OFF}')
     if rerun or bad:
