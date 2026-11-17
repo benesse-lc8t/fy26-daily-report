@@ -737,6 +737,20 @@
   .biz-sku-list label.hidden{display:none}
   .biz-sku-no-products{font-size:var(--fs-xs);color:var(--muted);padding:8px 0}
   .biz-sku-empty{text-align:center;padding:40px 0;color:var(--muted);font-size:var(--fs-sm)}
+  /* 月別・管道篩選（標題旁的下拉複選） */
+  .biz-dims{display:inline-flex;gap:8px;margin-left:10px;vertical-align:middle;flex-wrap:wrap}
+  .biz-dd{position:relative;font-size:var(--fs-xs);font-weight:500}
+  .biz-dd>summary{list-style:none;cursor:pointer;padding:4px 10px;border:0.5px solid var(--border);border-radius:6px;background:var(--card);color:var(--secondary)}
+  .biz-dd>summary::-webkit-details-marker{display:none}
+  .biz-dd>summary b{color:var(--accent);font-weight:600}
+  .biz-dd[open]>summary{border-color:var(--accent)}
+  .biz-dd-menu{position:absolute;z-index:20;top:calc(100% + 4px);left:0;min-width:150px;max-height:280px;overflow-y:auto;background:var(--card);border:0.5px solid var(--border);border-radius:8px;box-shadow:var(--shadow-card);padding:6px}
+  .biz-dd-menu label{display:flex;align-items:center;gap:6px;padding:3px 6px;border-radius:4px;cursor:pointer;color:var(--ink);white-space:nowrap}
+  .biz-dd-menu label:hover{background:var(--bg)}
+  .biz-dd-menu label.all{border-bottom:0.5px solid var(--border);margin-bottom:4px;font-weight:600}
+  .biz-dd-menu input{accent-color:var(--accent)}
+  h2:has(> .biz-dims){flex-wrap:wrap}
+  @media(max-width:768px){ .biz-dims{flex-basis:100%;margin:8px 0 0} }
 
   /* ── 業績卡片 Tab ── */
   .cards-toolbar{display:flex;align-items:center;gap:10px;flex-wrap:wrap;margin-bottom:0}
@@ -1215,6 +1229,8 @@ const STATE = {
   skuTrendBiz:'學習商品', // 品項月別分析：選択中の事業別（互換性のため保持）
   skuTrendCode:null,      // 品項月別分析：選択中の商品コード（互換性のため保持）
   skuBizFilters:{},       // biz → Set<code>：各事業の品項複選フィルタ
+  skuBizMonths:{},        // biz → Set<month>：月別篩選（預設全部）
+  skuBizChs:{},           // biz → Set<channel>：管道篩選（預設全部）
 };
 
 // YoY 對象タブ（前年比モードで表示するもの）
@@ -4019,8 +4035,21 @@ function getBizSkuFilter(biz){
   return STATE.skuBizFilters[biz];
 }
 
+function getBizSkuMonths(biz){
+  if(!STATE.skuBizMonths[biz]) STATE.skuBizMonths[biz] = new Set(MONTHS);
+  return STATE.skuBizMonths[biz];
+}
+function getBizSkuChs(biz){
+  if(!STATE.skuBizChs[biz]) STATE.skuBizChs[biz] = new Set(CHANNEL_LIST);
+  return STATE.skuBizChs[biz];
+}
+// 篩選後要顯示的月份／管道（保持原本順序）
+function bizSkuMonthsSel(biz){ const s = getBizSkuMonths(biz); return MONTHS.filter(m => s.has(m)); }
+function bizSkuChsSel(biz){ const s = getBizSkuChs(biz); return CHANNEL_LIST.filter(c => s.has(c)); }
+
 function aggregateSkuByMonth(codeSet, biz){
-  // {month: {qty, amt, byChannel: {ch: {qty,amt}}}}
+  // {month: {qty, amt, byChannel: {ch: {qty,amt}}}}（只算月別・管道篩選範圍內）
+  const mSet = getBizSkuMonths(biz), cSet = getBizSkuChs(biz);
   const res = {};
   for(const m of MONTHS){
     res[m] = { qty:0, amt:0, byChannel:{} };
@@ -4029,8 +4058,8 @@ function aggregateSkuByMonth(codeSet, biz){
   for(const r of (STATE.actualRows || [])){
     if(!codeSet.has(r.code)) continue;
     if(biz !== 'all' && r.biz !== biz) continue;
-    if(!MONTHS.includes(r.month)) continue;
-    if(!CHANNEL_LIST.includes(r.ch)) continue;
+    if(!MONTHS.includes(r.month) || !mSet.has(r.month)) continue;
+    if(!CHANNEL_LIST.includes(r.ch) || !cSet.has(r.ch)) continue;
     res[r.month].qty += r.qty;
     res[r.month].amt += r.amt;
     res[r.month].byChannel[r.ch].qty += r.qty;
@@ -4040,12 +4069,14 @@ function aggregateSkuByMonth(codeSet, biz){
 }
 
 function aggregateSkuByChannel(codeSet, biz){
+  const mSet = getBizSkuMonths(biz), cSet = getBizSkuChs(biz);
   const res = {};
   for(const c of CHANNEL_LIST) res[c] = { qty:0, amt:0 };
   for(const r of (STATE.actualRows || [])){
     if(!codeSet.has(r.code)) continue;
     if(biz !== 'all' && r.biz !== biz) continue;
-    if(!CHANNEL_LIST.includes(r.ch)) continue;
+    if(!CHANNEL_LIST.includes(r.ch) || !cSet.has(r.ch)) continue;
+    if(!mSet.has(r.month)) continue;
     res[r.ch].qty += r.qty;
     res[r.ch].amt += r.amt;
   }
@@ -4064,7 +4095,7 @@ function renderBizSkuFilterHTML(biz, products, selectedSet){
       const chk = selectedSet.has(p.code) ? ' checked' : '';
       const nameLabel = p.name ? `${p.name}` : p.code;
       const amtLabel  = `(${Math.round(p.totalAmt/10000)}萬)`;
-      checkboxes += `<label title="${p.code}"><input type="checkbox" class="biz-sku-cb" data-biz="${biz}" value="${p.code}"${chk}><span>${nameLabel}</span><span style="color:var(--muted);margin-left:4px;font-size:var(--fs-xs)">${amtLabel}</span></label>`;
+      checkboxes += `<label title="${p.code}"><input type="checkbox" class="biz-sku-cb" data-biz="${biz}" value="${p.code}"${chk}><span>${nameLabel}</span><span class="biz-sku-amt" data-code="${p.code}" style="color:var(--muted);margin-left:4px;font-size:var(--fs-xs)">${amtLabel}</span></label>`;
     });
   }
   return `<div class="biz-sku-filter" id="biz-sku-filter-${bizSafe(biz)}">
@@ -4086,6 +4117,11 @@ function renderBizSkuContentHTML(biz, codeSet){
   }
   const monthly  = aggregateSkuByMonth(codeSet, biz);
   const byCh     = aggregateSkuByChannel(codeSet, biz);
+  const CHS      = bizSkuChsSel(biz);       // 管道篩選後的欄位
+  const MS       = bizSkuMonthsSel(biz);    // 月別篩選後的列
+  if(!CHS.length || !MS.length){
+    return `<div class="biz-sku-empty">請在標題旁的「月別」「管道」至少各勾選一項</div>`;
+  }
   const totalQty = Object.values(byCh).reduce((s,v)=>s+v.qty, 0);
   const totalAmt = Object.values(byCh).reduce((s,v)=>s+v.amt, 0);
   const totalAOV = totalQty > 0 ? Math.round(totalAmt / totalQty) : null;
@@ -4096,7 +4132,7 @@ function renderBizSkuContentHTML(biz, codeSet){
   // 左欄下方：管道小計（6 列短表）—— 與右欄的 12 列長表配重
   html += `<div class="scroll-x" style="margin-top:12px"><table class="grid">
     <thead><tr><th class="l1">管道</th><th class="l2">套數</th><th class="l2">金額(萬)</th><th class="l2">AOV(元)</th></tr></thead><tbody>`;
-  CHANNEL_LIST.forEach(c => {
+  CHS.forEach(c => {
     const d = byCh[c];
     const aov = d.qty > 0 ? Math.round(d.amt / d.qty).toLocaleString() : '—';
     const hasData = d.qty > 0 || d.amt > 0;
@@ -4123,14 +4159,14 @@ function renderBizSkuContentHTML(biz, codeSet){
   html += `<details open style="margin-top:12px"><summary style="font-size:var(--fs-xs);font-weight:600;color:var(--secondary);cursor:pointer;padding:4px 0">▸ 月份 × 管道（套數）</summary>
     <div class="scroll-x" style="margin-top:8px"><table class="grid">
     <thead><tr><th class="l1">月份</th>`;
-  CHANNEL_LIST.forEach(c => { html += `<th class="l2">${c}</th>`; });
+  CHS.forEach(c => { html += `<th class="l2">${c}</th>`; });
   html += `<th class="l2">合計(套)</th></tr></thead><tbody>`;
-  let colTotals = {}; CHANNEL_LIST.forEach(c => colTotals[c] = {qty:0,amt:0}); let grandQty = 0;
-  for(const m of MONTHS){
+  let colTotals = {}; CHS.forEach(c => colTotals[c] = {qty:0,amt:0}); let grandQty = 0;
+  for(const m of MS){
     const d = monthly[m];
     const hasAny = d.qty > 0;
     html += `<tr><td class="dim">${m}</td>`;
-    CHANNEL_LIST.forEach(c => {
+    CHS.forEach(c => {
       const cd = d.byChannel[c];
       colTotals[c].qty += cd.qty; colTotals[c].amt += cd.amt;
       html += cd.qty > 0
@@ -4141,7 +4177,7 @@ function renderBizSkuContentHTML(biz, codeSet){
     html += `<td>${hasAny ? Math.round(d.qty).toLocaleString() : '<span class="na">—</span>'}</td></tr>`;
   }
   html += `<tr class="total"><td class="dim">合計</td>`;
-  CHANNEL_LIST.forEach(c => {
+  CHS.forEach(c => {
     html += colTotals[c].qty > 0
       ? `<td>${Math.round(colTotals[c].qty).toLocaleString()}</td>`
       : `<td>—</td>`;
@@ -4162,10 +4198,12 @@ function renderBizSkuChartWith(biz, codeSet, root){
   if(!codeSet || codeSet.size === 0) return;
 
   const monthly = aggregateSkuByMonth(codeSet, biz);
+  const MS = bizSkuMonthsSel(biz);
+  if(!MS.length || !bizSkuChsSel(biz).length) return;
 
-  const datasets = CHANNEL_LIST.map(ch => ({
+  const datasets = bizSkuChsSel(biz).map(ch => ({
     label: ch,
-    data: MONTHS.map(m => Math.round(monthly[m].byChannel[ch].qty)),
+    data: MS.map(m => Math.round(monthly[m].byChannel[ch].qty)),
     backgroundColor: chartColor(BIZ_SKU_CH_COLORS[ch] || 'var(--muted)'),
     stack: 'total',
     borderRadius: 2,
@@ -4173,7 +4211,7 @@ function renderBizSkuChartWith(biz, codeSet, root){
 
   STATE.charts[canvasId] = new Chart(canvas.getContext('2d'), {
     type: 'bar',
-    data: { labels: MONTHS, datasets },
+    data: { labels: MS, datasets },
     options: {
       responsive: true, maintainAspectRatio: false,
       scales: {
@@ -4197,6 +4235,22 @@ function renderBizSkuChartWith(biz, codeSet, root){
 
 function renderBizSkuChart(biz, root){
   renderBizSkuChartWith(biz, getBizSkuFilter(biz), root);
+}
+
+/* 月別・管道篩選（2026-11-17 使用者要求：在事業別頁縮小觀察範圍，結果反映到圖與表） */
+function bizDimLabel(sel, all){
+  if(sel.length === all.length) return '全部';
+  if(sel.length === 0) return '未選';
+  return sel.length <= 3 ? sel.join('、') : `${sel.length} 項`;
+}
+function renderBizDimsHTML(biz){
+  const dd = (dim, title, all, sel) => {
+    const items = all.map(v => `<label><input type="checkbox" class="biz-dim-cb" data-dim="${dim}" value="${v}"${sel.has(v) ? ' checked' : ''}>${v}</label>`).join('');
+    const allChk = all.every(v => sel.has(v)) ? ' checked' : '';
+    return `<details class="biz-dd" data-dim="${dim}"><summary>${title}：<b class="biz-dd-val">${bizDimLabel(all.filter(v => sel.has(v)), all)}</b> ▾</summary>
+      <div class="biz-dd-menu"><label class="all"><input type="checkbox" class="biz-dim-all" data-dim="${dim}"${allChk}>全部</label>${items}</div></details>`;
+  };
+  return `<span class="biz-dims" id="biz-dims-${bizSafe(biz)}">${dd('month', '月別', MONTHS, getBizSkuMonths(biz))}${dd('ch', '管道', CHANNEL_LIST, getBizSkuChs(biz))}</span>`;
 }
 
 function setupBizSkuHandlers(biz, root){
@@ -4272,6 +4326,44 @@ function setupBizSkuHandlers(biz, root){
     updateCount();
     refreshContent();
   });
+
+  // 月別・管道篩選：品項旁的金額也改成篩選範圍內的金額
+  function updateAmounts(){
+    const mSet = getBizSkuMonths(biz), cSet = getBizSkuChs(biz);
+    const amt = {};
+    for(const r of (STATE.actualRows || [])){
+      if(r.biz !== biz || !r.code || !mSet.has(r.month) || !cSet.has(r.ch)) continue;
+      amt[r.code] = (amt[r.code] || 0) + r.amt;
+    }
+    listEl.querySelectorAll('.biz-sku-amt').forEach(el => {
+      el.textContent = `(${Math.round((amt[el.dataset.code] || 0) / 10000)}萬)`;
+    });
+  }
+  const dimsEl = scope.querySelector(`#biz-dims-${safeBiz}`);
+  if(dimsEl){
+    dimsEl.addEventListener('change', e => {
+      const cb = e.target, dim = cb.dataset.dim;
+      if(!dim) return;
+      const set = dim === 'month' ? getBizSkuMonths(biz) : getBizSkuChs(biz);
+      const all = dim === 'month' ? MONTHS : CHANNEL_LIST;
+      const dd  = cb.closest('.biz-dd');
+      if(cb.classList.contains('biz-dim-all')){
+        all.forEach(v => cb.checked ? set.add(v) : set.delete(v));
+        dd.querySelectorAll('.biz-dim-cb').forEach(x => { x.checked = cb.checked; });
+      } else {
+        cb.checked ? set.add(cb.value) : set.delete(cb.value);
+        dd.querySelector('.biz-dim-all').checked = all.every(v => set.has(v));
+      }
+      dd.querySelector('.biz-dd-val').textContent = bizDimLabel(all.filter(v => set.has(v)), all);
+      updateAmounts();
+      refreshContent();
+    });
+    // 點選單外面就收起來
+    document.addEventListener('click', e => {
+      dimsEl.querySelectorAll('.biz-dd[open]').forEach(d => { if(!d.contains(e.target)) d.removeAttribute('open'); });
+    });
+  }
+  updateAmounts();
 }
 
 function renderTrendSectionHTML(s){
@@ -4283,7 +4375,7 @@ function renderTrendSectionHTML(s){
     const selSet   = getBizSkuFilter(biz);
 
     let html = `<div class="card wide" id="trend-${s.id}">`;
-    html += `<h2>${s.title} <span class="pill">品項複選</span></h2>`;
+    html += `<h2>${s.title} <span class="pill">品項複選</span>${renderBizDimsHTML(biz)}</h2>`;
     html += renderBizSkuFilterHTML(biz, products, selSet);
     html += `<div id="biz-sku-content-${safeBiz}">`;
     html += renderBizSkuContentHTML(biz, selSet);
