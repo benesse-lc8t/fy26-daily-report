@@ -749,6 +749,13 @@
   .biz-dd-menu label:hover{background:var(--bg)}
   .biz-dd-menu label.all{border-bottom:0.5px solid var(--border);margin-bottom:4px;font-weight:600}
   .biz-dd-menu input{accent-color:var(--accent)}
+  .biz-metric{display:inline-flex;border:0.5px solid var(--border);border-radius:6px;overflow:hidden}
+  .biz-metric-btn{font-size:var(--fs-xs);font-weight:600;color:var(--secondary);background:var(--card);border:0;padding:4px 10px;cursor:pointer}
+  .biz-metric-btn.active{background:var(--accent);color:#fff}
+  .biz-range-menu{min-width:250px}
+  .biz-range{display:flex;align-items:center;gap:4px;margin-bottom:6px;color:var(--secondary)}
+  .biz-range input{font-family:inherit;font-size:var(--fs-xs);padding:3px 4px;border:1px solid var(--border);border-radius:4px;color:var(--ink);background:var(--card)}
+  .biz-range-note{font-size:var(--fs-xs);color:var(--muted);margin-top:4px;font-weight:400}
   h2:has(> .biz-dims){flex-wrap:wrap}
   @media(max-width:768px){ .biz-dims{flex-basis:100%;margin:8px 0 0} }
 
@@ -1231,6 +1238,8 @@ const STATE = {
   skuBizFilters:{},       // biz → Set<code>：各事業の品項複選フィルタ
   skuBizMonths:{},        // biz → Set<month>：月別篩選（預設全部）
   skuBizChs:{},           // biz → Set<channel>：管道篩選（預設全部）
+  skuBizMetric:{},        // biz → 'qty' | 'amt'：圖與月份表顯示套數或金額
+  skuBizRange:{},         // biz → {from,to}：日期區間（有設定時取代月別篩選）
 };
 
 // YoY 對象タブ（前年比モードで表示するもの）
@@ -4043,13 +4052,56 @@ function getBizSkuChs(biz){
   if(!STATE.skuBizChs[biz]) STATE.skuBizChs[biz] = new Set(CHANNEL_LIST);
   return STATE.skuBizChs[biz];
 }
-// 篩選後要顯示的月份／管道（保持原本順序）
-function bizSkuMonthsSel(biz){ const s = getBizSkuMonths(biz); return MONTHS.filter(m => s.has(m)); }
+function getBizSkuMetric(biz){ return STATE.skuBizMetric[biz] || 'qty'; }
+// actualRows 的 date 載入後是 Date 物件 → 'YYYY-MM-DD'（本地時間）
+function bizSkuDateStr(d){
+  if(!d) return '';
+  if(d instanceof Date) return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
+  return String(d).slice(0, 10);
+}
+function bizSkuRange(biz){ const r = STATE.skuBizRange[biz]; return r && (r.from || r.to) ? r : null; }
+// 這一列是否在篩選範圍內：事業＋管道＋（日期區間；沒設定時用月別）。monthOverride：前月比較用
+function bizSkuInScope(r, biz, monthOverride){
+  if(biz !== 'all' && r.biz !== biz) return false;
+  if(!CHANNEL_LIST.includes(r.ch) || !getBizSkuChs(biz).has(r.ch)) return false;
+  if(!MONTHS.includes(r.month)) return false;
+  if(monthOverride) return r.month === monthOverride;
+  const rg = bizSkuRange(biz);
+  if(rg){
+    const ds = bizSkuDateStr(r.date);
+    if(!ds) return false;
+    return (!rg.from || ds >= rg.from) && (!rg.to || ds <= rg.to);
+  }
+  return getBizSkuMonths(biz).has(r.month);
+}
+// 篩選後要顯示的月份／管道（保持原本順序）；設定日期區間時＝區間涵蓋的月份
+function bizSkuMonthsSel(biz){
+  if(bizSkuRange(biz)){
+    const seen = new Set();
+    for(const r of (STATE.actualRows || [])) if(r.code && bizSkuInScope(r, biz)) seen.add(r.month);
+    return MONTHS.filter(m => seen.has(m));
+  }
+  const s = getBizSkuMonths(biz); return MONTHS.filter(m => s.has(m));
+}
 function bizSkuChsSel(biz){ const s = getBizSkuChs(biz); return CHANNEL_LIST.filter(c => s.has(c)); }
 
+// 品項排行：篩選範圍內各品項的套數・金額；只選一個月份（沒設日期區間）時加上前一個月（相同管道）
+function aggregateSkuRanking(codeSet, biz){
+  const cur = new Map(), prev = new Map();
+  const ms = bizSkuMonthsSel(biz);
+  const one = !bizSkuRange(biz) && ms.length === 1 ? ms[0] : null;
+  const pm = one && MONTHS.indexOf(one) > 0 ? MONTHS[MONTHS.indexOf(one) - 1] : null;
+  const add = (map, r) => { const e = map.get(r.code) || { qty:0, amt:0 }; e.qty += r.qty; e.amt += r.amt; map.set(r.code, e); };
+  for(const r of (STATE.actualRows || [])){
+    if(!r.code || !codeSet.has(r.code)) continue;
+    if(bizSkuInScope(r, biz)) add(cur, r);
+    else if(pm && bizSkuInScope(r, biz, pm)) add(prev, r);
+  }
+  return { cur, prev, prevMonth: pm };
+}
+
 function aggregateSkuByMonth(codeSet, biz){
-  // {month: {qty, amt, byChannel: {ch: {qty,amt}}}}（只算月別・管道篩選範圍內）
-  const mSet = getBizSkuMonths(biz), cSet = getBizSkuChs(biz);
+  // {month: {qty, amt, byChannel: {ch: {qty,amt}}}}（只算篩選範圍內）
   const res = {};
   for(const m of MONTHS){
     res[m] = { qty:0, amt:0, byChannel:{} };
@@ -4057,9 +4109,7 @@ function aggregateSkuByMonth(codeSet, biz){
   }
   for(const r of (STATE.actualRows || [])){
     if(!codeSet.has(r.code)) continue;
-    if(biz !== 'all' && r.biz !== biz) continue;
-    if(!MONTHS.includes(r.month) || !mSet.has(r.month)) continue;
-    if(!CHANNEL_LIST.includes(r.ch) || !cSet.has(r.ch)) continue;
+    if(!bizSkuInScope(r, biz)) continue;
     res[r.month].qty += r.qty;
     res[r.month].amt += r.amt;
     res[r.month].byChannel[r.ch].qty += r.qty;
@@ -4069,14 +4119,11 @@ function aggregateSkuByMonth(codeSet, biz){
 }
 
 function aggregateSkuByChannel(codeSet, biz){
-  const mSet = getBizSkuMonths(biz), cSet = getBizSkuChs(biz);
   const res = {};
   for(const c of CHANNEL_LIST) res[c] = { qty:0, amt:0 };
   for(const r of (STATE.actualRows || [])){
     if(!codeSet.has(r.code)) continue;
-    if(biz !== 'all' && r.biz !== biz) continue;
-    if(!CHANNEL_LIST.includes(r.ch) || !cSet.has(r.ch)) continue;
-    if(!mSet.has(r.month)) continue;
+    if(!bizSkuInScope(r, biz)) continue;
     res[r.ch].qty += r.qty;
     res[r.ch].amt += r.amt;
   }
@@ -4156,36 +4203,58 @@ function renderBizSkuContentHTML(biz, codeSet){
   // Monthly detail table (Month × channel qty)
   // 原本放在 chart-table-row 之外、獨佔整列；圖表右側卻空著一大塊（左重右輕）。
   // 改放進右欄接在管道小計表下面，右欄填滿、卡片也變矮。
-  html += `<details open style="margin-top:12px"><summary style="font-size:var(--fs-xs);font-weight:600;color:var(--secondary);cursor:pointer;padding:4px 0">▸ 月份 × 管道（套數）</summary>
+  // 套數／金額切換（2026-11-17）：月份表和圖一起換
+  const metric = getBizSkuMetric(biz);
+  const pick = d => metric === 'amt' ? d.amt : d.qty;
+  const fmtV = v => metric === 'amt' ? (v / 10000).toLocaleString(undefined, { minimumFractionDigits:1, maximumFractionDigits:1 }) : Math.round(v).toLocaleString();
+  html += `<details open style="margin-top:12px"><summary style="font-size:var(--fs-xs);font-weight:600;color:var(--secondary);cursor:pointer;padding:4px 0">▸ 月份 × 管道（${metric === 'amt' ? '金額・萬元' : '套數'}）</summary>
     <div class="scroll-x" style="margin-top:8px"><table class="grid">
     <thead><tr><th class="l1">月份</th>`;
   CHS.forEach(c => { html += `<th class="l2">${c}</th>`; });
-  html += `<th class="l2">合計(套)</th></tr></thead><tbody>`;
-  let colTotals = {}; CHS.forEach(c => colTotals[c] = {qty:0,amt:0}); let grandQty = 0;
+  html += `<th class="l2">合計(${metric === 'amt' ? '萬' : '套'})</th></tr></thead><tbody>`;
+  let colTotals = {}; CHS.forEach(c => colTotals[c] = 0); let grand = 0;
   for(const m of MS){
     const d = monthly[m];
-    const hasAny = d.qty > 0;
+    let rowSum = 0;
     html += `<tr><td class="dim">${m}</td>`;
     CHS.forEach(c => {
-      const cd = d.byChannel[c];
-      colTotals[c].qty += cd.qty; colTotals[c].amt += cd.amt;
-      html += cd.qty > 0
-        ? `<td>${Math.round(cd.qty).toLocaleString()}</td>`
-        : `<td class="na">—</td>`;
+      const v = pick(d.byChannel[c]);
+      colTotals[c] += v; rowSum += v;
+      html += v ? `<td>${fmtV(v)}</td>` : `<td class="na">—</td>`;
     });
-    grandQty += d.qty;
-    html += `<td>${hasAny ? Math.round(d.qty).toLocaleString() : '<span class="na">—</span>'}</td></tr>`;
+    grand += rowSum;
+    html += `<td>${rowSum ? fmtV(rowSum) : '<span class="na">—</span>'}</td></tr>`;
   }
   html += `<tr class="total"><td class="dim">合計</td>`;
-  CHS.forEach(c => {
-    html += colTotals[c].qty > 0
-      ? `<td>${Math.round(colTotals[c].qty).toLocaleString()}</td>`
-      : `<td>—</td>`;
-  });
-  html += `<td>${Math.round(grandQty).toLocaleString()}</td></tr>`;
+  CHS.forEach(c => { html += colTotals[c] ? `<td>${fmtV(colTotals[c])}</td>` : `<td>—</td>`; });
+  html += `<td>${fmtV(grand)}</td></tr>`;
   html += `</tbody></table></div></details>`;
-  html += `<div class="legend" style="margin-top:6px">※ 套數為原始筆數合計。</div>`;
+  html += `<div class="legend" style="margin-top:6px">※ 套數為原始筆數合計；金額為未稅。</div>`;
   html += `</div></div>`;   // ← table-side / chart-table-row.even
+
+  // 品項排行（2026-11-17）：篩選範圍內，依目前的套數／金額排序
+  const rk = aggregateSkuRanking(codeSet, biz);
+  const items = [...rk.cur.entries()].filter(([, v]) => v.qty || v.amt)
+    .sort((a, b) => (metric === 'amt' ? b[1].amt - a[1].amt : b[1].qty - a[1].qty) || b[1].amt - a[1].amt);
+  const sumAmt = items.reduce((s, [, v]) => s + v.amt, 0);
+  const nm = c => String(STATE.master?.products?.[c]?.name || c).replace(/[<>&]/g, ch => ({ '<':'&lt;', '>':'&gt;', '&':'&amp;' })[ch]);
+  const pmH = rk.prevMonth ? `<th class="l2">${rk.prevMonth}套數</th><th class="l2">${rk.prevMonth}金額(萬)</th><th class="l2">金額增減</th>` : '';
+  html += `<details open class="biz-sku-rank" style="margin-top:14px"><summary style="font-size:var(--fs-xs);font-weight:600;color:var(--secondary);cursor:pointer;padding:4px 0">▸ 品項排行（篩選範圍內，依${metric === 'amt' ? '金額' : '套數'}排序，${items.length} 項）</summary>
+    <div class="scroll-x" style="margin-top:8px;max-height:420px;overflow-y:auto"><table class="grid">
+    <thead><tr><th class="l1">#</th><th class="l1">品項</th><th class="l2">套數</th><th class="l2">金額(萬)</th><th class="l2">金額占比</th><th class="l2">AOV(元)</th>${pmH}</tr></thead><tbody>`;
+  items.forEach(([code, v], i) => {
+    let pm = '';
+    if(rk.prevMonth){
+      const p = rk.prev.get(code) || { qty:0, amt:0 };
+      const chg = p.amt ? (v.amt / p.amt - 1) * 100 : null;
+      pm = `<td>${p.qty ? Math.round(p.qty).toLocaleString() : '—'}</td><td>${p.amt ? (p.amt / 10000).toFixed(1) : '—'}</td>`
+         + `<td style="color:${chg == null ? 'var(--muted)' : chg < 0 ? 'var(--bad)' : 'var(--good)'}">${chg == null ? '新' : (chg > 0 ? '+' : '') + chg.toFixed(0) + '%'}</td>`;
+    }
+    html += `<tr><td class="dim">${i + 1}</td><td class="dim" style="text-align:left;white-space:nowrap" title="${code}">${nm(code)}</td>
+      <td>${Math.round(v.qty).toLocaleString()}</td><td>${(v.amt / 10000).toFixed(1)}</td>
+      <td>${sumAmt ? (v.amt / sumAmt * 100).toFixed(1) + '%' : '—'}</td><td>${v.qty > 0 ? Math.round(v.amt / v.qty).toLocaleString() : '—'}</td>${pm}</tr>`;
+  });
+  html += `</tbody></table></div><div class="legend" style="margin-top:6px">※ 只選一個月份（沒有設定期間）時，會加上和前一個月的比較（相同管道）。</div></details>`;
 
   return html;
 }
@@ -4201,9 +4270,11 @@ function renderBizSkuChartWith(biz, codeSet, root){
   const MS = bizSkuMonthsSel(biz);
   if(!MS.length || !bizSkuChsSel(biz).length) return;
 
+  const isAmt = getBizSkuMetric(biz) === 'amt';
+  const unit = isAmt ? '萬' : '套';
   const datasets = bizSkuChsSel(biz).map(ch => ({
     label: ch,
-    data: MS.map(m => Math.round(monthly[m].byChannel[ch].qty)),
+    data: MS.map(m => isAmt ? Math.round(monthly[m].byChannel[ch].amt / 1000) / 10 : Math.round(monthly[m].byChannel[ch].qty)),
     backgroundColor: chartColor(BIZ_SKU_CH_COLORS[ch] || 'var(--muted)'),
     stack: 'total',
     borderRadius: 2,
@@ -4216,7 +4287,7 @@ function renderBizSkuChartWith(biz, codeSet, root){
       responsive: true, maintainAspectRatio: false,
       scales: {
         x: { stacked: true, grid: { color: 'rgba(0,0,0,.04)' } },
-        y: { stacked: true, beginAtZero: true, title: { display:true, text:'套數' },
+        y: { stacked: true, beginAtZero: true, title: { display:true, text: isAmt ? '金額（萬元）' : '套數' },
              grid: { color: 'rgba(0,0,0,.06)' } },
       },
       plugins: {
@@ -4224,8 +4295,8 @@ function renderBizSkuChartWith(biz, codeSet, root){
         tooltip: {
           backgroundColor: '#0C4A6E', titleColor:'#fff', bodyColor:'#fff',
           callbacks: {
-            label: ctx => `${ctx.dataset.label}：${Number(ctx.raw).toLocaleString()} 套`,
-            footer: items => `合計：${items.reduce((a,i)=>a+Number(i.raw),0).toLocaleString()} 套`,
+            label: ctx => `${ctx.dataset.label}：${Number(ctx.raw).toLocaleString()} ${unit}`,
+            footer: items => `合計：${(Math.round(items.reduce((a,i)=>a+Number(i.raw),0) * 10) / 10).toLocaleString()} ${unit}`,
           },
         },
       },
@@ -4250,7 +4321,25 @@ function renderBizDimsHTML(biz){
     return `<details class="biz-dd" data-dim="${dim}"><summary>${title}：<b class="biz-dd-val">${bizDimLabel(all.filter(v => sel.has(v)), all)}</b> ▾</summary>
       <div class="biz-dd-menu"><label class="all"><input type="checkbox" class="biz-dim-all" data-dim="${dim}"${allChk}>全部</label>${items}</div></details>`;
   };
-  return `<span class="biz-dims" id="biz-dims-${bizSafe(biz)}">${dd('month', '月別', MONTHS, getBizSkuMonths(biz))}${dd('ch', '管道', CHANNEL_LIST, getBizSkuChs(biz))}</span>`;
+  // 日期區間（2026-11-17）：KOL 檔期、大促前後等短期間；有設定時月別篩選暫停
+  const rg = STATE.skuBizRange[biz] || {};
+  const dates = (STATE.actualRows || []).filter(r => r.date && r.biz === biz).map(r => bizSkuDateStr(r.date)).sort();
+  const lo = dates[0] || '', hi = dates[dates.length - 1] || '';
+  const period = `<details class="biz-dd" data-dim="range"><summary>期間：<b class="biz-dd-val biz-range-val">${bizRangeLabel(biz)}</b> ▾</summary>
+      <div class="biz-dd-menu biz-range-menu">
+        <div class="biz-range"><input type="date" class="biz-range-in" data-k="from" min="${lo}" max="${hi}" value="${rg.from || ''}"> 〜
+        <input type="date" class="biz-range-in" data-k="to" min="${lo}" max="${hi}" value="${rg.to || ''}"></div>
+        <button type="button" class="biz-sku-action biz-range-clear">清除期間</button>
+        <div class="biz-range-note">設定期間時，月別篩選暫停使用</div></div></details>`;
+  const m = getBizSkuMetric(biz);
+  const metric = `<span class="biz-metric"><button type="button" class="biz-metric-btn${m === 'qty' ? ' active' : ''}" data-metric="qty">套數</button><button type="button" class="biz-metric-btn${m === 'amt' ? ' active' : ''}" data-metric="amt">金額</button></span>`;
+  const exp = `<button type="button" class="biz-sku-action biz-export" title="下載目前篩選結果的表格（Excel 可開）">匯出 CSV</button>`;
+  return `<span class="biz-dims" id="biz-dims-${bizSafe(biz)}">${dd('month', '月別', MONTHS, getBizSkuMonths(biz))}${dd('ch', '管道', CHANNEL_LIST, getBizSkuChs(biz))}${period}${metric}${exp}</span>`;
+}
+function bizRangeLabel(biz){
+  const r = bizSkuRange(biz);
+  const md = d => d ? `${+d.slice(5, 7)}/${+d.slice(8)}` : '…';
+  return r ? `${md(r.from)}〜${md(r.to)}` : '不限';
 }
 
 function setupBizSkuHandlers(biz, root){
@@ -4329,10 +4418,9 @@ function setupBizSkuHandlers(biz, root){
 
   // 月別・管道篩選：品項旁的金額也改成篩選範圍內的金額
   function updateAmounts(){
-    const mSet = getBizSkuMonths(biz), cSet = getBizSkuChs(biz);
     const amt = {};
     for(const r of (STATE.actualRows || [])){
-      if(r.biz !== biz || !r.code || !mSet.has(r.month) || !cSet.has(r.ch)) continue;
+      if(!r.code || !bizSkuInScope(r, biz)) continue;
       amt[r.code] = (amt[r.code] || 0) + r.amt;
     }
     listEl.querySelectorAll('.biz-sku-amt').forEach(el => {
@@ -4341,7 +4429,18 @@ function setupBizSkuHandlers(biz, root){
   }
   const dimsEl = scope.querySelector(`#biz-dims-${safeBiz}`);
   if(dimsEl){
+    const syncLabels = () => {
+      dimsEl.querySelector('.biz-range-val').textContent = bizRangeLabel(biz);
+      const mv = dimsEl.querySelector('.biz-dd[data-dim="month"] .biz-dd-val');
+      mv.textContent = bizSkuRange(biz) ? '依期間' : bizDimLabel(bizSkuMonthsSel(biz), MONTHS);
+    };
     dimsEl.addEventListener('change', e => {
+      if(e.target.classList.contains('biz-range-in')){
+        const rg = STATE.skuBizRange[biz] || (STATE.skuBizRange[biz] = {});
+        rg[e.target.dataset.k] = e.target.value || '';
+        syncLabels(); updateAmounts(); refreshContent();
+        return;
+      }
       const cb = e.target, dim = cb.dataset.dim;
       if(!dim) return;
       const set = dim === 'month' ? getBizSkuMonths(biz) : getBizSkuChs(biz);
@@ -4361,6 +4460,35 @@ function setupBizSkuHandlers(biz, root){
     // 點選單外面就收起來
     document.addEventListener('click', e => {
       dimsEl.querySelectorAll('.biz-dd[open]').forEach(d => { if(!d.contains(e.target)) d.removeAttribute('open'); });
+    });
+    dimsEl.addEventListener('click', e => {
+      const b = e.target.closest('button');
+      if(!b) return;
+      if(b.classList.contains('biz-metric-btn')){            // 套數／金額切換
+        STATE.skuBizMetric[biz] = b.dataset.metric;
+        dimsEl.querySelectorAll('.biz-metric-btn').forEach(x => x.classList.toggle('active', x === b));
+        refreshContent();
+      } else if(b.classList.contains('biz-range-clear')){    // 清除期間
+        STATE.skuBizRange[biz] = {};
+        dimsEl.querySelectorAll('.biz-range-in').forEach(x => { x.value = ''; });
+        syncLabels(); updateAmounts(); refreshContent();
+      } else if(b.classList.contains('biz-export')){         // 匯出 CSV：目前畫面上的表格
+        const rows = [[`${biz} 品項統計`, `管道：${bizSkuChsSel(biz).join('、')}`,
+                       bizSkuRange(biz) ? `期間：${bizRangeLabel(biz)}` : `月別：${bizSkuMonthsSel(biz).join('、')}`,
+                       `品項：已選 ${selSet.size} 件`]];
+        (contentEl ? contentEl.querySelectorAll('table') : []).forEach((t, i) => {
+          const title = t.closest('details')?.querySelector('summary')?.textContent.replace('▸', '').trim() || (i === 0 ? '管道小計' : '');
+          rows.push([]); rows.push([title]);
+          t.querySelectorAll('tr').forEach(tr => rows.push([...tr.children].map(td => td.textContent.trim())));
+        });
+        const q = v => /[",\r\n]/.test(v) ? `"${String(v).replace(/"/g, '""')}"` : v;
+        const csv = '﻿' + rows.map(r => r.map(q).join(',')).join('\r\n');
+        const a = document.createElement('a');
+        a.href = URL.createObjectURL(new Blob([csv], { type: 'text/csv;charset=utf-8' }));
+        a.download = `${biz}_品項統計_${new Date().toISOString().slice(0, 10)}.csv`;
+        document.body.appendChild(a); a.click(); a.remove();
+        setTimeout(() => URL.revokeObjectURL(a.href), 2000);
+      }
     });
   }
   updateAmounts();
