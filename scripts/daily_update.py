@@ -441,7 +441,11 @@ def cmd_publish(a):
         print('✗ commit 失敗：' + p.stdout + p.stderr); return 2
     sha = git('rev-parse', 'HEAD')[1].strip()
     print(f'commit {sha[:7]}：{msg.splitlines()[0]}')
-    rc, out = git('push', 'origin', 'main')
+    for attempt in range(4):          # network blips (2026-11-19: "Failed to connect to github.com:443"): retry before giving up
+        rc, out = git('push', 'origin', 'main')
+        if not rc:
+            break
+        time.sleep(10)
     if rc:
         print('✗ push 失敗：\n' + out); return 2
     print('push 完成，等待部署…')
